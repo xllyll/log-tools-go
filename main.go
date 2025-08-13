@@ -12,7 +12,7 @@ import (
  * 主函数
  */
 func main() {
-	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n正在启动日志分析工具...")
+	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n🚀🚀🚀正在启动日志分析工具...")
 	// 加载配置
 	fmt.Println("正在加载配置文件...")
 	if err := config.LoadConfig(); err != nil {
@@ -41,7 +41,7 @@ func main() {
 	// 启动服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	fmt.Printf("正在启动服务器: http://%s\n", addr)
-	fmt.Println("日志分析工具已就绪，请访问 http://" + addr)
+	fmt.Println("🌐日志分析工具已就绪，请访问 🌐http://" + addr)
 	fmt.Println("按 Ctrl+C 停止服务器")
 
 	if err := r.Run(addr); err != nil {
