@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"log"
 	"log-tools-go/internal/config"
 	"log-tools-go/router"
-
-	"github.com/gin-gonic/gin"
 )
 
+/**
+ * 主函数
+ */
 func main() {
-	fmt.Println("正在启动日志分析工具...")
-
+	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n正在启动日志分析工具...")
 	// 加载配置
 	fmt.Println("正在加载配置文件...")
 	if err := config.LoadConfig(); err != nil {

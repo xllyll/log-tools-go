@@ -33,6 +33,9 @@ func NewDatabase(cfg *config.Config) (*Database, error) {
 	return database, nil
 }
 
+/**
+ * 关闭数据库连接
+ */
 func (d *Database) Close() error {
 	return d.db.Close()
 }
@@ -47,7 +50,8 @@ func (d *Database) initTables() error {
 		upload_at DATETIME NOT NULL,
 		total_entries INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);`
+	);
+	`
 
 	// 创建日志条目表
 	createLogEntriesTable := `
@@ -67,7 +71,8 @@ func (d *Database) initTables() error {
 		color TEXT NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (file_id) REFERENCES log_files(id) ON DELETE CASCADE
-	);`
+	);
+	`
 
 	// 创建索引
 	createIndexes := `

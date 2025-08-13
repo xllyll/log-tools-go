@@ -61,9 +61,11 @@ log-tools-go/
 ├── main.go                 # 主程序入口
 ├── go.mod                  # Go模块文件
 ├── config/
-│   ├── config.yaml        # 配置文件
-│   └── config.go          # 配置结构定义
+│   ├── conf.yaml          # 配置文件
+│   └── config.json        # 配置json
 ├── internal/
+│   ├── config/
+│   │   └── config.go      # 配置结构定义
 │   ├── model/
 │   │   ├── log.go         # 数据模型定义
 │   │   └── database.go    # 数据库操作
@@ -73,6 +75,13 @@ log-tools-go/
 │   └── handler/
 │       ├── upload.go      # 文件上传处理器
 │       └── log.go         # 日志查询处理器
+├── web/
+│   └── router.go         # 路由定义
+├── pkg/
+│   ├── xtime/
+│   │   └── time.go         # 时间处理工具
+│   └── xmatch/
+│       └── match.go        # 正则匹配工具
 ├── web/
 │   ├── templates/
 │   │   └── index.html     # 主页面模板

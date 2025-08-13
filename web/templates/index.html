@@ -110,20 +110,16 @@
                 <div v-if="currentFileId && logs.length > 0">
 
                     <el-collapse accordion>
-                        <el-collapse-item v-for="(log,index) in logs" :name="index">
+                        <el-collapse-item v-for="(log,index) in logs" :name="index" :key="index">
                             <template #title="{ isActive }">
-                                <div
-                                        :key="index"
-                                        class="log-entry"
-                                        :class="log.level"
-                                        @click="toggleLogExpansion(log.id)">
-                                    <div class="flex-row"
-                                         style="font-size: 14px;white-space: nowrap;overflow: hidden;align-items: center;">
-                                        <span style="background: #f0f0f0;width: 128px;color: #666666;flex-shrink: 0;">{{ formatTime(log.log_time)
-                                            }}</span>
-                                        <el-tag style="color: #909399;">[{{ log.thread }}]</el-tag>
-                                        <div style="flex: 1;padding-left: 2px;border-bottom: 1px solid #f0c78a;" :style="{color: settingForm.color}"
-                                             v-html="highlightKeywords(log.message)"></div>
+                                <div class="log-entry" :style="{borderLeft:getLevelColor(log.level)}">
+                                    <div class="flex-row" style="font-size: 14px;white-space: nowrap;overflow: hidden;align-items: center;">
+                                        <span v-if="settingForm.showTime" style="background: #f0f0f0;width: 128px;color: #666666;flex-shrink: 0;">{{ formatTime(log.log_time) }}</span>
+                                        <div v-if="settingForm.showThread" style="color: #909399;">[{{ log.thread }}]</div>
+                                        <div style="flex: 1;padding-left: 2px;border-bottom: 1px solid #f0c78a;"
+                                             :style="{color: settingForm.color}"
+                                             v-html="highlightKeywords(log.message)">
+                                        </div>
                                     </div>
                                 </div>
                             </template>
@@ -146,14 +142,36 @@
         </div>
     </div>
     <el-dialog :visible.sync="showDialog" title="设置" width="80vw">
-        <div>
-            <el-form ref="form" :model="settingForm" label-width="80px">
-                <!-- 日志颜色 -->
-                <el-form-item label="日志颜色">
-                    <el-color-picker v-model="settingForm.color" show-alpha></el-color-picker>
-                </el-form-item>
-            </el-form>
-        </div>
+        <el-tabs>
+            <el-tab-pane label="日志颜色">
+                <el-card>
+                    <el-form ref="form" :model="settingForm" label-width="80px">
+                        <!-- 日志颜色 -->
+                        <el-form-item label="日志颜色">
+                            <el-color-picker v-model="settingForm.color" show-alpha></el-color-picker>
+                        </el-form-item>
+                        <el-form-item label="等级">
+                            <div class="flex-row">
+                                <div class="level-color-set" v-for="(value,key) in levelColorMap">
+                                    <span style="margin: 0 5px;">{{ key }}</span>
+                                    <el-color-picker v-model="levelColorMap[key]" show-alpha></el-color-picker>
+                                </div>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="显示时间">
+                            <el-switch v-model="settingForm.showTime" active-text="显示" inactive-text="隐藏"></el-switch>
+                        </el-form-item>
+                        <el-form-item label="显示线程">
+                            <el-switch v-model="settingForm.showThread" active-text="显示" inactive-text="隐藏"></el-switch>
+                        </el-form-item>
+                        <el-form-item label="显示类名">
+                            <el-switch v-model="settingForm.showClass" active-text="显示" inactive-text="隐藏"></el-switch>
+                        </el-form-item>
+
+                    </el-form>
+                </el-card>
+            </el-tab-pane>
+        </el-tabs>
     </el-dialog>
 </div>
 <script src="/static/js/app.js?v=2025"></script>

@@ -17,7 +17,6 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	//defer database.Close()
 
 	fmt.Println("数据库初始化完成")
 	// 创建服务实例

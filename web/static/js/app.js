@@ -12,14 +12,18 @@ new Vue({
             currentPage: 0,
             pageSize: 100,
             totalLogs: 0,
-            expandedLogs: [],
             availableLevels: [],
+            levelColorMap: {},
             filterForm: {levels: [], keywords: ''},
             selectedProject: '',
             projectList: [],
             showDialog:false,
             settingForm:{
-                color:'#666666'
+                color:'#666666',
+                showTime: true,
+                showThread: true,
+                showClass: false,
+                showClassLine: false,
             }
         }
     },
@@ -79,7 +83,6 @@ new Vue({
         selectFile(fileId) {
             this.currentFileId = fileId;
             this.currentPage = 0;
-            this.expandedLogs = [];
             this.loadLogs();
         },
 
@@ -89,6 +92,9 @@ new Vue({
                 .then(data => {
                     if (data.success) {
                         this.availableLevels = data.data;
+                        data.data.forEach(item => {
+                            this.levelColorMap[item.level] = item.color;
+                        })
                     }
                 })
                 .catch(error => {
@@ -139,17 +145,7 @@ new Vue({
 
         applyFilter() {
             this.currentPage = 0;
-            this.expandedLogs = [];
             this.loadLogs();
-        },
-
-        toggleLogExpansion(logId) {
-            const index = this.expandedLogs.indexOf(logId);
-            if (index > -1) {
-                this.expandedLogs.splice(index, 1);
-            } else {
-                this.expandedLogs.push(logId);
-            }
         },
 
         handlePageChange(page) {
@@ -176,6 +172,7 @@ new Vue({
                     console.log(data);
                     if (data.success) {
                         this.projectList = data.data;
+                        this.selectedProject = data.data[0];
                     }
                 });
         },
@@ -213,6 +210,12 @@ new Vue({
                 }).catch(() => {
                 this.$message.error('删除失败');
             })
+        },
+        getLevelColor(level){
+            let color = '#999999';
+            color = this.levelColorMap[level] || color;
+            console.log(level,color)
+            return `4px solid ${color}`;
         },
         highlightKeywords(text) {
             const keywords = [this.filterForm.keywords]

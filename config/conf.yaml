@@ -16,6 +16,7 @@ log_levels:
   DEBUG: "#6c757d"    # 灰色
   FATAL: "#721c24"    # 深红色
   TRACE: "#6f42c1"    # 紫色
+  UNKNOWN: "#343a40"  # 黑色
 
 filters:
   default_levels: ["ERROR", "WARN", "INFO"]

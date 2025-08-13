@@ -17,8 +17,9 @@ import (
 )
 
 type LogParser struct {
-	config *config.Config
-	rule   *config.LogParseRule
+	config   *config.Config
+	rule     *config.LogParseRule
+	lastTime *time.Time
 }
 
 func NewLogParserWithRule(cfg *config.Config, rule *config.LogParseRule) *LogParser {
@@ -67,23 +68,19 @@ func (p *LogParser) ParseLogFile(filePath string) (*model.LogFile, error) {
 	for scanner.Scan() {
 		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
-
 		if line == "" {
 			continue
 		}
-
 		entry := p.parseLogLine(line, lineNumber, filePath)
 		if entry != nil {
 			logFile.Entries = append(logFile.Entries, *entry)
 		}
 	}
-
+	p.lastTime = nil
 	logFile.Total = len(logFile.Entries)
-
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("读取文件失败: %w", err)
 	}
-
 	return logFile, nil
 }
 
@@ -92,10 +89,18 @@ func (p *LogParser) parseLogLine(line string, lineNumber int, source string) *mo
 	timestampStr := xmatch.Match(rule.Timestamp, line)
 	timestamp, err := xtime.ParseTime(timestampStr, rule.TimestampFormat)
 	if err != nil {
-		timestamp = time.Now()
+		if p.lastTime != nil {
+			timestamp = *p.lastTime
+		} else {
+			timestamp = time.Now()
+		}
 	}
+	p.lastTime = &timestamp
 	level := xmatch.Match(rule.Level, line)
 	message := xmatch.Match(rule.Message, line)
+	if message == "" {
+		message = line
+	}
 	thread := xmatch.Match(rule.Thread, line)
 	class := xmatch.Match(rule.Class, line)
 	classLine := xmatch.Match(rule.ClassLine, line)
