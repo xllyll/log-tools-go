@@ -1,0 +1,31 @@
+server:
+  port: 4080
+  host: "127.0.0.1"
+
+# 存储设置
+storage:
+  upload_dir: "./uploads" # 上传文件保存路径
+  log_dir: "./logs" # 日志保存路径
+  max_file_size: 104857600  # 上传文件大小限制 100MB in bytes
+  database_path: "./logs.db"  # SQLite数据库文件路径
+
+log_levels:
+  ERROR: "#dc3545"    # 红色
+  WARN: "#ffc107"     # 黄色
+  INFO: "#17a2b8"     # 蓝色
+  DEBUG: "#6c757d"    # 灰色
+  FATAL: "#721c24"    # 深红色
+  TRACE: "#6f42c1"    # 紫色
+
+filters:
+  default_levels: ["ERROR", "WARN", "INFO"]
+  exclude_patterns: []
+  include_patterns: []
+
+log_patterns:
+  - name: "standard"
+    pattern: (\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)\s+(\w+)\s+(.+)
+    time_format: "2006-01-02 15:04:05"
+  - name: "json"
+    pattern: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)\s+(\w+)\s+(.+)
+    time_format: "2006-01-02T15:04:05Z07:00"

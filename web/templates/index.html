@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蓝鲸智联日志分析工具</title>
+    <link rel="stylesheet" href="/static/element-ui/index.css">
+    <link rel="stylesheet" href="/static/css/index.css?v=2025">
+    <script src="/static/js/vue.js"></script>
+    <script src="/static/element-ui/index.js"></script>
+</head>
+<body>
+<div id="app" class="app-container">
+    <div class="header">
+        <h2 style="margin: 20px;">
+            <i class="el-icon-document"></i>
+            <span>蓝鲸智联日志分析工具</span>
+        </h2>
+        <el-button icon="el-icon-setting" circle @click="showSettings" style="margin-right: 20px;"></el-button>
+    </div>
+    <div class="main-content">
+        <div class="sidebar">
+            <el-container style="height: 100%;">
+                <el-main style="padding: 20px;">
+                    <el-tabs v-model="activeTab">
+                        <el-tab-pane label="上传日志" name="upload">
+                            <el-card style="margin-bottom: 20px;">
+                                <div slot="header">上传日志文件</div>
+                                <el-form>
+                                    <el-form-item label="选择项目">
+                                        <el-select v-model="selectedProject" placeholder="请选择项目"
+                                                   style="width: 200px;">
+                                            <el-option v-for="(name,index) in projectList" :key="index" :label="name"
+                                                       :value="name"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                    <el-form-item label="上传日志">
+                                        <el-upload
+                                                :http-request="handleUpload"
+                                                action="#"
+                                                drag
+                                                :show-file-list="false"
+                                                accept=".log,.txt,.zip,.gz"
+                                                style="width: 100%;"
+                                        >
+                                            <i class="el-icon-upload" style="font-size: 48px; color: #409EFF;"></i>
+                                            <div class="el-upload__text">将文件拖到此处，或 <em>点击上传</em></div>
+                                            <div class="el-upload__tip" slot="tip">支持 .log、.txt、.zip、.gz 文件</div>
+                                        </el-upload>
+                                    </el-form-item>
+                                </el-form>
+                            </el-card>
+                        </el-tab-pane>
+                        <el-tab-pane label="日志管理" name="settings">
+                            <el-card>
+                                <div slot="header">过滤设置</div>
+                                <el-form :model="filterForm" size="small">
+                                    <el-form-item label="日志级别">
+                                        <el-select multiple placeholder="请选择日志级别" style="width: 100%;"
+                                                   v-model="filterForm.levels">
+                                            <el-option v-for="(node,index) in availableLevels" :key="index"
+                                                       :value="node.level" :label="node.level"/>
+                                        </el-select>
+                                    </el-form-item>
+                                    <el-form-item label="关键词">
+                                        <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索"></el-input>
+                                    </el-form-item>
+                                    <el-form-item>
+                                        <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索
+                                        </el-button>
+                                    </el-form-item>
+                                </el-form>
+                            </el-card>
+                            <el-card style="margin-top: 20px;">
+                                <div slot="header">已上传文件</div>
+                                <div v-if="files.length === 0">暂无文件</div>
+                                <div v-else>
+                                    <div
+                                            v-for="(file,index) in files"
+                                            :key="index"
+                                            style="margin-bottom: 8px; cursor: pointer;font-size: 12px;border-radius: 8px;background: #d0d0d0;padding: 5px;"
+                                            @click="selectFile(file.id)">
+                                        <div>
+                                            <span style="margin: 0;">{{ file.name }}</span>
+                                            <div class="flex-row-center mt-5"
+                                                 style="width:100%;justify-content: space-between;">
+                                                <span style="margin: 0; color: #909399;">{{ formatFileSize(file.size) }} • {{ file.total
+                                                    }} 条日志</span>
+                                                <el-button type="danger" icon="Delete" link style="float: right;"
+                                                           size="mini" @click="removeFile(file.id)">删除
+                                                </el-button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </el-card>
+                        </el-tab-pane>
+                    </el-tabs>
+                </el-main>
+            </el-container>
+        </div>
+        <div class="content-area">
+            <el-card style="width: 100%; min-height: 560px;" :loading="loading">
+                <div slot="header">日志内容 总数:{{logs.length}}</div>
+                <div v-if="loading">正在加载日志...</div>
+                <div v-if="!currentFileId">请上传日志文件开始分析</div>
+                <div v-if="currentFileId && logs.length === 0">
+                    <el-empty description="暂无数据"></el-empty>
+                </div>
+                <div v-if="currentFileId && logs.length > 0">
+
+                    <el-collapse accordion>
+                        <el-collapse-item v-for="(log,index) in logs" :name="index">
+                            <template #title="{ isActive }">
+                                <div
+                                        :key="index"
+                                        class="log-entry"
+                                        :class="log.level"
+                                        @click="toggleLogExpansion(log.id)">
+                                    <div class="flex-row"
+                                         style="font-size: 14px;white-space: nowrap;overflow: hidden;align-items: center;">
+                                        <span style="background: #f0f0f0;width: 128px;color: #666666;flex-shrink: 0;">{{ formatTime(log.log_time)
+                                            }}</span>
+                                        <el-tag style="color: #909399;">[{{ log.thread }}]</el-tag>
+                                        <div style="flex: 1;padding-left: 2px;border-bottom: 1px solid #f0c78a;" :style="{color: settingForm.color}"
+                                             v-html="highlightKeywords(log.message)"></div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div class="log-message" v-html="highlightKeywords(log.content)">
+                            </div>
+                        </el-collapse-item>
+                    </el-collapse>
+
+                    <el-pagination
+                            v-if="totalLogs > pageSize"
+                            @current-change="handlePageChange"
+                            :current-page="currentPage + 1"
+                            :page-size="pageSize"
+                            layout="prev, pager, next, total"
+                            :total="totalLogs"
+                            style="margin-top: 20px; text-align: center;">
+                    </el-pagination>
+                </div>
+            </el-card>
+        </div>
+    </div>
+    <el-dialog :visible.sync="showDialog" title="设置" width="80vw">
+        <div>
+            <el-form ref="form" :model="settingForm" label-width="80px">
+                <!-- 日志颜色 -->
+                <el-form-item label="日志颜色">
+                    <el-color-picker v-model="settingForm.color" show-alpha></el-color-picker>
+                </el-form-item>
+            </el-form>
+        </div>
+    </el-dialog>
+</div>
+<script src="/static/js/app.js?v=2025"></script>
+</body>
+</html> 

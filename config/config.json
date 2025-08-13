@@ -1,0 +1,26 @@
+[
+    {
+        "project_name": "默认项目",
+        "rule": {
+            "timestamp": "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
+            "timestamp_format": "YYYY-MM-dd hh:mm:ss",
+            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
+            "thread": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[([^\\]]+)\\]",
+            "class": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[[^\\]]+\\] \\w+\\s+([a-zA-Z][\\w.]*)",
+            "class_line": "",
+            "message": "->\\s*(.*)"
+        }
+    },
+    {
+        "project_name": "默认项目2",
+        "rule": {
+            "timestamp": "(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
+            "timestamp_format": "MM-dd hh:mm:ss",
+            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
+            "thread": "$[^$]+$",
+            "class": "([a-zA-Z0-9.$]+)\\s*->",
+            "class_line": "",
+            "message": ".*"
+        }
+    }
+]
