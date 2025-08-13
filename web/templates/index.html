@@ -75,19 +75,13 @@
                                 <div slot="header">已上传文件</div>
                                 <div v-if="files.length === 0">暂无文件</div>
                                 <div v-else>
-                                    <div
-                                            v-for="(file,index) in files"
-                                            :key="index"
-                                            style="margin-bottom: 8px; cursor: pointer;font-size: 12px;border-radius: 8px;background: #d0d0d0;padding: 5px;"
-                                            @click="selectFile(file.id)">
+                                    <div v-for="(file,index) in files" :key="index" class="file-list" :class="{select:file.id === currentFileId}" @click="selectFile(file.id)">
                                         <div>
                                             <span style="margin: 0;">{{ file.name }}</span>
-                                            <div class="flex-row-center mt-5"
-                                                 style="width:100%;justify-content: space-between;">
-                                                <span style="margin: 0; color: #909399;">{{ formatFileSize(file.size) }} • {{ file.total
-                                                    }} 条日志</span>
+                                            <div class="flex-row-center mt-5" style="width:100%;justify-content: space-between;">
+                                                <span style="margin: 0; color: #909399;">{{ formatFileSize(file.size) }} • {{ file.total}} 条日志</span>
                                                 <el-button type="danger" icon="Delete" link style="float: right;"
-                                                           size="mini" @click="removeFile(file.id)">删除
+                                                           size="mini" @click.stop="removeFile(file.id)">删除
                                                 </el-button>
                                             </div>
                                         </div>
@@ -114,8 +108,9 @@
                             <template #title="{ isActive }">
                                 <div class="log-entry" :style="{borderLeft:getLevelColor(log.level)}">
                                     <div class="flex-row" style="font-size: 14px;white-space: nowrap;overflow: hidden;align-items: center;">
-                                        <span v-if="settingForm.showTime" style="background: #f0f0f0;width: 128px;color: #666666;flex-shrink: 0;">{{ formatTime(log.log_time) }}</span>
-                                        <div v-if="settingForm.showThread" style="color: #909399;">[{{ log.thread }}]</div>
+                                        <span class="log-message-time" v-if="settingForm.showTime">{{ formatTime(log.log_time) }}</span>
+                                        <div class="log-message-thread" v-if="settingForm.showThread" :style="{color:settingForm.threadColor}">[{{ log.thread }}]</div>
+                                        <div class="log-message-class" v-if="settingForm.showClass" :style="{color:settingForm.classColor}">[{{ log.class }}]</div>
                                         <div style="flex: 1;padding-left: 2px;border-bottom: 1px solid #f0c78a;"
                                              :style="{color: settingForm.color}"
                                              v-html="highlightKeywords(log.message)">
@@ -147,9 +142,23 @@
                 <el-card>
                     <el-form ref="form" :model="settingForm" label-width="80px">
                         <!-- 日志颜色 -->
-                        <el-form-item label="日志颜色">
-                            <el-color-picker v-model="settingForm.color" show-alpha></el-color-picker>
-                        </el-form-item>
+                        <el-row>
+                            <el-col :span="8">
+                                <el-form-item label="日志颜色">
+                                    <el-color-picker v-model="settingForm.color" show-alpha></el-color-picker>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="线程颜色">
+                                    <el-color-picker v-model="settingForm.threadColor" show-alpha></el-color-picker>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="类名颜色">
+                                    <el-color-picker v-model="settingForm.classColor" show-alpha></el-color-picker>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
                         <el-form-item label="等级">
                             <div class="flex-row">
                                 <div class="level-color-set" v-for="(value,key) in levelColorMap">

@@ -20,6 +20,9 @@ new Vue({
             showDialog:false,
             settingForm:{
                 color:'#666666',
+                fontSize: 12,
+                threadColor: '#409EFF',
+                classColor: '#409EFF',
                 showTime: true,
                 showThread: true,
                 showClass: false,
@@ -73,6 +76,8 @@ new Vue({
                 .then(data => {
                     if (data.success && data.data) {
                         this.files = data.data;
+                    }else{
+                        this.files = [];
                     }
                 })
                 .catch(error => {
@@ -188,7 +193,16 @@ new Vue({
                 .then(data => {
                     if (data.success) {
                         this.$message.success('上传成功！');
-                        this.loadFileList && this.loadFileList();
+                        this.loadFileList();
+                        // 提示查看
+                        this.$alert('上传成功！是否立即查看？', '提示', {
+                            confirmButtonText: '立即查看',
+                            cancelButtonText: '取消',
+                            callback: action => {
+                                const fileIds = data.file_id.split(',');
+                                this.selectFile(fileIds[0])
+                            }
+                        });
                     } else {
                         this.$message.error(data.message || '上传失败');
                     }
@@ -203,7 +217,7 @@ new Vue({
                 .then(data => {
                     if (data.success) {
                         this.$message.success('删除成功！');
-                        this.loadFileList && this.loadFileList();
+                        this.loadFileList();
                     } else {
                         this.$message.error(data.message || '删除失败');
                     }
