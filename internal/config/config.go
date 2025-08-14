@@ -9,11 +9,11 @@ import (
 )
 
 type Config struct {
-	Server      ServerConfig      `mapstructure:"server"`
-	Storage     StorageConfig     `mapstructure:"storage"`
-	LogLevels   map[string]string `mapstructure:"log_levels"`
-	Filters     FilterConfig      `mapstructure:"filters"`
-	LogPatterns []LogPattern      `mapstructure:"log_patterns"`
+	Server    ServerConfig      `mapstructure:"server"`
+	Storage   StorageConfig     `mapstructure:"storage"`
+	LogLevels map[string]string `mapstructure:"log_levels"`
+	Filters   FilterConfig      `mapstructure:"filters"`
+	AiConfig  AiConfig          `mapstructure:"ai"`
 }
 
 type ServerConfig struct {
@@ -34,10 +34,9 @@ type FilterConfig struct {
 	IncludePatterns []string `mapstructure:"include_patterns"`
 }
 
-type LogPattern struct {
-	Name       string `mapstructure:"name"`
-	Pattern    string `mapstructure:"pattern"`
-	TimeFormat string `mapstructure:"time_format"`
+type AiConfig struct {
+	ApiKey string `mapstructure:"api_key"`
+	Model  string `mapstructure:"model"`
 }
 
 // 新增：项目规则结构体

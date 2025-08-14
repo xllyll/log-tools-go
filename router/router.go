@@ -29,6 +29,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 	fmt.Println("正在创建HTTP处理器...")
 	uploadHandler := handler.NewUploadHandler(cfg, storage, parser)
 	logHandler := handler.NewLogHandler(cfg, storage, parser)
+	aiHandler := handler.NewAiHandler(cfg, storage, parser)
 	fmt.Println("HTTP处理器创建完成")
 
 	// 静态文件服务
@@ -51,5 +52,9 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 		api.GET("/logs/stats", logHandler.GetLogStats)
 		api.GET("/logs/levels", logHandler.GetLogLevels)
 		api.GET("/logs/search", logHandler.SearchLogs)
+
+		// Ai 日志分析
+		api.POST("/logs/analysis", aiHandler.AnalysisLog)
+		api.POST("/logs/analysis/stream", aiHandler.AnalysisLogStream)
 	}
 }

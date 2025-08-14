@@ -6,8 +6,12 @@
     <title>蓝鲸智联日志分析工具</title>
     <link rel="stylesheet" href="/static/element-ui/index.css">
     <link rel="stylesheet" href="/static/css/index.css?v=2025">
+    <link rel="stylesheet" href="/static/css/loading.css?v=2025">
     <script src="/static/js/vue.js"></script>
     <script src="/static/element-ui/index.js"></script>
+    <link rel="stylesheet" href="/static/highlight/styles/dark.css">
+    <script src="/static/js/marked.umd.js"></script>
+    <script src="/static/highlight/highlight.min.js"></script>
 </head>
 <body>
 <div id="app" class="app-container">
@@ -95,7 +99,10 @@
         </div>
         <div class="content-area">
             <el-card style="width: 100%; min-height: 560px;" :loading="loading">
-                <div slot="header">日志内容 总数:{{logs.length}}</div>
+                <div slot="header" class="clearfix">
+                    <span>日志内容 总数:{{logs.length}}</span>
+                    <el-button style="float: right; padding: 3px 0" type="text" @click.stop="analyzeLogs">AI分析</el-button>
+                </div>
                 <div v-if="loading">正在加载日志...</div>
                 <div v-if="!currentFileId">请上传日志文件开始分析</div>
                 <div v-if="currentFileId && logs.length === 0">
@@ -182,7 +189,24 @@
             </el-tab-pane>
         </el-tabs>
     </el-dialog>
+    <el-dialog :visible.sync="aiShow" title="AI日志分析" width="80vw">
+        <el-card style="height: 70vh;">
+            <div ref="aiContentRef" style="width:100%;height:calc(70vh - 40px);overflow-y: auto;">
+                <div v-if="aiLoading" style="display: flex;flex-direction: column;align-items: center;justify-content: center ;">
+                    <div  class="loader"></div>
+                    <span>AI 分析中...</span>
+                </div>
+                <div v-if="aiRes.length > 0">
+                    <i class="el-icon-success" style="font-size: 64px;color: #13ce66;"></i>
+                    <div class="" style="white-space: pre-line;">
+                        <div v-html="highlightedCode(aiRes)"></div>
+                    </div>
+                </div>
+            </div>
+        </el-card>
+    </el-dialog>
 </div>
+<script>hljs.highlightAll();</script>
 <script src="/static/js/app.js?v=2025"></script>
 </body>
 </html> 
