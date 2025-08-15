@@ -65,7 +65,7 @@
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="关键词">
-                                        <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索"></el-input>
+                                        <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索" clearable></el-input>
                                     </el-form-item>
                                     <el-form-item>
                                         <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索
@@ -98,7 +98,7 @@
         <div class="content-area">
             <el-card style="width: 100%; min-height: 560px;" :loading="loading">
                 <div slot="header" class="clearfix">
-                    <span>日志内容 总数:{{logs.length}}</span>
+                    <span>日志内容 总数:{{totalLogs}}</span>
                     <el-button style="float: right; padding: 3px 0" type="text" @click.stop="analyzeLogs">AI分析</el-button>
                 </div>
                 <div v-if="loading">正在加载日志...</div>
@@ -111,7 +111,7 @@
                     <el-collapse accordion>
                         <el-collapse-item v-for="(log,index) in logs" :name="index" :key="index">
                             <template #title="{ isActive }">
-                                <div class="log-entry" :style="{borderLeft:getLevelColor(log.level)}">
+                                <div class="log-entry" :class="{active:isActive}" :style="{borderLeft:getLevelColor(log.level)}">
                                     <div class="flex-row" style="font-size: 14px;white-space: nowrap;overflow: hidden;align-items: center;">
                                         <span class="log-message-time" v-if="settingForm.showTime">{{ formatTime(log.log_time) }}</span>
                                         <div class="log-message-thread" v-if="settingForm.showThread" :style="{color:settingForm.threadColor}">[{{ log.thread }}]</div>

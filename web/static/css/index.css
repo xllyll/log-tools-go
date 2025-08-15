@@ -8,6 +8,8 @@ body { margin: 0; padding: 0; background-color: #f5f7fa; }
 .file-list:hover { background: #f0f0f0; }
 .file-list.select { background: #667eea; color: #fff;border: 2px solid #f0f0f0;}
 .log-entry {  width: 100%;border-left: 4px solid #909399; margin: 4px 0;color: #909399; background: white; border-radius: 4px; cursor: pointer; }
+.log-entry:hover { background: #f0f0f0; }
+.log-entry.active { background: #667eea; color: #fff; }
 .log-message { margin-top: 8px; word-wrap: break-word; }
 .log-message-time {background: #f0f0f0;width: 128px;color: #666666;flex-shrink: 0;}
 .log-message-thread { margin-left: 3px; color: #909399;}
