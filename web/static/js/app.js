@@ -223,6 +223,10 @@ new Vue({
                 console.log('Done');
                 this.aiLoading = false;
             }
+            const onError = (error)=>{
+                console.log('Error:', error);
+                this.$message.error('AI分析失败: ' + error);
+            }
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -237,6 +241,7 @@ new Vue({
                             const json = JSON.parse(data);
                             if (json.type === 'error') {
                                 console.error('AI Error:', json.error);
+                                onError(json.error);
                                 return;
                             }
                             if (json.type === 'done') {
@@ -261,7 +266,15 @@ new Vue({
         },
 
         handlePageChange(page) {
+            console.log(page)
             this.currentPage = page - 1;
+            this.loadLogs();
+        },
+
+        handleSizeChange(size){
+            console.log(size)
+            this.currentPage = 0;
+            this.pageSize = size;
             this.loadLogs();
         },
 

@@ -60,10 +60,8 @@
                                 <div slot="header">过滤设置</div>
                                 <el-form :model="filterForm" size="small">
                                     <el-form-item label="日志级别">
-                                        <el-select multiple placeholder="请选择日志级别" style="width: 100%;"
-                                                   v-model="filterForm.levels">
-                                            <el-option v-for="(node,index) in availableLevels" :key="index"
-                                                       :value="node.level" :label="node.level"/>
+                                        <el-select multiple placeholder="请选择日志级别" style="width: 100%;" v-model="filterForm.levels">
+                                            <el-option v-for="(node,index) in availableLevels" :key="index" :value="node.level" :label="node.level"/>
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="关键词">
@@ -131,11 +129,13 @@
                     </el-collapse>
 
                     <el-pagination
-                            v-if="totalLogs > pageSize"
+                            v-if="totalLogs > 0"
+                            @size-change="handleSizeChange"
                             @current-change="handlePageChange"
                             :current-page="currentPage + 1"
                             :page-size="pageSize"
-                            layout="prev, pager, next, total"
+                            :page-sizes="[100, 200, 500, 1000]"
+                            layout="sizes,prev, pager, next, total"
                             :total="totalLogs"
                             style="margin-top: 20px; text-align: center;">
                     </el-pagination>

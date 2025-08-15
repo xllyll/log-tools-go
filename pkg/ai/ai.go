@@ -148,7 +148,19 @@ func Qwen3ChatStream(apiKey, model, userMsg string, writer http.ResponseWriter) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("AI返回错误状态: %d", resp.StatusCode)
+		//读取 body 的值
+		body, _ := io.ReadAll(resp.Body)
+		respJson := map[string]interface{}{}
+		err = json.Unmarshal(body, &respJson)
+		if err != nil {
+			return fmt.Errorf("解析响应失败: %v", err)
+		}
+		fmt.Printf("调用AI失败: %s", respJson)
+		errMsg, ok := respJson["error"].(map[string]interface{})
+		if ok {
+			return fmt.Errorf("%s", errMsg["message"])
+		}
+		return fmt.Errorf("%s", respJson)
 	}
 
 	// 使用 bufio 逐行读取 SSE
