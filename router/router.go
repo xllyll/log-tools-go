@@ -23,6 +23,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 	fmt.Println("正在初始化服务...")
 	parser := service.NewLogParserWithRule(cfg, nil)
 	storage := service.NewStorageService(cfg, parser, database)
+	projectService := service.NewProjectService(cfg, parser, database)
 	fmt.Println("服务初始化完成")
 
 	// 创建处理器
@@ -30,6 +31,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 	uploadHandler := handler.NewUploadHandler(cfg, storage, parser)
 	logHandler := handler.NewLogHandler(cfg, storage, parser)
 	aiHandler := handler.NewAiHandler(cfg, storage, parser)
+	projectHandler := handler.NewProjectHandler(cfg, storage, parser, projectService)
 	fmt.Println("HTTP处理器创建完成")
 
 	// 静态文件服务
@@ -40,7 +42,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 	api := r.Group("/api")
 	{
 		// 项目相关
-		api.GET("/projects", uploadHandler.GetProjects)
+		api.GET("/projects", projectHandler.GetProjects)
 
 		// 文件上传相关
 		api.POST("/upload", uploadHandler.UploadFile)
@@ -56,5 +58,6 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 		// Ai 日志分析
 		api.POST("/logs/analysis", aiHandler.AnalysisLog)
 		api.POST("/logs/analysis/stream", aiHandler.AnalysisLogStream)
+		api.POST("/logs/rule/generate", aiHandler.GenerateLogRule)
 	}
 }

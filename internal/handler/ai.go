@@ -89,3 +89,25 @@ func (h *AiHandler) AnalysisLogStream(ctx *gin.Context) {
 	fmt.Fprintf(ctx.Writer, "data: %s\n\n", `{"type":"done"}`)
 	ctx.Writer.Flush()
 }
+
+func (h *AiHandler) GenerateLogRule(ctx *gin.Context) {
+	req := &model.GenerateLogRoleRequest{}
+	if err := ctx.ShouldBindJSON(req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
+	res, err := ai.Qwen3Chat(h.config.AiConfig.ApiKey, &h.config.AiConfig.Model, req.Msg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "生成日志规则失败: " + err.Error(),
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    *res,
+	})
+}

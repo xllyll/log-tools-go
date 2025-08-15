@@ -186,11 +186,3 @@ func (h *UploadHandler) DeleteFile(c *gin.Context) {
 		"message": "文件删除成功",
 	})
 }
-
-func (h *UploadHandler) GetProjects(c *gin.Context) {
-	var names []string
-	for _, pr := range config.ProjectRules {
-		names = append(names, pr.ProjectName)
-	}
-	c.JSON(200, gin.H{"success": true, "data": names})
-}

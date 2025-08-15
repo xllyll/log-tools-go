@@ -97,12 +97,3 @@ func GetRuleByProjectName(name string) *LogParseRule {
 	}
 	return nil
 }
-
-// 获取所有的项目
-func GetAllProjects() []string {
-	projects := []string{}
-	for _, pr := range ProjectRules {
-		projects = append(projects, pr.ProjectName)
-	}
-	return projects
-}

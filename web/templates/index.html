@@ -9,9 +9,11 @@
     <link rel="stylesheet" href="/static/css/loading.css?v=2025">
     <script src="/static/js/vue.js"></script>
     <script src="/static/element-ui/index.js"></script>
-    <link rel="stylesheet" href="/static/highlight/styles/dark.css">
-    <script src="/static/js/marked.umd.js"></script>
+    <link rel="stylesheet" href="/static/highlight/styles/vs2015.css">
     <script src="/static/highlight/highlight.min.js"></script>
+    <script src="/static/js/marked.umd.js"></script>
+    <script src="/static/marked-highlight/index.umd.js"></script>
+    <script src="/static/js/gen.js"></script>
 </head>
 <body>
 <div id="app" class="app-container">
@@ -34,8 +36,8 @@
                                     <el-form-item label="选择项目">
                                         <el-select v-model="selectedProject" placeholder="请选择项目"
                                                    style="width: 200px;">
-                                            <el-option v-for="(name,index) in projectList" :key="index" :label="name"
-                                                       :value="name"></el-option>
+                                            <el-option v-for="(p,index) in projectList" :key="index" :label="p.project_name"
+                                                       :value="p.project_name"></el-option>
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="上传日志">
@@ -187,6 +189,58 @@
                     </el-form>
                 </el-card>
             </el-tab-pane>
+            <el-tab-pane label="项目配置">
+                <el-card style="height: 60vh;">
+                    <!-- 项目配置 projects 折叠配置 -->
+                    <el-collapse accordion>
+                        <el-collapse-item v-for="(project,index) in projectList" :name="index" :key="index">
+                            <template #title="{ isActive }">
+                                <div class="project-entry" :class="{active:isActive}" style="font-size: 14px;white-space: nowrap;overflow: hidden;">
+                                    <div class="flex-row">
+                                        <span class="project-name">{{ project.project_name }}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </el-collapse-item>
+                    </el-collapse>
+                </el-card>
+            </el-tab-pane>
+            <el-tab-pane label="AI日志正则">
+                <el-card>
+                    <div v-if="aiLoading===false && (!aiRuleRes || aiRuleRes==='')">
+                        <span>提示：请输入日志示例</span>
+                        <el-input v-model="logExample"></el-input>
+                        <el-form :model="logRuleSet"  label-width="80px">
+                            <el-form-item label="时间">
+                                <el-input v-model="logRuleSet.time"></el-input>
+                            </el-form-item>
+                            <el-form-item label="线程">
+                                <el-input v-model="logRuleSet.thread"></el-input>
+                            </el-form-item>
+                            <el-form-item label="类名">
+                                <el-input v-model="logRuleSet.class"></el-input>
+                            </el-form-item>
+                            <el-form-item label="等级">
+                                <el-input v-model="logRuleSet.level"></el-input>
+                            </el-form-item>
+                            <el-form-item label="内容">
+                                <el-input v-model="logRuleSet.message"></el-input>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+                    <div style="width: 100%;display: flex;flex-direction: column;align-items: center;justify-content: center;">
+                        <div v-if="aiLoading" class="loader"></div>
+                        <div v-if="aiRuleRes">
+                            <i class="el-icon-success" style="font-size: 64px;color: #13ce66;"></i>
+                            <div class="" style="white-space: pre-line;">
+                                <div v-html="buildMarkdownCode(aiRuleRes)"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <el-button v-if="!aiRuleRes || aiRuleRes===''" type="primary" style="margin-top: 20px;width: 100%;" @click="aiGenerateLogRule">AI生成</el-button>
+                    <el-button v-if="aiRuleRes && aiRuleRes!==''" type="primary" style="margin-top: 20px;width: 100%;" @click="resetGenerateLogRule">重新生成</el-button>
+                </el-card>
+            </el-tab-pane>
         </el-tabs>
     </el-dialog>
     <el-dialog :visible.sync="aiShow" title="AI日志分析" width="80vw">
@@ -196,10 +250,10 @@
                     <div  class="loader"></div>
                     <span>AI 分析中...</span>
                 </div>
-                <div v-if="aiRes.length > 0">
+                <div v-if="aiRes.length > 0" style="width: 100%">
                     <i class="el-icon-success" style="font-size: 64px;color: #13ce66;"></i>
                     <div class="" style="white-space: pre-line;">
-                        <div v-html="highlightedCode(aiRes)"></div>
+                        <div v-html="buildMarkdownCode(aiRes)"></div>
                     </div>
                 </div>
             </div>
