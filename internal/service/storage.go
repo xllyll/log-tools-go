@@ -137,7 +137,6 @@ func (s *StorageService) LoadParsedLogs(fileID string) (*model.LogFile, error) {
 			if err != nil {
 				return nil, err
 			}
-
 			logFile := &model.LogFile{
 				ID:       file.ID,
 				Name:     file.Name,

@@ -39,20 +39,36 @@ type AiConfig struct {
 	Model  string `mapstructure:"model"`
 }
 
-// 新增：项目规则结构体
+// LogParseRule 新增：项目规则结构体
 type LogParseRule struct {
-	Timestamp       string `json:"timestamp"`
-	TimestampFormat string `json:"timestamp_format"`
-	Level           string `json:"level"`
-	Thread          string `json:"thread"`
-	Class           string `json:"class"`
-	ClassLine       string `json:"class_line"`
-	Message         string `json:"message"`
+	Timestamp       string `json:"timestamp"`        // 时间正则表达式
+	TimestampFormat string `json:"timestamp_format"` // 时间格式
+	Process         string `json:"process"`          // 进程正则表达式
+	Thread          string `json:"thread"`           // 线程正则表达式
+	Level           string `json:"level"`            // 日志级别正则表达式
+	Module          string `json:"module"`           // 模块名正则表达式
+	Class           string `json:"class"`            // 类名正则表达式
+	ClassLine       string `json:"class_line"`       // 类方法行号正则表达式
+	Tag             string `json:"tag"`              // 标签正则表达式
+	Message         string `json:"message"`          // 日志内容正则表达式
+}
+type LogProjectKeyword struct {
+	Keyword string `json:"keyword"`
+	Desc    string `json:"desc"`
+}
+type LogProjectScene struct {
+	Name     string              `json:"name"`
+	Keywords []LogProjectKeyword `json:"keywords"`
+}
+type LogProjectModule struct {
+	Name   string            `json:"name"`
+	Scenes []LogProjectScene `json:"scenes"`
 }
 
 type LogProjectRule struct {
-	ProjectName string       `json:"project_name"`
-	Rule        LogParseRule `json:"rule"`
+	ProjectName string             `json:"project_name"`
+	Rule        LogParseRule       `json:"rule"`
+	Modules     []LogProjectModule `json:"modules"`
 }
 
 var AppConfig *Config

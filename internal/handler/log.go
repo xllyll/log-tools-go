@@ -139,6 +139,11 @@ func (h *LogHandler) buildFilter(c *gin.Context) model.LogFilter {
 		filter.Source = source
 	}
 
+	// 解析模块
+	if module := c.Query("module"); module != "" {
+		filter.Module = module
+	}
+
 	// 解析分页参数
 	if limitStr := c.Query("limit"); limitStr != "" {
 		if limit, err := strconv.Atoi(limitStr); err == nil {

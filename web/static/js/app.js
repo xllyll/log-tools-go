@@ -3,10 +3,15 @@
  */
 new Vue({
     el: '#app',
+    components: {
+        'log-view':window.MyApp.Components.LogView,
+        'log-header-view':window.MyApp.Components.LogHeaderView,
+    },
     data() {
         return {
             activeTab: 'upload',
             uploadUrl: '/api/upload',
+            uploading: false,
             files: [],
             currentFileId: null,
             logs: [],
@@ -18,7 +23,11 @@ new Vue({
             availableLevels: [],
             levelColorMap: {},
             filterForm: {levels: [], keywords: ''},
-            selectedProject: '',
+            selectedProject: {},
+            selectedProjectName: '',
+            selectedModules:[],
+            selectedModule:{},
+            selectedModuleName: '',
             projectList: [],
             showDialog:false,
             settingForm:{
@@ -45,6 +54,7 @@ new Vue({
                 message:'RedisDao init success'
             },
             aiRuleRes:'',
+            keywords:[]
         }
     },
     mounted() {
@@ -74,8 +84,11 @@ new Vue({
             }
             return true;
         },
-
+        handleUploadProgress(event, file, fileLis){
+            console.log('handleUploadProgress',event)
+        },
         handleUploadSuccess(response, file) {
+            console.log('handleUploadSuccess',response)
             if (response.success) {
                 this.$message.success(response.message);
                 this.loadFileList();
@@ -97,7 +110,36 @@ new Vue({
             console.log('showSettings')
             this.showDialog = true;
         },
-
+        onSelectProject(e)  {
+            console.log('onSelectProject',e)
+            const ls = this.projectList
+            for (let i = 0; i < ls.length; i++) {
+                if (ls[i].project_name === e) {
+                    this.selectedProject = ls[i];
+                    break;
+                }
+            }
+        },
+        onSelectModule(e){
+            console.log('onSelectModule',e)
+            this.selectedProject.modules.forEach( module=>{
+                if (module.name === e) {
+                    this.selectedModule = module;
+                    this.moduleSceneList = module.scenes;
+                }
+            })
+        },
+        onSelectModuleScene(e){
+            console.log('onSelectModuleScene',e)
+            let scene = null;
+            for (let i = 0; i < this.moduleSceneList.length; i++) {
+                if (this.moduleSceneList[i].name === e) {
+                    scene = this.moduleSceneList[i];
+                    break;
+                }
+            }
+            this.keywords = scene.keywords;
+        },
         loadFileList() {
             fetch('/api/files')
                 .then(response => response.json())
@@ -144,7 +186,9 @@ new Vue({
                 limit: this.pageSize,
                 offset: this.currentPage * this.pageSize
             });
-
+            if (this.filterForm.module) {
+                params.append('module', this.filterForm.module);
+            }
             if (this.filterForm.levels.length > 0) {
                 params.append('levels', this.filterForm.levels.join(','));
             }
@@ -333,20 +377,20 @@ new Vue({
                     console.log(data);
                     if (data.success) {
                         this.projectList = data.data;
-                        this.selectedProject = data.data[0].project_name;
+                        this.selectedProject = data.data[0];
+                        this.selectedProjectName = data.data[0].project_name;
                     }
                 });
         },
         handleUpload(option) {
+            console.log(option)
             const file = option.file;
             const formData = new FormData();
             formData.append('file', file);
             formData.append('project_name', this.selectedProject);
-            fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            }).then(res => res.json())
-                .then(data => {
+            this.uploading = true;
+            fetch('/api/upload', {method: 'POST',  body: formData}).then(res => res.json()).then(data => {
+                    this.uploading = false;
                     if (data.success) {
                         this.$message.success('上传成功！');
                         this.loadFileList();
@@ -364,6 +408,8 @@ new Vue({
                     }
                 }).catch(() => {
                 this.$message.error('上传失败');
+            }).catch(err=>{
+                this.uploading = true;
             });
         },
         removeFile(fileId) {
@@ -384,6 +430,25 @@ new Vue({
 
         getLevelColor(level){
             let color = '#999999';
+            switch (level) {
+                case 'D':
+                    level = 'DEBUG';
+                    break
+                case 'I':
+                    level = 'INFO';
+                    break
+                case 'W':
+                    level = 'WARN';
+                    break
+                case 'E':
+                    level = 'ERROR';
+                    break
+                case 'F':
+                    level = 'FATAL';
+                    break
+                default:
+                    level = 'UNKNOWN';
+            }
             color = this.levelColorMap[level] || color;
             return `4px solid ${color}`;
         },

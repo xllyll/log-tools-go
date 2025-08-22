@@ -26,6 +26,7 @@ func NewLogParserWithRule(cfg *config.Config, rule *config.LogParseRule) *LogPar
 	return &LogParser{config: cfg, rule: rule}
 }
 
+// 解析日志文件
 func (p *LogParser) ParseLogFile(filePath string) (*model.LogFile, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -84,6 +85,7 @@ func (p *LogParser) ParseLogFile(filePath string) (*model.LogFile, error) {
 	return logFile, nil
 }
 
+// 解析日志行
 func (p *LogParser) parseLogLine(line string, lineNumber int, source string) *model.LogEntry {
 	rule := p.rule
 	timestampStr := xmatch.Match(rule.Timestamp, line)
@@ -96,12 +98,15 @@ func (p *LogParser) parseLogLine(line string, lineNumber int, source string) *mo
 		}
 	}
 	p.lastTime = &timestamp
+	module := xmatch.Match(rule.Module, line)
 	level := xmatch.Match(rule.Level, line)
 	message := xmatch.Match(rule.Message, line)
 	if message == "" {
 		message = line
 	}
+	process := xmatch.Match(rule.Process, line)
 	thread := xmatch.Match(rule.Thread, line)
+	tag := xmatch.Match(rule.Tag, line)
 	class := xmatch.Match(rule.Class, line)
 	classLine := xmatch.Match(rule.ClassLine, line)
 	fmt.Printf("匹配结果: %s, %s, %s\n", timestampStr, level, message)
@@ -109,10 +114,13 @@ func (p *LogParser) parseLogLine(line string, lineNumber int, source string) *mo
 		ID:        fmt.Sprintf("%s_%d", p.generateFileID(source), lineNumber),
 		LogTime:   timestamp,
 		SaveTime:  time.Now(),
+		Module:    module,
 		Level:     level,
+		Process:   &process,
 		Thread:    &thread,
 		Class:     &class,
 		ClassLine: &classLine,
+		Tag:       &tag,
 		Message:   message,
 		Content:   line,
 		Source:    source,

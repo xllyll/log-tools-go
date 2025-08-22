@@ -61,9 +61,12 @@ func (d *Database) initTables() error {
 		log_time DATETIME NOT NULL,
 		save_time DATETIME NOT NULL,
 		level TEXT NOT NULL,
+		module TEXT,
+		process TEXT,
 		thread TEXT,
 		class TEXT,
 		class_line TEXT,
+		tag TEXT,
 		message TEXT NOT NULL,
 		content TEXT NOT NULL,
 		source TEXT NOT NULL,
@@ -125,12 +128,12 @@ func (d *Database) SaveLogFile(logFile *LogFile) error {
 	// 批量插入日志条目
 	if len(logFile.Entries) > 0 {
 		entryStmt := `
-			INSERT INTO log_entries (id, file_id, log_time, save_time, level, thread,class,class_line,message, content, source, line_number, color)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			INSERT INTO log_entries (id, file_id, log_time, save_time, module,level,process, thread,class,class_line,tag,message, content, source, line_number, color)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?)`
 
 		for _, entry := range logFile.Entries {
 			_, err = tx.Exec(entryStmt,
-				entry.ID, logFile.ID, entry.LogTime, entry.SaveTime, entry.Level, entry.Thread, entry.Class, entry.ClassLine,
+				entry.ID, logFile.ID, entry.LogTime, entry.SaveTime, entry.Module, entry.Level, entry.Process, entry.Thread, entry.Class, entry.ClassLine, entry.Tag,
 				entry.Message, entry.Content, entry.Source, entry.Line, entry.Color)
 			if err != nil {
 				return fmt.Errorf("插入日志条目失败: %w", err)
@@ -166,10 +169,9 @@ func (d *Database) GetLogFiles() ([]LogFile, error) {
 // 获取日志条目
 func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, error) {
 	query := `
-		SELECT id, log_time, save_time, level, thread, class, class_line, message, content, source, line_number, color
+		SELECT id, log_time, save_time, module ,level, process, thread, class, class_line, tag,message, content, source, line_number, color
 		FROM log_entries
 		WHERE file_id = ?`
-	fmt.Printf("查询日志文件: %s, \n参数: %+v", query, filter)
 	args := []interface{}{fileID}
 
 	// 添加过滤条件
@@ -207,8 +209,13 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 		args = append(args, "%"+filter.Source+"%")
 	}
 
+	if filter.Module != "" {
+		query += " AND module = ?"
+		args = append(args, filter.Module)
+	}
+
 	// 添加排序和分页
-	query += " ORDER BY line_number DESC"
+	query += " ORDER BY line_number ASC"
 
 	if filter.Limit > 0 {
 		query += " LIMIT ?"
@@ -220,6 +227,7 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 		args = append(args, filter.Offset)
 	}
 
+	fmt.Printf("查询日志文件: %s, \n参数: %+v", query, args)
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查询日志条目失败: %w", err)
@@ -233,10 +241,13 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 			&entry.ID,
 			&entry.LogTime,
 			&entry.SaveTime,
+			&entry.Module,
 			&entry.Level,
+			&entry.Process,
 			&entry.Thread,
 			&entry.Class,
 			&entry.ClassLine,
+			&entry.Tag,
 			&entry.Message,
 			&entry.Content,
 			&entry.Source,
@@ -295,6 +306,11 @@ func (d *Database) GetLogStats(fileID string, filter LogFilter) (LogStats, error
 	if filter.Source != "" {
 		query += " AND source LIKE ?"
 		args = append(args, "%"+filter.Source+"%")
+	}
+
+	if filter.Module != "" {
+		query += " AND module = ?"
+		args = append(args, filter.Module)
 	}
 
 	// 获取总条目数

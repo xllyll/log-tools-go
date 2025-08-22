@@ -7,7 +7,7 @@ storage:
   upload_dir: "./uploads" # 上传文件保存路径
   log_dir: "./logs" # 日志保存路径
   max_file_size: 104857600  # 上传文件大小限制 100MB in bytes
-  database_path: "./logs.db"  # SQLite数据库文件路径
+  database_path: "./logs_v1.db"  # SQLite数据库文件路径
 
 log_levels:
   ERROR: "#dc3545"    # 红色
@@ -24,5 +24,5 @@ filters:
   include_patterns: []
 
 ai:
-  api_key: "sk-xxxxxx"
-  model: "qwen3-coder-flash"
+  api_key: "sk-2d7b4b20d97d47bfbeb0cdd6b872b70f"
+  model: "qwen3-coder-flash-2025-07-28"

@@ -4,22 +4,58 @@
         "rule": {
             "timestamp": "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
             "timestamp_format": "YYYY-MM-dd hh:mm:ss",
-            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
+            "process":"",
             "thread": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[([^\\]]+)\\]",
+            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
+            "module":"",
             "class": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[[^\\]]+\\] \\w+\\s+([a-zA-Z][\\w.]*)",
             "class_line": "",
+            "tag": "",
             "message": "->\\s*(.*)"
         }
+    },
+    {
+        "project_name": "BWIC",
+        "rule": {
+            "timestamp": "^(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3})",
+            "timestamp_format": "MM-dd hh:mm:ss.SSS",
+            "process":"^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+(\\d+)",
+            "thread": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+(\\d+)",
+            "level": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+([A-Z{1}])",
+            "module":"^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+([^:]+)",
+            "class": "",
+            "class_line": "",
+            "tag": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+[^:]+:\\s*([^\\s+]+)",
+            "message": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+[^:]+:\\s*[^\\s+]+\\s*(.*)$"
+        },
+        "modules":[{
+            "name": "DeviceService",
+            "scenes":[
+                {
+                    "name": "测试场景1",
+                    "keywords": [
+                        {
+                            "keyword": "[notify] ",
+                            "type": "notify",
+                            "desc": "这是一个测试写入【哈哈哈】的日志"
+                        }
+                    ]
+                }
+            ]
+        }]
     },
     {
         "project_name": "默认项目2",
         "rule": {
             "timestamp": "(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
             "timestamp_format": "MM-dd hh:mm:ss",
-            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
+            "process":"",
             "thread": "$[^$]+$",
+            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
+            "module":"",
             "class": "([a-zA-Z0-9.$]+)\\s*->",
             "class_line": "",
+            "tag": "",
             "message": ".*"
         }
     }
