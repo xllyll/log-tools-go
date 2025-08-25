@@ -36,8 +36,15 @@
                     "keywords": [
                         {
                             "keyword": "[notify] ",
-                            "type": "notify",
-                            "desc": "这是一个测试写入【哈哈哈】的日志"
+                            "mode": "",
+                            "desc": "这是一个测试写入【哈哈哈】的日志",
+                            "color": "#ff3333"
+                        },
+                        {
+                            "keyword": "[write] ",
+                            "mode": "",
+                            "desc": "写入数据提示",
+                            "color": "#33ff33"
                         }
                     ]
                 }

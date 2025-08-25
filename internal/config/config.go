@@ -55,6 +55,8 @@ type LogParseRule struct {
 type LogProjectKeyword struct {
 	Keyword string `json:"keyword"`
 	Desc    string `json:"desc"`
+	Mode    string `json:"mode"`
+	Color   string `json:"color"`
 }
 type LogProjectScene struct {
 	Name     string              `json:"name"`

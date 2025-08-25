@@ -14,10 +14,18 @@ body { margin: 0; padding: 0; background-color: #f5f7fa; }
 .log-message-time {background: #f0f0f0;width: 128px;color: #666666;flex-shrink: 0;}
 .log-message-thread { margin-left: 3px; color: #909399;}
 .log-message-class { margin-left: 3px; color: #909399;}
+.scene_line {display: inline-flex;align-items: center;}
+.scene_line .v1 {height:15px;line-height:15px;color: #8cc5ff;font-size: 12px;}
+.scene_line .v2 {height:15px;line-height:15px;color: #8cc5ff;background-color: #0b1c2c;font-size: 12px;border-radius: 8px;padding: 1px 2px;}
+.tooltip-view {  }
+.tooltip-view-content{
+    display: none;
+}
 .level-color-set {display: inline-flex;align-items: center;justify-content: center;}
 .el-upload-dragger { width: 280px; }
 .el-card__header { padding: 10px; font-weight: bold;background: linear-gradient(135deg, #8cc5ff55 0%, #8cc5ff99 50%, #8cc5ff 100%);}
 .el-dialog { margin-top: 10vh !important; }
+.el-collapse-item__header{height:auto;line-height: 20px;}
 .mt-5 { margin-top: 5px; }
 .mb-5 { margin-bottom: 5px; }
 .ml-5 { margin-left: 5px; }

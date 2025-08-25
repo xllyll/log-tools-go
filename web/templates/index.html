@@ -59,7 +59,7 @@
                         <el-tab-pane label="日志管理" name="settings">
                             <el-card>
                                 <div slot="header">过滤设置</div>
-                                <el-form :model="filterForm" size="small">
+                                <el-form :model="filterForm" size="mini" label-width="80px">
                                     <el-form-item label="日志级别">
                                         <el-select multiple placeholder="请选择日志级别" style="width: 100%;"
                                                    v-model="filterForm.levels">
@@ -68,15 +68,15 @@
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="模块">
-                                        <el-select multiple placeholder="请选择日志模块" style="width: 100%;"
+                                        <el-select clearable placeholder="请选择日志模块" style="width: 100%;"
                                                    v-model="filterForm.module" @change="onSelectModule">
                                             <el-option v-for="(module,m_index) in selectedProject.modules" :key="m_index"
                                                        :value="module.name" :label="module.name"/>
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="场景">
-                                        <el-select multiple placeholder="请选择日志模块" style="width: 100%;"
-                                                   v-model="selectedModuleName" @change="onSelectModuleScene">
+                                        <el-select placeholder="请选择日志模块" style="width: 100%;"
+                                                   v-model="selectedSceneName" @change="onSelectModuleScene">
                                             <el-option v-for="(scene,s_index) in selectedModule.scenes" :key="s_index"
                                                        :value="scene.name" :label="scene.name"/>
                                         </el-select>
@@ -85,11 +85,9 @@
                                         <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索"
                                                   clearable></el-input>
                                     </el-form-item>
-                                    <el-form-item>
-                                        <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索
-                                        </el-button>
-                                    </el-form-item>
                                 </el-form>
+                                <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索
+                                </el-button>
                             </el-card>
                             <el-card style="margin-top: 20px;">
                                 <div slot="header">已上传文件</div>
@@ -141,10 +139,13 @@
                                         <div class="log-message-thread" v-if="settingForm.showThread"
                                              :style="{color:settingForm.threadColor}">[{{ log.thread }}]
                                         </div>
+                                        <div class="log-message-level" v-if="settingForm.showModule"
+                                             :style="{color:settingForm.moduleColor}">[{{ log.module }}]
+                                        </div>
                                         <div class="log-message-class" v-if="settingForm.showClass"
                                              :style="{color:settingForm.classColor}">[{{ log.class }}]
                                         </div>
-                                        <div style="flex: 1;padding-left: 2px;border-bottom: 1px solid #f0c78a;"
+                                        <div style="flex: 1;padding-left: 2px;"
                                              :style="{color: settingForm.color}"
                                              v-html="highlightKeywords(log.message)">
                                         </div>

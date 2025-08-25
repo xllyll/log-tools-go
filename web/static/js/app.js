@@ -23,20 +23,23 @@ new Vue({
             availableLevels: [],
             levelColorMap: {},
             filterForm: {levels: [], keywords: ''},
+            projectList: [],
             selectedProject: {},
             selectedProjectName: '',
-            selectedModules:[],
             selectedModule:{},
             selectedModuleName: '',
-            projectList: [],
+            selectedSceneName: '',
+            keywords:[],
             showDialog:false,
             settingForm:{
                 color:'#666666',
                 fontSize: 12,
                 threadColor: '#409EFF',
+                moduleColor: '#40900F',
                 classColor: '#409EFF',
                 showTime: true,
                 showThread: true,
+                showModule: true,
                 showClass: false,
                 showClassLine: false,
             },
@@ -54,7 +57,6 @@ new Vue({
                 message:'RedisDao init success'
             },
             aiRuleRes:'',
-            keywords:[]
         }
     },
     mounted() {
@@ -121,24 +123,34 @@ new Vue({
             }
         },
         onSelectModule(e){
-            console.log('onSelectModule',e)
+            if (e== null){
+                this.selectedModule = null;
+                this.selectedSceneName = null;
+                this.keywords = [];
+                return
+            }
+            console.log('onSelectModule',e.toString())
             this.selectedProject.modules.forEach( module=>{
-                if (module.name === e) {
+                if (module.name === e.toString()) {
                     this.selectedModule = module;
-                    this.moduleSceneList = module.scenes;
                 }
             })
+            console.log('selectedModule',this.selectedModule)
         },
         onSelectModuleScene(e){
             console.log('onSelectModuleScene',e)
-            let scene = null;
-            for (let i = 0; i < this.moduleSceneList.length; i++) {
-                if (this.moduleSceneList[i].name === e) {
-                    scene = this.moduleSceneList[i];
-                    break;
-                }
+            if (e== null){
+                this.selectedSceneName = null;
+                this.keywords = [];
             }
-            this.keywords = scene.keywords;
+            if (this.selectedModule){
+                this.selectedModule.scenes.forEach( scene=>{
+                    if (scene.name === e.toString()) {
+                        this.keywords = scene.keywords;
+                    }
+                })
+            }
+            console.log('keywords',this.keywords)
         },
         loadFileList() {
             fetch('/api/files')
@@ -176,10 +188,9 @@ new Vue({
                     console.error('加载日志级别失败:', error);
                 });
         },
-
+        /** 加载日志内容列表 */
         loadLogs() {
             if (!this.currentFileId) return;
-
             this.loading = true;
             const params = new URLSearchParams({
                 file_id: this.currentFileId,
@@ -195,7 +206,6 @@ new Vue({
             if (this.filterForm.keywords) {
                 params.append('keywords', this.filterForm.keywords);
             }
-
             fetch(`/api/logs?${params}`)
                 .then(response => response.json())
                 .then(data => {
@@ -453,6 +463,10 @@ new Vue({
             return `4px solid ${color}`;
         },
         highlightKeywords(text) {
+            let line = this.formatSceneKeywords(text);
+            if(line!==null){
+                return line;
+            }
             const keywords = [this.filterForm.keywords]
             // 先 HTML 转义，防止 XSS
             const escaped = text
@@ -461,17 +475,34 @@ new Vue({
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#x27;');
-
             // 关键：使用 (A|B|C) 捕获组，而不是 [A|B|C]
             const escapedKeywords = keywords
                 .filter(k => k) // 过滤空字符串
                 .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); // 转义正则特殊字符
-
             if (escapedKeywords.length === 0) return escaped;
-
             const regex = new RegExp(`(${escapedKeywords.join('|')})`, 'gi');
-
             return escaped.replace(regex, '<mark style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 0 1px; border-radius: 3px; font-weight: bold;border: 1px solid #ff0000;">$1</mark>');
+        },
+        formatSceneKeywords(line){
+            if (this.keywords!=null){
+                for (let i = 0; i < this.keywords.length; i++){
+                    let key = this.keywords[i];
+                    let keyword = key.keyword;
+                    if (line.includes(keyword)){
+                        line = `
+                            <div class="tooltip-view">
+                              <div class="tooltip-view-content">${key.desc}</div>
+                              <div class="scene_line">
+                                <span class="v1" style="color: ${key.color || '#667eea'}">${line}</span>
+                                <span class="v2">${key.desc}</span>
+                              </div>
+                            </div>
+                        `
+                        return  line
+                    }
+                }
+            }
+            return null;
         },
         aiGenerateLogRule(){
             this.aiLoading = true;
