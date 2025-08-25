@@ -4,6 +4,7 @@ go 1.24
 
 require (
 	github.com/gin-gonic/gin v1.9.1
+	github.com/openai/openai-go v0.1.0-alpha.62
 	github.com/spf13/viper v1.18.2
 	modernc.org/sqlite v1.38.2
 )
@@ -30,7 +31,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/openai/openai-go v0.1.0-alpha.62 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect

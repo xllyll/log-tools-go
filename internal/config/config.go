@@ -53,10 +53,10 @@ type LogParseRule struct {
 	Message         string `json:"message"`          // 日志内容正则表达式
 }
 type LogProjectKeyword struct {
-	Keyword string `json:"keyword"`
-	Desc    string `json:"desc"`
-	Mode    string `json:"mode"`
-	Color   string `json:"color"`
+	Keyword string `json:"keyword"` // 关键词
+	Desc    string `json:"desc"`    // 描述
+	Mode    string `json:"mode"`    // 匹配模式[word,regular]
+	Color   string `json:"color"`   // 颜色
 }
 type LogProjectScene struct {
 	Name     string              `json:"name"`

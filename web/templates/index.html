@@ -40,14 +40,7 @@
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="上传日志">
-                                        <el-upload
-                                                :http-request="handleUpload"
-                                                action="#"
-                                                drag
-                                                :show-file-list="false"
-                                                accept=".log,.txt,.zip,.gz"
-                                                style="width: 100%;"
-                                        >
+                                        <el-upload :http-request="handleUpload" action="#" drag :show-file-list="false"  accept=".log,.txt,.zip,.gz" style="width: 100%;">
                                             <i class="el-icon-upload" style="font-size: 48px; color: #409EFF;"></i>
                                             <div class="el-upload__text">将文件拖到此处，或 <em>点击上传</em></div>
                                             <div class="el-upload__tip" slot="tip">支持 .log、.txt、.zip、.gz 文件</div>
@@ -61,29 +54,22 @@
                                 <div slot="header">过滤设置</div>
                                 <el-form :model="filterForm" size="mini" label-width="80px">
                                     <el-form-item label="日志级别">
-                                        <el-select multiple placeholder="请选择日志级别" style="width: 100%;"
-                                                   v-model="filterForm.levels">
-                                            <el-option v-for="(node,index) in availableLevels" :key="index"
-                                                       :value="node.level" :label="node.level"/>
+                                        <el-select multiple placeholder="请选择日志级别" style="width: 100%;" v-model="filterForm.levels">
+                                            <el-option v-for="(node,index) in availableLevels" :key="index" :value="node.level" :label="node.level"/>
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="模块">
-                                        <el-select clearable placeholder="请选择日志模块" style="width: 100%;"
-                                                   v-model="filterForm.module" @change="onSelectModule">
-                                            <el-option v-for="(module,m_index) in selectedProject.modules" :key="m_index"
-                                                       :value="module.name" :label="module.name"/>
+                                        <el-select clearable placeholder="请选择日志模块" style="width: 100%;" v-model="filterForm.module" @change="onSelectModule">
+                                            <el-option v-for="(module,m_index) in selectedProject.modules" :key="m_index" :value="module.name" :label="module.name"/>
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="场景">
-                                        <el-select placeholder="请选择日志模块" style="width: 100%;"
-                                                   v-model="selectedSceneName" @change="onSelectModuleScene">
-                                            <el-option v-for="(scene,s_index) in selectedModule.scenes" :key="s_index"
-                                                       :value="scene.name" :label="scene.name"/>
+                                        <el-select clearable placeholder="请选择日志模块" style="width: 100%;" v-model="selectedSceneName" @change="onSelectModuleScene">
+                                            <el-option v-for="(scene,s_index) in selectedModule.scenes" :key="s_index" :value="scene.name" :label="scene.name"/>
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="关键词">
-                                        <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索"
-                                                  clearable></el-input>
+                                        <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索" clearable></el-input>
                                     </el-form-item>
                                 </el-form>
                                 <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索
@@ -117,8 +103,7 @@
             <el-card style="width: 100%; min-height: 560px;" v-loading="loading">
                 <div slot="header" class="clearfix">
                     <span>日志内容 总数:{{ totalLogs }}</span>
-                    <el-button style="float: right; padding: 3px 0" type="text" @click.stop="analyzeLogs">AI分析
-                    </el-button>
+                    <el-button style="float: right; padding: 3px 0" type="text" @click.stop="analyzeLogs">AI分析</el-button>
                 </div>
                 <div v-if="loading">正在加载日志...</div>
                 <div v-if="!currentFileId">请上传日志文件开始分析</div>
@@ -126,7 +111,6 @@
                     <el-empty description="暂无数据"></el-empty>
                 </div>
                 <div v-if="currentFileId && logs.length > 0">
-
                     <el-collapse accordion>
                         <el-collapse-item v-for="(log,index) in logs" :name="index" :key="index">
                             <template #title="{ isActive }">
@@ -157,17 +141,19 @@
                         </el-collapse-item>
                     </el-collapse>
 
-                    <el-pagination
-                            v-if="totalLogs > 0"
-                            @size-change="handleSizeChange"
-                            @current-change="handlePageChange"
-                            :current-page="currentPage + 1"
-                            :page-size="pageSize"
-                            :page-sizes="[100, 200, 500, 1000]"
-                            layout="sizes,prev, pager, next, total"
-                            :total="totalLogs"
-                            style="margin-top: 20px; text-align: center;">
-                    </el-pagination>
+                    <div class="page-footer">
+                        <el-pagination
+                                v-if="totalLogs > 0"
+                                @size-change="handleSizeChange"
+                                @current-change="handlePageChange"
+                                :current-page="currentPage + 1"
+                                :page-size="pageSize"
+                                :page-sizes="[100, 200, 500, 1000]"
+                                layout="sizes,prev, pager, next, total"
+                                :total="totalLogs"
+                                style="margin-top: 20px; text-align: center;">
+                        </el-pagination>
+                    </div>
                 </div>
             </el-card>
         </div>
