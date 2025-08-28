@@ -397,7 +397,7 @@ new Vue({
             const file = option.file;
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('project_name', this.selectedProject);
+            formData.append('project_name', this.selectedProjectName);
             this.uploading = true;
             fetch('/api/upload', {method: 'POST',  body: formData}).then(res => res.json()).then(data => {
                     this.uploading = false;

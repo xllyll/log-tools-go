@@ -8,6 +8,8 @@ import (
 	"log-tools-go/internal/handler"
 	"log-tools-go/internal/model"
 	"log-tools-go/internal/service"
+	"os/exec"
+	"runtime"
 )
 
 func InitRouter(r *gin.Engine, cfg *config.Config) {
@@ -59,5 +61,26 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 		api.POST("/logs/analysis", aiHandler.AnalysisLog)
 		api.POST("/logs/analysis/stream", aiHandler.AnalysisLogStream)
 		api.POST("/logs/rule/generate", aiHandler.GenerateLogRule)
+	}
+}
+
+// 打开浏览器
+func OpenBrowser(url string) {
+	var err error
+
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin": // macOS
+		err = exec.Command("open", url).Start()
+	default:
+		log.Printf("不支持的操作系统: %s", runtime.GOOS)
+		return
+	}
+
+	if err != nil {
+		log.Printf("无法打开浏览器: %v", err)
 	}
 }

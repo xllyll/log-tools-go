@@ -1,20 +1,5 @@
 [
     {
-        "project_name": "默认项目",
-        "rule": {
-            "timestamp": "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
-            "timestamp_format": "YYYY-MM-dd hh:mm:ss",
-            "process":"",
-            "thread": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[([^\\]]+)\\]",
-            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
-            "module":"",
-            "class": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[[^\\]]+\\] \\w+\\s+([a-zA-Z][\\w.]*)",
-            "class_line": "",
-            "tag": "",
-            "message": "->\\s*(.*)"
-        }
-    },
-    {
         "project_name": "BWIC",
         "rule": {
             "timestamp": "^(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3})",
@@ -50,6 +35,21 @@
                 }
             ]
         }]
+    },
+    {
+        "project_name": "SpringBoot项目",
+        "rule": {
+            "timestamp": "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
+            "timestamp_format": "YYYY-MM-dd hh:mm:ss",
+            "process":"",
+            "thread": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[([^\\]]+)\\]",
+            "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
+            "module":"",
+            "class": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[[^\\]]+\\] \\w+\\s+([a-zA-Z][\\w.]*)",
+            "class_line": "",
+            "tag": "",
+            "message": "->\\s*(.*)"
+        }
     },
     {
         "project_name": "默认项目2",

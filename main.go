@@ -43,6 +43,8 @@ func main() {
 	fmt.Printf("正在启动服务器: http://%s\n", addr)
 	fmt.Println("🌐日志分析工具已就绪，请访问 🌐http://" + addr)
 	fmt.Println("按 Ctrl+C 停止服务器")
+	// 打开浏览器
+	router.OpenBrowser("http://" + addr)
 
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
