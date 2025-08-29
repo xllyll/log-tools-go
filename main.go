@@ -39,14 +39,19 @@ func main() {
 	router.InitRouter(r, cfg)
 
 	// 启动服务器
-	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	fmt.Printf("正在启动服务器: http://%s\n", addr)
-	fmt.Println("🌐日志分析工具已就绪，请访问 🌐http://" + addr)
+	addr1 := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+
+	// 获取IP地址
+	ip := router.GetLocalIP()
+	addr2 := fmt.Sprintf("%s:%d", ip, cfg.Server.Port)
+	fmt.Printf("正在启动服务器: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
+	fmt.Println("🌐日志分析工具已就绪，请访问 🌐http://" + addr1)
+	fmt.Println("🌐日志分析工具已就绪，请访问 🌐http://" + addr2)
 	fmt.Println("按 Ctrl+C 停止服务器")
 	// 打开浏览器
-	router.OpenBrowser("http://" + addr)
+	router.OpenBrowser("http://" + addr1)
 
-	if err := r.Run(addr); err != nil {
+	if err := r.Run(addr1); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
 	}
 }

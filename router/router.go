@@ -2,14 +2,16 @@ package router
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"log-tools-go/internal/config"
 	"log-tools-go/internal/handler"
 	"log-tools-go/internal/model"
 	"log-tools-go/internal/service"
+	"log-tools-go/pkg/xip"
 	"os/exec"
 	"runtime"
+
+	"github.com/gin-gonic/gin"
 )
 
 func InitRouter(r *gin.Engine, cfg *config.Config) {
@@ -83,4 +85,9 @@ func OpenBrowser(url string) {
 	if err != nil {
 		log.Printf("无法打开浏览器: %v", err)
 	}
+}
+
+// 获取本机IP
+func GetLocalIP() string {
+	return xip.GetLocalIP()
 }
