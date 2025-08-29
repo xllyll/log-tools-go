@@ -1,0 +1,184 @@
+/* 暗黑主题基础样式 */
+body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.app-container {
+    background-color: #1a1a1a;
+}
+
+.header {
+    background: linear-gradient(135deg, #3a4a8a 0%, #4a2a72 100%) !important;
+}
+
+.sidebar {
+    background-color: #2d2d2d !important;
+    border-right: 1px solid #444 !important;
+}
+
+.content-area {
+    background-color: #252525 !important;
+}
+
+.file-list {
+    background: #444 !important;
+    color: #ddd !important;
+}
+
+.file-list:hover {
+    background: #555 !important;
+}
+
+.file-list.select {
+    background: #3a4a8a !important;
+    color: #fff !important;
+}
+
+.log-entry {
+    background-color: #333 !important;
+    color: #ccc !important;
+    border-left-color: #666 !important;
+}
+
+.log-entry:hover {
+    background-color: #3a3a3a !important;
+}
+
+.log-entry.active {
+    background-color: #3a4a8a !important;
+    color: #fff !important;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar-track {
+    background: #2a2a2a !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #555 !important;
+    border-color: #3a4a8a !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #666 !important;
+}
+
+/* 表格样式 */
+table {
+    border-color: #666 !important;
+}
+
+th, td {
+    border-color: #555 !important;
+    background-color: #333 !important;
+}
+
+/* Element UI 组件适配 */
+.el-card {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #fff !important;
+}
+
+.el-card__header {
+    background: linear-gradient(135deg, #3a4a8a55 0%, #3a4a8a99 50%, #3a4a8a 100%) !important;
+    border-bottom-color: #444 !important;
+    color: #fff !important;
+}
+
+.el-upload-dragger{
+    background-color: #333 !important;
+    border-color: #555 !important;
+}
+
+.el-tabs__item {
+    color: #ccc !important;
+}
+
+.el-tabs__item.is-active {
+    color: #409EFF !important;
+}
+
+.el-tabs__active-bar {
+    background-color: #409EFF !important;
+}
+
+.el-tabs__nav-wrap::after {
+    background-color: #444 !important;
+}
+
+.el-input__inner {
+    background-color: #333 !important;
+    border-color: #555 !important;
+    color: #eee !important;
+}
+
+.el-select-dropdown {
+    background-color: #333 !important;
+    border-color: #555 !important;
+}
+
+.el-select-dropdown__item {
+    color: #eee !important;
+}
+
+.el-select-dropdown__item.hover {
+    background-color: #444 !important;
+}
+
+.el-button {
+    background-color: #333 !important;
+    border-color: #555 !important;
+    color: #eee !important;
+}
+
+.el-button--primary {
+    background-color: #409EFF !important;
+    border-color: #409EFF !important;
+}
+
+.el-dialog {
+    background-color: #2d2d2d !important;
+}
+
+.el-dialog__header {
+    border-bottom-color: #444 !important;
+}
+
+.el-dialog__title {
+    color: #eee !important;
+}
+
+.el-form-item__label {
+    color: #ccc !important;
+}
+
+.el-pagination button,
+.el-pagination span:not([class*=suffix]) {
+    background-color: #2d2d2d !important;
+    color: #eee !important;
+}
+
+.el-pagination__jump {
+    color: #ccc !important;
+}
+
+.el-pagination__editor.el-input .el-input__inner {
+    background-color: #333 !important;
+}
+.el-collapse-item__header{
+    background-color: #333 !important;
+    border-bottom-color: #444 !important;
+    color: #fff !important;
+}
+.el-loading-mask{
+    background-color: rgba(0, 0, 0, 0.7) !important;
+}
+.el-message-box{
+    background-color: #333 !important;
+    border-color: #555 !important;
+}
+.el-message-box__content{
+    color: #eee !important;
+}

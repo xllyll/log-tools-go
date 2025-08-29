@@ -50,8 +50,8 @@ func main() {
 	fmt.Println("按 Ctrl+C 停止服务器")
 	// 打开浏览器
 	router.OpenBrowser("http://" + addr1)
-
-	if err := r.Run(addr1); err != nil {
+	runIp := fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port)
+	if err := r.Run(runIp); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
 	}
 }

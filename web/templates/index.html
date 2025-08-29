@@ -20,7 +20,10 @@
 </head>
 <body>
 <div id="app" class="app-container">
-    <log-header-view @on-setting="showSettings"></log-header-view>
+    <log-header-view 
+        @on-setting="showSettings"
+        @dark-mode-toggle="toggleDarkMode"
+    ></log-header-view>
     <div class="main-content">
         <div class="sidebar">
             <el-container style="height: 100%;">
