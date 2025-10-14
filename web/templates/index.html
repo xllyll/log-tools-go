@@ -192,18 +192,32 @@
                                 </div>
                             </div>
                         </el-form-item>
-                        <el-form-item label="显示时间">
-                            <el-switch v-model="settingForm.showTime" active-text="显示"
-                                       inactive-text="隐藏"></el-switch>
-                        </el-form-item>
-                        <el-form-item label="显示线程">
-                            <el-switch v-model="settingForm.showThread" active-text="显示"
-                                       inactive-text="隐藏"></el-switch>
-                        </el-form-item>
-                        <el-form-item label="显示类名">
-                            <el-switch v-model="settingForm.showClass" active-text="显示"
-                                       inactive-text="隐藏"></el-switch>
-                        </el-form-item>
+                        <el-row>
+                            <el-col :span="8">
+                                <el-form-item label="显示时间">
+                                    <el-switch v-model="settingForm.showTime" active-text="显示"
+                                               inactive-text="隐藏"></el-switch>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="显示模块">
+                                    <el-switch v-model="settingForm.showModule" active-text="显示"
+                                               inactive-text="隐藏"></el-switch>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="显示线程">
+                                    <el-switch v-model="settingForm.showThread" active-text="显示"
+                                               inactive-text="隐藏"></el-switch>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="显示类名">
+                                    <el-switch v-model="settingForm.showClass" active-text="显示" inactive-text="隐藏"></>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+
 
                     </el-form>
                 </el-card>
