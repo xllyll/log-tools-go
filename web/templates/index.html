@@ -68,11 +68,14 @@
                                     </el-form-item>
                                     <el-form-item label="场景">
                                         <el-select clearable placeholder="请选择日志模块" style="width: 100%;" v-model="selectedSceneName" @change="onSelectModuleScene">
-                                            <el-option v-for="(scene,s_index) in selectedModule.scenes" :key="s_index" :value="scene.name" :label="scene.name"/>
+                                            <el-option v-for="(scene,s_index) in ((selectedModule && selectedModule.scenes)?selectedModule.scenes : [])" :key="s_index" :value="scene.name" :label="scene.name"/>
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="关键词">
-                                        <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索" clearable></el-input>
+                                        <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索" clearable>
+                                            123
+                                            <el-tag>123</el-tag>
+                                        </el-input>
                                     </el-form-item>
                                 </el-form>
                                 <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索

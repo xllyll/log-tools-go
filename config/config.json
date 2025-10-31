@@ -30,6 +30,24 @@
                             "mode": "word",
                             "desc": "写入数据提示",
                             "color": "#33ff33"
+                        },
+                        {
+                            "keyword": "beginning of main",
+                            "mode": "word",
+                            "desc": "开机打印",
+                            "color": "#ff3333"
+                        },
+                        {
+                            "keyword": "00 09 0a",
+                            "mode": "word",
+                            "desc": "重启原因",
+                            "color": "#33ff33"
+                        },
+                        {
+                            "keyword": "SystemServer: Entered the Android system server",
+                            "mode": "word",
+                            "desc": "SystemServer启动",
+                            "color": "#33ff33"
                         }
                     ]
                 }

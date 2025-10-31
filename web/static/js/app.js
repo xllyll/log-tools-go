@@ -22,7 +22,11 @@ new Vue({
             totalLogs: 0,
             availableLevels: [],
             levelColorMap: {},
-            filterForm: {levels: [], keywords: ''},
+            filterForm: {
+                levels: [],
+                module: '',
+                keywords: ''
+            },
             projectList: [],
             selectedProject: {},
             selectedProjectName: '',
@@ -125,10 +129,12 @@ new Vue({
             }
         },
         onSelectModule(e) {
+            console.log('onSelectModule', e)
             if (e == null || e === '') {
                 this.selectedModule = null;
                 this.selectedSceneName = null;
                 this.keywords = [];
+                this.filterForm.module = null;
                 return
             }
             console.log('onSelectModule', e.toString())
@@ -137,7 +143,7 @@ new Vue({
                     this.selectedModule = module;
                 }
             })
-            console.log('selectedModule', this.selectedModule)
+            console.log('selectedModule end:', this.selectedModule)
         },
         onSelectModuleScene(e) {
             console.log('onSelectModuleScene', e)
@@ -206,7 +212,7 @@ new Vue({
                 limit: this.pageSize,
                 offset: this.currentPage * this.pageSize
             });
-            if (this.filterForm.module) {
+            if (this.filterForm.module && this.filterForm.module !== '') {
                 params.append('module', this.filterForm.module);
             }
             if (this.filterForm.levels.length > 0) {
@@ -412,7 +418,6 @@ new Vue({
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        debugger
                         this.projectList = data.data;
                         if (data.data.length > 0) {
                             this.selectedProject = data.data[0]
