@@ -186,3 +186,50 @@ func (h *UploadHandler) DeleteFile(c *gin.Context) {
 		"message": "文件删除成功",
 	})
 }
+
+// 批量删除文件
+func (h *UploadHandler) BatchDeleteFiles(c *gin.Context) {
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请至少选择一个文件",
+		})
+		return
+	}
+
+	// 删除所有指定的文件
+	var failedIDs []string
+	var lastError error
+	for _, id := range req.IDs {
+		if err := h.storage.DeleteFile(id); err != nil {
+			failedIDs = append(failedIDs, id)
+			lastError = err
+		}
+	}
+
+	if len(failedIDs) > 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("部分文件删除失败 (%d/%d): %v", len(failedIDs), len(req.IDs), lastError.Error()),
+			"data":    failedIDs,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("成功删除 %d 个文件", len(req.IDs)),
+	})
+}

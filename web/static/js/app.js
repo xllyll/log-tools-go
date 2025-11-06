@@ -63,6 +63,10 @@ new Vue({
                 message: 'RedisDao init success'
             },
             aiRuleRes: '',
+            // 批量删除相关
+            selectedFileIds: [],
+            selectAll: false,
+            batchDeleting: false,
         }
     },
     mounted() {
@@ -483,7 +487,71 @@ new Vue({
                 this.$message.info('已取消删除');
             });
         },
+        // 批量删除文件
+        batchRemoveFiles() {
+            if (this.selectedFileIds.length === 0) {
+                this.$message.warning('请至少选择一个文件');
+                return;
+            }
 
+            this.$confirm(`确定要删除选中的 ${this.selectedFileIds.length} 个文件吗?`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.batchDeleting = true;
+                fetch('/api/files/batch-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ids: this.selectedFileIds
+                    })
+                }).then(res => res.json())
+                    .then(data => {
+                        this.batchDeleting = false;
+                        if (data.success) {
+                            this.$message.success(data.message);
+                            this.selectedFileIds = [];
+                            this.selectAll = false;
+                            this.logs = [];
+                        } else {
+                            this.$message.error(data.message || '删除失败');
+                        }
+                    }).catch(() => {
+                    this.batchDeleting = false;
+                    this.$message.error('删除失败');
+                })
+            }).catch(() => {
+                this.$message.info('已取消删除');
+            });
+        },
+        // 处理文件选择变化
+        handleFileSelectChange(selected, fileId) {
+            if (selected) {
+                // 添加到选中列表
+                if (!this.selectedFileIds.includes(fileId)) {
+                    this.selectedFileIds.push(fileId);
+                }
+            } else {
+                // 从选中列表移除
+                this.selectedFileIds = this.selectedFileIds.filter(id => id !== fileId);
+            }
+            
+            // 更新全选状态
+            this.selectAll = this.selectedFileIds.length === this.files.length && this.files.length > 0;
+        },
+        // 处理全选变化
+        handleSelectAllChange(selectAll) {
+            if (selectAll) {
+                // 全选
+                this.selectedFileIds = this.files.map(file => file.id);
+            } else {
+                // 取消全选
+                this.selectedFileIds = [];
+            }
+        },
         getLevelColor(level) {
             let color = '#999999';
             switch (level) {

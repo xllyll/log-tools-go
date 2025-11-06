@@ -52,6 +52,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 		api.POST("/upload", uploadHandler.UploadFile)
 		api.GET("/files", uploadHandler.GetUploadedFiles)
 		api.DELETE("/files/:id", uploadHandler.DeleteFile)
+		api.POST("/files/batch-delete", uploadHandler.BatchDeleteFiles)
 
 		// 日志相关
 		api.GET("/logs", logHandler.GetLogs)
