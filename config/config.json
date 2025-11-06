@@ -1,6 +1,6 @@
 [
     {
-        "project_name": "BWIC",
+        "project_name": "默认项目",
         "rule": {
             "timestamp": "^(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3})",
             "timestamp_format": "MM-dd hh:mm:ss.SSS",
