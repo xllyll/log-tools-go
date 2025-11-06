@@ -64,3 +64,7 @@ type LogResponse struct {
 	Stats   LogStats   `json:"stats,omitempty"`
 	Error   string     `json:"error,omitempty"`
 }
+type R struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data,omitempty"`
+}

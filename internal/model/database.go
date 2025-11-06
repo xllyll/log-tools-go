@@ -404,3 +404,24 @@ func (d *Database) SearchLogs(fileID string, query string, limit int) ([]LogEntr
 
 	return entries, nil
 }
+
+func (s *Database) GetModuleOptions(fileID string) ([]*string, error) {
+	rows, err := s.db.Query(`
+		SELECT DISTINCT module
+		FROM log_entries
+		WHERE file_id = ?`, fileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var modules []*string
+	for rows.Next() {
+		var module string
+		err := rows.Scan(&module)
+		if err != nil {
+			return nil, err
+		}
+		modules = append(modules, &module)
+	}
+	return modules, nil
+}

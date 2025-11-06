@@ -191,3 +191,20 @@ func (h *LogHandler) SearchLogs(c *gin.Context) {
 		Stats:   stats,
 	})
 }
+
+func (h *LogHandler) GetModuleOptions(ctx *gin.Context) {
+	fileID := ctx.Query("file_id")
+	// 从数据库查询 （根据file_id）
+	moduleOptions, err := h.storage.GetModuleOptions(fileID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, model.LogResponse{
+			Success: false,
+			Error:   "获取模块选项失败: " + err.Error(),
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, model.R{
+		Success: true,
+		Data:    moduleOptions,
+	})
+}

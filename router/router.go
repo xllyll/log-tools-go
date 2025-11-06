@@ -58,6 +58,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 		api.GET("/logs/stats", logHandler.GetLogStats)
 		api.GET("/logs/levels", logHandler.GetLogLevels)
 		api.GET("/logs/search", logHandler.SearchLogs)
+		api.GET("/logs/module/options", logHandler.GetModuleOptions) // 获取日志模块选项
 
 		// Ai 日志分析
 		api.POST("/logs/analysis", aiHandler.AnalysisLog)

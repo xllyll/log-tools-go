@@ -207,3 +207,7 @@ func (s *StorageService) GetLogStats(fileID string, filter model.LogFilter) (mod
 func (s *StorageService) SearchLogs(fileID string, query string, limit int) ([]model.LogEntry, error) {
 	return s.database.SearchLogs(fileID, query, limit)
 }
+
+func (s *StorageService) GetModuleOptions(fileID string) ([]*string, error) {
+	return s.database.GetModuleOptions(fileID)
+}
