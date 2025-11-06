@@ -4,7 +4,7 @@ body { margin: 0; padding: 0; background-color: #f5f7fa; }
 .main-content { flex: 1; display: flex; margin-top: 80px; height: calc(100vh - 80px)}
 .sidebar { position: fixed;left: 0;top: 80px;width: 350px; height: calc(100vh - 80px);overflow-y: auto;background: white; border-right: 1px solid #e6e6e6; }
 .content-area { position: fixed;right: 0;top: 80px; left: 350px;padding: 10px; height: calc(100vh - 80px);overflow-y: auto;}
-.file-list {margin-bottom: 8px; cursor: pointer;font-size: 12px;border-radius: 8px;background: #d0d0d0;padding: 5px;}
+.file-list {position:relative;margin-bottom: 8px; cursor: pointer;font-size: 12px;border-radius: 8px;background: #eaeaea;padding: 5px;}
 .file-list:hover { background: #f0f0f0; }
 .file-list.select { background: #667eea; color: #fff;border: 2px solid #f0f0f0;}
 .log-entry {  width: 100%;border-left: 4px solid #909399; margin: 4px 0;color: #909399; background: white; border-radius: 4px; cursor: pointer; }
@@ -33,6 +33,23 @@ body { margin: 0; padding: 0; background-color: #f5f7fa; }
 .flex-row { display: flex; flex-direction: row; }
 .flex-column { display: flex; flex-direction: column; }
 .flex-row-center { display: flex; flex-direction: row; justify-content: center; align-items: center; }
+.delete-file-btn{
+    position: absolute;
+    right: -8px;
+    top: -8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #d91e18aa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &:hover{
+        background: red;
+        color: white;
+        transform: scale(1.2);
+    }
+}
 table{
     /** 添加线条 */
     border: 2px solid #999999; /* 外边框 */
