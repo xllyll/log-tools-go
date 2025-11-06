@@ -11,7 +11,7 @@ body { margin: 0; padding: 0; background-color: #f5f7fa; }
 .log-entry:hover { background: #f0f0f0; }
 .log-entry.active { background: #667eea; color: #fff; }
 .log-message { margin-top: 8px; word-wrap: break-word; }
-.log-message-time {background: #f0f0f0;width: 128px;color: #666666;flex-shrink: 0;}
+.log-message-time {background: #f0f0f0;width: 132px;color: #666666;flex-shrink: 0;}
 .log-message-thread { margin-left: 3px; color: #909399;}
 .log-message-class { margin-left: 3px; color: #909399;}
 .scene_line {display: inline-flex;align-items: center;}

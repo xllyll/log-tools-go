@@ -125,17 +125,21 @@
                                     <div class="flex-row"
                                          style="font-size: 14px;white-space: nowrap;overflow: hidden;align-items: center;">
                                         <span class="log-message-time"
-                                              v-if="settingForm.showTime">{{ formatTime(log.log_time) }}</span>
-                                        <div class="log-message-thread" v-if="settingForm.showThread"
+                                              v-if="!settingForm.showAll && settingForm.showTime">{{ formatTime(log.log_time) }}</span>
+                                        <div class="log-message-thread" v-if="!settingForm.showAll && settingForm.showThread"
                                              :style="{color:settingForm.threadColor}">[{{ log.thread }}]
                                         </div>
-                                        <div class="log-message-level" v-if="settingForm.showModule"
+                                        <div class="log-message-level" v-if="!settingForm.showAll && settingForm.showModule"
                                              :style="{color:settingForm.moduleColor}">[{{ log.module }}]
                                         </div>
-                                        <div class="log-message-class" v-if="settingForm.showClass"
+                                        <div class="log-message-class" v-if="!settingForm.showAll && settingForm.showClass"
                                              :style="{color:settingForm.classColor}">[{{ log.class }}]
                                         </div>
-                                        <div style="flex: 1;padding-left: 2px;"
+                                        <div v-if="settingForm.showAll" style="flex: 1;padding-left: 2px;"
+                                             :style="{color: settingForm.color}"
+                                             v-html="highlightKeywords(log.content)">
+                                        </div>
+                                        <div v-else style="flex: 1;padding-left: 2px;"
                                              :style="{color: settingForm.color}"
                                              v-html="highlightKeywords(log.message)">
                                         </div>
