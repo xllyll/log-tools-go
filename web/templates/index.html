@@ -43,10 +43,10 @@
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="上传日志">
-                                        <el-upload :http-request="handleUpload" action="#" drag :show-file-list="false"  accept=".log,.txt,.zip,.gz" style="width: 100%;">
+                                        <el-upload :http-request="handleUpload" action="#" drag multiple :show-file-list="false"  accept=".log,.txt,.zip,.gz" style="width: 100%;">
                                             <i class="el-icon-upload" style="font-size: 48px; color: #409EFF;"></i>
                                             <div class="el-upload__text">将文件拖到此处，或 <em>点击上传</em></div>
-                                            <div class="el-upload__tip" slot="tip">支持 .log、.txt、.zip、.gz 文件</div>
+                                            <div class="el-upload__tip" slot="tip">支持 .log、.txt、.zip、.gz、.7z 文件</div>
                                         </el-upload>
                                     </el-form-item>
                                 </el-form>

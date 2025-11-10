@@ -168,6 +168,7 @@ new Vue({
             fetch('/api/files')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('loadFileList', data)
                     if (data.success && data.data) {
                         this.files = data.data;
                     } else {
@@ -175,6 +176,7 @@ new Vue({
                     }
                 })
                 .catch(error => {
+                    this.files = [];
                     console.error('加载文件列表失败:', error);
                 });
         },
@@ -549,18 +551,18 @@ new Vue({
                     body: JSON.stringify({
                         ids: this.selectedFileIds
                     })
-                }).then(res => res.json())
-                    .then(data => {
-                        this.batchDeleting = false;
-                        if (data.success) {
-                            this.$message.success(data.message);
-                            this.selectedFileIds = [];
-                            this.selectAll = false;
-                            this.logs = [];
-                        } else {
-                            this.$message.error(data.message || '删除失败');
-                        }
-                    }).catch(() => {
+                }).then(res => res.json()).then(data => {
+                    this.batchDeleting = false;
+                    if (data.success) {
+                        this.$message.success(data.message);
+                        this.selectedFileIds = [];
+                        this.selectAll = false;
+                        this.logs = [];
+                        this.loadFileList();
+                    } else {
+                        this.$message.error(data.message || '删除失败');
+                    }
+                }).catch(() => {
                     this.batchDeleting = false;
                     this.$message.error('删除失败');
                 })
