@@ -12,6 +12,7 @@ new Vue({
             activeTab: 'upload',
             uploadUrl: '/api/upload',
             uploading: false,
+            uploadFiles:[],
             files: [],
             currentFileId: null,
             logs: [],
@@ -478,7 +479,8 @@ new Vue({
                 });
         },
         handleUpload(option) {
-            console.log(option)
+            console.log('handleUpload:',option)
+            console.log('handleUpload:',this.uploadFiles)
             const file = option.file;
             const formData = new FormData();
             formData.append('file', file);
