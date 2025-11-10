@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log-tools-go/internal/config"
 	_ "modernc.org/sqlite"
+	"strings"
 	"time"
 )
 
@@ -168,23 +169,31 @@ func (d *Database) GetLogFiles() ([]LogFile, error) {
 
 // 获取日志条目
 func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, error) {
-	query := `
-		SELECT id, log_time, save_time, module ,level, process, thread, class, class_line, tag,message, content, source, line_number, color
-		FROM log_entries
-		WHERE file_id = ?`
-	args := []interface{}{fileID}
+	// 检查fileID是否包含多个ID（逗号分隔）
+	fileIDs := strings.Split(fileID, ",")
+
+	query := `SELECT id, log_time, save_time, module, level, process, thread, class, class_line, tag, message, content, source, line_number, color FROM log_entries`
+	args := make([]interface{}, 0)
+
+	if len(fileIDs) > 0 {
+		// 构建IN查询
+		placeholders := strings.Repeat("?,", len(fileIDs)-1) + "?"
+		query += " WHERE file_id IN (" + placeholders + ")"
+		for _, id := range fileIDs {
+			args = append(args, strings.TrimSpace(id))
+		}
+	} else {
+		query += " WHERE file_id = ?"
+		args = append(args, fileID)
+	}
 
 	// 添加过滤条件
 	if len(filter.Levels) > 0 {
-		placeholders := ""
-		for i, _ := range filter.Levels {
-			if i > 0 {
-				placeholders += ","
-			}
-			placeholders += "?"
-			args = append(args, filter.Levels[i])
-		}
+		placeholders := strings.Repeat("?,", len(filter.Levels)-1) + "?"
 		query += " AND level IN (" + placeholders + ")"
+		for _, level := range filter.Levels {
+			args = append(args, level)
+		}
 	}
 
 	if len(filter.Keywords) > 0 {
@@ -215,7 +224,7 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 	}
 
 	// 添加排序和分页
-	query += " ORDER BY line_number ASC"
+	query += " ORDER BY log_time ASC, line_number ASC"
 
 	if filter.Limit > 0 {
 		query += " LIMIT ?"
@@ -227,7 +236,6 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 		args = append(args, filter.Offset)
 	}
 
-	fmt.Printf("查询日志文件: %s, \n参数: %+v", query, args)
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查询日志条目失败: %w", err)
@@ -269,21 +277,32 @@ func (d *Database) GetLogStats(fileID string, filter LogFilter) (LogStats, error
 		LevelCounts: make(map[string]int),
 	}
 
+	// 检查fileID是否包含多个ID（逗号分隔）
+	fileIDs := strings.Split(fileID, ",")
+
 	// 获取总条目数
-	query := "SELECT COUNT(*) FROM log_entries WHERE file_id = ?"
-	args := []interface{}{fileID}
+	query := "SELECT COUNT(*) FROM log_entries"
+	args := make([]interface{}, 0)
+
+	if len(fileIDs) > 0 {
+		// 构建IN查询
+		placeholders := strings.Repeat("?,", len(fileIDs)-1) + "?"
+		query += " WHERE file_id IN (" + placeholders + ")"
+		for _, id := range fileIDs {
+			args = append(args, strings.TrimSpace(id))
+		}
+	} else {
+		query += " WHERE file_id = ?"
+		args = append(args, fileID)
+	}
 
 	// 添加过滤条件
 	if len(filter.Levels) > 0 {
-		placeholders := ""
-		for i, _ := range filter.Levels {
-			if i > 0 {
-				placeholders += ","
-			}
-			placeholders += "?"
-			args = append(args, filter.Levels[i])
-		}
+		placeholders := strings.Repeat("?,", len(filter.Levels)-1) + "?"
 		query += " AND level IN (" + placeholders + ")"
+		for _, level := range filter.Levels {
+			args = append(args, level)
+		}
 	}
 
 	if len(filter.Keywords) > 0 {
@@ -319,34 +338,131 @@ func (d *Database) GetLogStats(fileID string, filter LogFilter) (LogStats, error
 		return stats, fmt.Errorf("获取总条目数失败: %w", err)
 	}
 
-	// 获取时间范围 - 修复时间类型转换
-	timeQuery := "SELECT MIN(log_time), MAX(log_time) FROM log_entries WHERE file_id = ?"
-	var startTimeStr, endTimeStr string
-	err = d.db.QueryRow(timeQuery, fileID).Scan(&startTimeStr, &endTimeStr)
+	// 获取时间范围
+	timeQuery := "SELECT MIN(log_time), MAX(log_time) FROM log_entries"
+	timeArgs := make([]interface{}, 0)
+
+	if len(fileIDs) > 0 {
+		// 构建IN查询
+		placeholders := strings.Repeat("?,", len(fileIDs)-1) + "?"
+		timeQuery += " WHERE file_id IN (" + placeholders + ")"
+		for _, id := range fileIDs {
+			timeArgs = append(timeArgs, strings.TrimSpace(id))
+		}
+	} else {
+		timeQuery += " WHERE file_id = ?"
+		timeArgs = append(timeArgs, fileID)
+	}
+
+	// 添加相同的过滤条件到时间查询
+	if len(filter.Levels) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.Levels)-1) + "?"
+		timeQuery += " AND level IN (" + placeholders + ")"
+		for _, level := range filter.Levels {
+			timeArgs = append(timeArgs, level)
+		}
+	}
+
+	if len(filter.Keywords) > 0 {
+		for _, keyword := range filter.Keywords {
+			timeQuery += " AND message LIKE ?"
+			timeArgs = append(timeArgs, "%"+keyword+"%")
+		}
+	}
+
+	if filter.StartTime != nil {
+		timeQuery += " AND log_time >= ?"
+		timeArgs = append(timeArgs, filter.StartTime)
+	}
+
+	if filter.EndTime != nil {
+		timeQuery += " AND log_time <= ?"
+		timeArgs = append(timeArgs, filter.EndTime)
+	}
+
+	if filter.Source != "" {
+		timeQuery += " AND source LIKE ?"
+		timeArgs = append(timeArgs, "%"+filter.Source+"%")
+	}
+
+	if filter.Module != "" {
+		timeQuery += " AND module = ?"
+		timeArgs = append(timeArgs, filter.Module)
+	}
+
+	var startTimeStr, endTimeStr sql.NullString
+	err = d.db.QueryRow(timeQuery, timeArgs...).Scan(&startTimeStr, &endTimeStr)
 	if err != nil && err != sql.ErrNoRows {
 		return stats, fmt.Errorf("获取时间范围失败: %w", err)
 	}
 
 	// 解析时间字符串
-	if startTimeStr != "" {
-		if t, err := time.Parse("2006-01-02 15:04:05", startTimeStr); err == nil {
+	if startTimeStr.Valid {
+		if t, err := time.Parse("2006-01-02 15:04:05", startTimeStr.String); err == nil {
 			stats.TimeRange.Start = t
 		}
 	}
-	if endTimeStr != "" {
-		if t, err := time.Parse("2006-01-02 15:04:05", endTimeStr); err == nil {
+	if endTimeStr.Valid {
+		if t, err := time.Parse("2006-01-02 15:04:05", endTimeStr.String); err == nil {
 			stats.TimeRange.End = t
 		}
 	}
 
 	// 获取各级别统计
-	levelQuery := `
-		SELECT level, COUNT(*) 
-		FROM log_entries 
-		WHERE file_id = ?
-		GROUP BY level`
+	levelQuery := `SELECT level, COUNT(*) FROM log_entries`
+	levelArgs := make([]interface{}, 0)
 
-	levelRows, err := d.db.Query(levelQuery, fileID)
+	if len(fileIDs) > 0 {
+		// 构建IN查询
+		placeholders := strings.Repeat("?,", len(fileIDs)-1) + "?"
+		levelQuery += " WHERE file_id IN (" + placeholders + ")"
+		for _, id := range fileIDs {
+			levelArgs = append(levelArgs, strings.TrimSpace(id))
+		}
+	} else {
+		levelQuery += " WHERE file_id = ?"
+		levelArgs = append(levelArgs, fileID)
+	}
+
+	// 添加相同的过滤条件到级别统计查询
+	if len(filter.Levels) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.Levels)-1) + "?"
+		levelQuery += " AND level IN (" + placeholders + ")"
+		for _, level := range filter.Levels {
+			levelArgs = append(levelArgs, level)
+		}
+	}
+
+	if len(filter.Keywords) > 0 {
+		for _, keyword := range filter.Keywords {
+			levelQuery += " AND message LIKE ?"
+			levelArgs = append(levelArgs, "%"+keyword+"%")
+		}
+	}
+
+	if filter.StartTime != nil {
+		levelQuery += " AND log_time >= ?"
+		levelArgs = append(levelArgs, filter.StartTime)
+	}
+
+	if filter.EndTime != nil {
+		levelQuery += " AND log_time <= ?"
+		levelArgs = append(levelArgs, filter.EndTime)
+	}
+
+	if filter.Source != "" {
+		levelQuery += " AND source LIKE ?"
+		levelArgs = append(levelArgs, "%"+filter.Source+"%")
+	}
+
+	if filter.Module != "" {
+		levelQuery += " AND module = ?"
+		levelArgs = append(levelArgs, filter.Module)
+	}
+
+	levelQuery += " GROUP BY level"
+
+	levelRows, err := d.db.Query(levelQuery, levelArgs...)
 	if err != nil {
 		return stats, fmt.Errorf("获取级别统计失败: %w", err)
 	}

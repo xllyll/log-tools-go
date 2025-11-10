@@ -109,7 +109,8 @@
                                 <div v-if="files.length === 0">暂无文件</div>
                                 <div v-else>
                                     <div v-for="(file,index) in files" :key="index" class="file-list"
-                                         :class="{select:file.id === currentFileId}" @click.stop="selectFile(file.id)">
+                                         :class="{select: selectedFileIds.includes(file.id)}" 
+                                         @click.stop="toggleFileSelection(file.id)">
                                         <div style="display: flex; align-items: center;">
                                             <el-checkbox
                                                 :value="selectedFileIds.includes(file.id)"
@@ -194,6 +195,16 @@
                                 :total="totalLogs"
                                 style="margin-top: 20px; text-align: center;">
                         </el-pagination>
+                        <div style="margin-top: 10px; text-align: center;">
+                            <el-button 
+                                v-if="selectedFileIds.length > 1 && selectedFileIds.length !== files.length" 
+                                type="primary" 
+                                size="small"
+                                @click="loadLogs"
+                                :disabled="loading">
+                                查询选中的 {{ selectedFileIds.length }} 个文件
+                            </el-button>
+                        </div>
                     </div>
                 </div>
             </el-card>

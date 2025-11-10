@@ -63,7 +63,6 @@ new Vue({
                 message: 'RedisDao init success'
             },
             aiRuleRes: '',
-            // 批量删除相关
             selectedFileIds: [],
             selectAll: false,
             batchDeleting: false,
@@ -192,7 +191,35 @@ new Vue({
             this.currentPage = 0;
             this.loadLogs();
         },
-
+        // 新增切换文件选择状态的方法
+        toggleFileSelection(fileId) {
+            // 切换文件的选中状态
+            const index = this.selectedFileIds.indexOf(fileId);
+            if (index > -1) {
+                // 如果已选中，则取消选中
+                this.selectedFileIds.splice(index, 1);
+            } else {
+                // 如果未选中，则添加到选中列表
+                this.selectedFileIds.push(fileId);
+            }
+            
+            // 更新全选状态
+            this.selectAll = this.selectedFileIds.length === this.files.length && this.files.length > 0;
+            
+            // 如果选择了多个文件，自动触发查询
+            if (this.selectedFileIds.length > 1) {
+                this.loadLogs();
+            } 
+            // 如果只选择了一个文件，则查询该文件
+            else if (this.selectedFileIds.length === 1) {
+                this.selectFile(this.selectedFileIds[0]);
+            }
+            // 如果没有选择文件，则清空日志显示
+            else {
+                this.logs = [];
+                this.totalLogs = 0;
+            }
+        },
         loadLogLevels() {
             fetch('/api/logs/levels')
                 .then(response => response.json())
@@ -212,11 +239,25 @@ new Vue({
         loadLogs() {
             if (!this.currentFileId) return;
             this.loading = true;
-            const params = new URLSearchParams({
-                file_id: this.currentFileId,
-                limit: this.pageSize,
-                offset: this.currentPage * this.pageSize
-            });
+            
+            // 检查是否选择了多个文件
+            let params;
+            if (this.selectedFileIds.length > 1) {
+                // 多文件查询
+                params = new URLSearchParams({
+                    file_ids: this.selectedFileIds.join(','),
+                    limit: this.pageSize,
+                    offset: this.currentPage * this.pageSize
+                });
+            } else {
+                // 单文件查询
+                params = new URLSearchParams({
+                    file_id: this.currentFileId,
+                    limit: this.pageSize,
+                    offset: this.currentPage * this.pageSize
+                });
+            }
+            
             if (this.filterForm.module && this.filterForm.module !== '') {
                 params.append('module', this.filterForm.module);
             }
@@ -541,6 +582,11 @@ new Vue({
             
             // 更新全选状态
             this.selectAll = this.selectedFileIds.length === this.files.length && this.files.length > 0;
+            
+            // 如果选择了多个文件，自动触发查询
+            if (this.selectedFileIds.length > 1) {
+                this.loadLogs();
+            }
         },
         // 处理全选变化
         handleSelectAllChange(selectAll) {
@@ -550,6 +596,11 @@ new Vue({
             } else {
                 // 取消全选
                 this.selectedFileIds = [];
+            }
+            
+            // 如果选择了多个文件，自动触发查询
+            if (this.selectedFileIds.length > 1) {
+                this.loadLogs();
             }
         },
         getLevelColor(level) {

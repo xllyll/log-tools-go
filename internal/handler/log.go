@@ -27,18 +27,30 @@ func NewLogHandler(cfg *config.Config, storage *service.StorageService, parser *
 }
 
 func (h *LogHandler) GetLogs(c *gin.Context) {
+	// 支持单个文件ID或多个文件ID（用逗号分隔）
 	fileID := c.Query("file_id")
-	if fileID == "" {
+	fileIDs := c.Query("file_ids")
+
+	// 如果没有提供任何文件ID参数，则返回错误
+	if fileID == "" && fileIDs == "" {
 		c.JSON(http.StatusBadRequest, model.LogResponse{
 			Success: false,
 			Error:   "文件ID不能为空",
 		})
 		return
 	}
+
+	// 确定要查询的文件ID参数
+	queryFileID := fileID
+	if fileIDs != "" {
+		queryFileID = fileIDs
+	}
+
 	// 构建过滤条件
 	filter := h.buildFilter(c)
+
 	// 从数据库获取日志条目
-	entries, err := h.storage.GetLogEntries(fileID, filter)
+	entries, err := h.storage.GetLogEntries(queryFileID, filter)
 	if err != nil {
 		c.JSON(http.StatusNotFound, model.LogResponse{
 			Success: false,
@@ -46,8 +58,9 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 		})
 		return
 	}
+
 	// 获取统计信息
-	stats, err := h.storage.GetLogStats(fileID, filter)
+	stats, err := h.storage.GetLogStats(queryFileID, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.LogResponse{
 			Success: false,
@@ -55,6 +68,7 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 		})
 		return
 	}
+
 	c.JSON(http.StatusOK, model.LogResponse{
 		Success: true,
 		Data:    entries,
