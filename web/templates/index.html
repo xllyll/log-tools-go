@@ -79,7 +79,7 @@
                                 <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索
                                 </el-button>
                             </el-card>
-                            <el-card style="margin-top: 20px;">
+                            <el-card style="margin-top: 20px;" v-loading="batchDeleting">
                                 <div slot="header">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <span>已上传文件</span>

@@ -483,7 +483,6 @@ new Vue({
                 this.$message.warning('请至少选择一个文件');
                 return;
             }
-
             this.$confirm(`确定要删除选中的 ${this.selectedFileIds.length} 个文件吗?`, '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
