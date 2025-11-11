@@ -109,7 +109,7 @@ func (p *LogParser) parseLogLine(line string, lineNumber int, source string) *mo
 	tag := xmatch.Match(rule.Tag, line)
 	class := xmatch.Match(rule.Class, line)
 	classLine := xmatch.Match(rule.ClassLine, line)
-	fmt.Printf("匹配结果: %s, %s, %s\n", timestampStr, level, message)
+	//fmt.Printf("匹配结果: %s, %s, %s\n", timestampStr, level, message)
 	return &model.LogEntry{
 		ID:        fmt.Sprintf("%s_%d", p.generateFileID(source), lineNumber),
 		LogTime:   timestamp,

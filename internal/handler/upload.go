@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -83,7 +84,7 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 	var processedFiles []string
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 
-	if ext == ".zip" {
+	if ext == ".zip" || ext == ".rar" || ext == ".7z" {
 		// 解压zip文件
 		extractedFiles, err := h.storage.ExtractZipFile(savedPath)
 		if err != nil {
@@ -113,13 +114,16 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 
 	var allLogFiles []*model.LogFile
 	for _, filePath := range processedFiles {
+		beginTime := time.Now()
 		logFile, err := parser.ParseLogFile(filePath)
+		useTime := time.Since(beginTime)
+		fmt.Printf("解析文件 %s 用时 %s\n", filePath, useTime)
 		if err != nil {
 			// 记录错误但继续处理其他文件
 			fmt.Printf("解析文件 %s 失败: %v\n", filePath, err)
 			continue
 		}
-		// 保存解析结果
+		// 保存解析结果 (批量最大500插入数据库)
 		if err := h.storage.SaveParsedLogs(logFile); err != nil {
 			fmt.Printf("保存解析结果失败: %v\n", err)
 		}
@@ -192,7 +196,7 @@ func (h *UploadHandler) BatchDeleteFiles(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,

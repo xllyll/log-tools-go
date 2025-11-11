@@ -132,12 +132,22 @@ func (d *Database) SaveLogFile(logFile *LogFile) error {
 			INSERT INTO log_entries (id, file_id, log_time, save_time, module,level,process, thread,class,class_line,tag,message, content, source, line_number, color)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?)`
 
-		for _, entry := range logFile.Entries {
-			_, err = tx.Exec(entryStmt,
-				entry.ID, logFile.ID, entry.LogTime, entry.SaveTime, entry.Module, entry.Level, entry.Process, entry.Thread, entry.Class, entry.ClassLine, entry.Tag,
-				entry.Message, entry.Content, entry.Source, entry.Line, entry.Color)
-			if err != nil {
-				return fmt.Errorf("插入日志条目失败: %w", err)
+		// 每批最多500条记录
+		batchSize := 500
+		for i := 0; i < len(logFile.Entries); i += batchSize {
+			end := i + batchSize
+			if end > len(logFile.Entries) {
+				end = len(logFile.Entries)
+			}
+
+			// 执行这一批的插入
+			for _, entry := range logFile.Entries[i:end] {
+				_, err = tx.Exec(entryStmt,
+					entry.ID, logFile.ID, entry.LogTime, entry.SaveTime, entry.Module, entry.Level, entry.Process, entry.Thread, entry.Class, entry.ClassLine, entry.Tag,
+					entry.Message, entry.Content, entry.Source, entry.Line, entry.Color)
+				if err != nil {
+					return fmt.Errorf("插入日志条目失败: %w", err)
+				}
 			}
 		}
 	}
