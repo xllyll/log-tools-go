@@ -2,6 +2,7 @@ package service
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"log-tools-go/internal/config"
@@ -10,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/mholt/archiver/v4"
 )
 
 type StorageService struct {
@@ -60,6 +63,20 @@ func (s *StorageService) SaveUploadedFile(file *os.File, filename string) (strin
 }
 
 func (s *StorageService) ExtractZipFile(zipPath string) ([]string, error) {
+	ext := strings.ToLower(filepath.Ext(zipPath))
+
+	switch ext {
+	case ".zip":
+		return s.extractZip(zipPath)
+	case ".rar", ".7z":
+		return s.extractWithArchiver(zipPath)
+	default:
+		return nil, fmt.Errorf("不支持的压缩格式: %s", ext)
+	}
+}
+
+// extractZip 处理ZIP文件解压
+func (s *StorageService) extractZip(zipPath string) ([]string, error) {
 	var extractedFiles []string
 
 	reader, err := zip.OpenReader(zipPath)
@@ -112,6 +129,92 @@ func (s *StorageService) ExtractZipFile(zipPath string) ([]string, error) {
 		if err == nil {
 			extractedFiles = append(extractedFiles, filePath)
 		}
+	}
+
+	return extractedFiles, nil
+}
+
+// extractWithArchiver 使用第三方库处理RAR和7Z文件解压
+func (s *StorageService) extractWithArchiver(archivePath string) ([]string, error) {
+	var extractedFiles []string
+
+	// 创建解压目录
+	extractDir := filepath.Join(s.config.Storage.UploadDir, "extracted_"+time.Now().Format("20060102_150405"))
+	if err := os.MkdirAll(extractDir, 0755); err != nil {
+		return nil, fmt.Errorf("创建解压目录失败: %w", err)
+	}
+
+	// 打开文件
+	file, err := os.Open(archivePath)
+	if err != nil {
+		return nil, fmt.Errorf("打开压缩文件失败: %w", err)
+	}
+	defer file.Close()
+
+	// 使用archiver库解压
+	format, _, err := archiver.Identify(context.Background(), archivePath, file)
+	if err != nil {
+		return nil, fmt.Errorf("识别压缩文件格式失败: %w", err)
+	}
+
+	extractor, ok := format.(archiver.Extractor)
+	if !ok {
+		return nil, fmt.Errorf("不支持的压缩格式")
+	}
+
+	// 重置文件指针
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return nil, fmt.Errorf("重置文件指针失败: %w", err)
+	}
+
+	// 解压文件
+	err = extractor.Extract(context.Background(), file, func(ctx context.Context, file archiver.FileInfo) error {
+		// 只处理文件，跳过目录
+		if file.FileInfo.IsDir() {
+			return nil
+		}
+
+		// 检查文件扩展名
+		ext := strings.ToLower(filepath.Ext(file.Name()))
+		if ext != ".txt" && ext != ".log" && ext != ".gz" {
+			return nil
+		}
+
+		// 构建目标文件路径
+		filePath := filepath.Join(extractDir, file.Name())
+
+		// 创建目录结构
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			return fmt.Errorf("创建目录失败: %w", err)
+		}
+
+		// 创建目标文件
+		dst, err := os.Create(filePath)
+		if err != nil {
+			return fmt.Errorf("创建文件失败: %w", err)
+		}
+		defer dst.Close()
+
+		// 打开源文件
+		src, err := file.Open()
+		if err != nil {
+			return fmt.Errorf("打开压缩文件中的文件失败: %w", err)
+		}
+		defer src.Close()
+
+		// 复制内容
+		_, err = io.Copy(dst, src)
+		if err != nil {
+			return fmt.Errorf("复制文件内容失败: %w", err)
+		}
+
+		extractedFiles = append(extractedFiles, filePath)
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("解压文件失败: %w", err)
 	}
 
 	return extractedFiles, nil

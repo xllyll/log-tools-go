@@ -86,7 +86,7 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 
 	if ext == ".zip" || ext == ".rar" || ext == ".7z" {
-		// 解压zip文件
+		// 解压压缩文件 (zip/rar/7z)
 		extractedFiles, err := h.storage.ExtractZipFile(savedPath)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.UploadResponse{
