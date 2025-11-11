@@ -6,6 +6,7 @@ new Vue({
     components: {
         'log-view': window.MyApp.Components.LogView,
         'log-header-view': window.MyApp.Components.LogHeaderView,
+        'upload-view': window.MyApp.Components.UploadView
     },
     data() {
         return {
@@ -87,38 +88,18 @@ new Vue({
         this.loadProjects();
     },
     methods: {
-        beforeUpload(file) {
-            const isValidType = ['.txt', '.log', '.gz', '.zip'].some(ext =>
-                file.name.toLowerCase().endsWith(ext)
-            );
-            if (!isValidType) {
-                this.$message.error('只支持 .txt, .log, .gz, .zip 格式的文件');
-                return false;
-            }
-            return true;
-        },
-        handleUploadProgress(event, file, fileLis) {
-            console.log('handleUploadProgress', event)
-        },
-        handleUploadSuccess(response, file) {
-            console.log('handleUploadSuccess', response)
-            if (response.success) {
-                this.$message.success(response.message);
-                this.loadFileList();
-                if (response.file_id) {
-                    const fileIds = response.file_id.split(',');
-                    this.currentFileId = fileIds[0];
+        handleUploadSuccess(file) {
+            console.log('handleUploadSuccess', file)
+            this.$alert('上传成功！是否立即查看？', '提示', {
+                confirmButtonText: '立即查看',
+                cancelButtonText: '取消',
+                callback: action => {
+                    this.selectedFileIds = [file.fileId];
                     this.loadLogs();
+                    this.loadFileList();
                 }
-            } else {
-                this.$message.error(response.error);
-            }
+            });
         },
-
-        handleUploadError(err) {
-            this.$message.error('上传失败: ' + err.message);
-        },
-
         showSettings() {
             console.log('showSettings')
             this.showDialog = true;
@@ -463,51 +444,18 @@ new Vue({
             localStorage.setItem('darkMode', this.darkMode);
         },
         loadProjects() {
-            fetch('/api/projects')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        this.projectList = data.data;
-                        if (data.data.length > 0) {
-                            this.selectedProject = data.data[0]
-                            this.selectedProjectName = data.data[0].project_name;
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('加载项目列表失败:', error);
-                });
-        },
-        handleUpload(option) {
-            console.log('handleUpload:',option)
-            console.log('handleUpload:',this.uploadFiles)
-            const file = option.file;
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('project_name', this.selectedProjectName);
-            this.uploading = true;
-            fetch('/api/upload', {method: 'POST', body: formData}).then(res => res.json()).then(data => {
-                this.uploading = false;
+            baseRequest('/api/projects', 'GET', null, {}).then(data=>{
+                debugger
                 if (data.success) {
-                    this.$message.success('上传成功！');
-                    this.loadFileList();
-                    // 提示查看
-                    this.$alert('上传成功！是否立即查看？', '提示', {
-                        confirmButtonText: '立即查看',
-                        cancelButtonText: '取消',
-                        callback: action => {
-                            const fileIds = data.file_id.split(',');
-                            this.selectFile(fileIds[0])
-                        }
-                    });
-                } else {
-                    this.$message.error(data.message || '上传失败');
+                    this.projectList = data.data;
+                    if (data.data.length > 0) {
+                        this.selectedProject = data.data[0]
+                        this.selectedProjectName = data.data[0].project_name;
+                    }
                 }
-            }).catch(() => {
-                this.$message.error('上传失败');
-            }).catch(err => {
-                this.uploading = true;
-            });
+            }).catch( error=>{
+                console.error('加载项目列表失败:', error);
+            })
         },
         removeFile(fileId) {
             this.$confirm('确定要删除这个文件吗?', '提示', {
@@ -515,17 +463,14 @@ new Vue({
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
-                fetch(`/api/files/${fileId}`, {
-                    method: 'DELETE'
-                }).then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            this.$message.success('删除成功！');
-                            this.loadFileList();
-                        } else {
-                            this.$message.error(data.message || '删除失败');
-                        }
-                    }).catch(() => {
+                baseRequest(`/api/files/${fileId}`, 'DELETE', null, {}).then(data => {
+                    if (data.success) {
+                        this.$message.success('删除成功！');
+                        this.loadFileList();
+                    } else {
+                        this.$message.error(data.message || '删除失败');
+                    }
+                }).catch(() => {
                     this.$message.error('删除失败');
                 })
             }).catch(() => {
