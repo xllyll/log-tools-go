@@ -3,6 +3,7 @@ package model
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"log-tools-go/internal/config"
 	_ "modernc.org/sqlite"
 	"strings"
@@ -497,7 +498,16 @@ func (d *Database) DeleteLogFile(fileID string) error {
 	if err != nil {
 		return fmt.Errorf("删除日志文件失败: %w", err)
 	}
-	_, err = d.db.Exec("DELETE FROM log_entries WHERE file_id = ?", fileID)
+	go func() {
+		err := d.DeleteLogFileEntry(fileID)
+		if err != nil {
+			log.Println("删除日志条目失败:", err)
+		}
+	}()
+	return nil
+}
+func (d *Database) DeleteLogFileEntry(fileID string) error {
+	_, err := d.db.Exec("DELETE FROM log_entries WHERE file_id = ?", fileID)
 	if err != nil {
 		return fmt.Errorf("删除日志条目失败: %w", err)
 	}

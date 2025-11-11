@@ -221,9 +221,8 @@ new Vue({
         },
         /** 加载日志内容列表 */
         loadLogs() {
-            if (!this.currentFileId) return;
+
             this.loading = true;
-            
             // 检查是否选择了多个文件
             let params;
             if (this.selectedFileIds.length > 1) {
@@ -234,6 +233,11 @@ new Vue({
                     offset: this.currentPage * this.pageSize
                 });
             } else {
+                if (this.currentFileId === null || this.currentFileId==='') {
+                    this.loading = false;
+                    this.logs = [];
+                    return;
+                }
                 // 单文件查询
                 params = new URLSearchParams({
                     file_id: this.currentFileId,
@@ -445,13 +449,14 @@ new Vue({
         },
         loadProjects() {
             baseRequest('/api/projects', 'GET', null, {}).then(data=>{
-                debugger
                 if (data.success) {
                     this.projectList = data.data;
                     if (data.data.length > 0) {
                         this.selectedProject = data.data[0]
                         this.selectedProjectName = data.data[0].project_name;
                     }
+                }else{
+                    this.projectList = [];
                 }
             }).catch( error=>{
                 console.error('加载项目列表失败:', error);
@@ -463,9 +468,17 @@ new Vue({
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
+                this.batchDeleting = true;
                 baseRequest(`/api/files/${fileId}`, 'DELETE', null, {}).then(data => {
+                    this.batchDeleting = false;
                     if (data.success) {
                         this.$message.success('删除成功！');
+                        if (this.currentFileId && this.currentFileId === fileId){
+                            this.logs = [];
+                            this.totalLogs = 0;
+                        }
+                        // 删除this.selectedFileIds 的文件id
+                        this.selectedFileIds = this.selectedFileIds.filter(id => id !== fileId);
                         this.loadFileList();
                     } else {
                         this.$message.error(data.message || '删除失败');
@@ -474,6 +487,7 @@ new Vue({
                     this.$message.error('删除失败');
                 })
             }).catch(() => {
+                this.batchDeleting = false;
                 this.$message.info('已取消删除');
             });
         },
@@ -489,21 +503,14 @@ new Vue({
                 type: 'warning'
             }).then(() => {
                 this.batchDeleting = true;
-                fetch('/api/files/batch-delete', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ids: this.selectedFileIds
-                    })
-                }).then(res => res.json()).then(data => {
+                baseRequest('/api/files/batch-delete', 'POST', {ids: this.selectedFileIds},{'Content-Type': 'application/json'}).then(data=>{
                     this.batchDeleting = false;
                     if (data.success) {
                         this.$message.success(data.message);
                         this.selectedFileIds = [];
                         this.selectAll = false;
                         this.logs = [];
+                        this.totalLogs = 0;
                         this.loadFileList();
                     } else {
                         this.$message.error(data.message || '删除失败');

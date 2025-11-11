@@ -5,6 +5,7 @@ import (
 	"log-tools-go/internal/config"
 	"log-tools-go/internal/model"
 	"log-tools-go/internal/service"
+	"log-tools-go/pkg/xjob"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -123,11 +124,12 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 			fmt.Printf("解析文件 %s 失败: %v\n", filePath, err)
 			continue
 		}
-		// 保存解析结果 (批量最大500插入数据库)
-		if err := h.storage.SaveParsedLogs(logFile); err != nil {
+		err = xjob.GetInstance().Submit(func() error {
+			return h.storage.SaveParsedLogs(logFile)
+		}, true)
+		if err != nil {
 			fmt.Printf("保存解析结果失败: %v\n", err)
 		}
-
 		allLogFiles = append(allLogFiles, logFile)
 	}
 
