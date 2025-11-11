@@ -176,7 +176,7 @@ func (s *StorageService) ValidateFile(file *os.File, filename string) error {
 
 	// 检查文件扩展名
 	ext := strings.ToLower(filepath.Ext(filename))
-	allowedExts := []string{".txt", ".log", ".gz", ".zip"}
+	allowedExts := []string{".txt", ".log", ".rar", ".gz", ".zip", ".7z"}
 
 	allowed := false
 	for _, allowedExt := range allowedExts {

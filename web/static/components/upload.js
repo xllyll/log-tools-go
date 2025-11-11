@@ -8,11 +8,11 @@ const UploadView = {
             drag 
             multiple 
             :show-file-list="false" 
-            accept=".log,.txt,.zip,.gz,.7z" 
+            accept=".log,.txt,.zip,.gz,.7z,.rar" 
             style="width: 100%;">
                 <i class="el-icon-upload" style="font-size: 48px; color: #409EFF;"></i>
                 <div class="el-upload__text">将文件拖到此处，或 <em>点击上传</em></div>
-                <div class="el-upload__tip" slot="tip">支持 .log、.txt、.zip、.gz、.7z 文件</div>
+                <div class="el-upload__tip" slot="tip">支持 .log、.txt、.zip、.gz、.7z、.rar 文件</div>
             </el-upload>
         </div>
     `,
@@ -37,7 +37,7 @@ const UploadView = {
                 file.name.toLowerCase().endsWith(ext)
             );
             if (!isValidType) {
-                this.$message.error('只支持 .txt, .log, .gz, .zip 格式的文件');
+                this.$message.error('只支持 .txt, .log, .gz, .zip, .7z, .rar 格式的文件');
                 return false;
             }
             return true;
