@@ -209,8 +209,8 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 
 	if len(filter.Keywords) > 0 {
 		for _, keyword := range filter.Keywords {
-			query += " AND message LIKE ?"
-			args = append(args, "%"+keyword+"%")
+			w := "'%" + keyword + "%'"
+			query += (" AND message LIKE " + w)
 		}
 	}
 
@@ -246,7 +246,7 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 		query += " OFFSET ?"
 		args = append(args, filter.Offset)
 	}
-
+	log.Printf("SQL: %s", query)
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查询日志条目失败: %w", err)

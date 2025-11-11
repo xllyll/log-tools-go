@@ -26,13 +26,38 @@ func NewLogHandler(cfg *config.Config, storage *service.StorageService, parser *
 	}
 }
 
+// LogQueryRequest 定义日志查询请求的JSON结构
+type LogQueryRequest struct {
+	FileID    string   `json:"file_id"`
+	FileIDs   string   `json:"file_ids"`
+	Levels    []string `json:"levels"`
+	Keywords  []string `json:"keywords"`
+	StartTime *string  `json:"start_time"`
+	EndTime   *string  `json:"end_time"`
+	Source    string   `json:"source"`
+	Module    string   `json:"module"`
+	Limit     int      `json:"limit"`
+	Offset    int      `json:"offset"`
+}
+
 func (h *LogHandler) GetLogs(c *gin.Context) {
+	var req LogQueryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.LogResponse{
+			Success: false,
+			Error:   "请求参数解析失败: " + err.Error(),
+		})
+		return
+	}
+
 	// 支持单个文件ID或多个文件ID（用逗号分隔）
-	fileID := c.Query("file_id")
-	fileIDs := c.Query("file_ids")
+	queryFileID := req.FileID
+	if req.FileIDs != "" {
+		queryFileID = req.FileIDs
+	}
 
 	// 如果没有提供任何文件ID参数，则返回错误
-	if fileID == "" && fileIDs == "" {
+	if queryFileID == "" {
 		c.JSON(http.StatusBadRequest, model.LogResponse{
 			Success: false,
 			Error:   "文件ID不能为空",
@@ -40,14 +65,8 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 		return
 	}
 
-	// 确定要查询的文件ID参数
-	queryFileID := fileID
-	if fileIDs != "" {
-		queryFileID = fileIDs
-	}
-
 	// 构建过滤条件
-	filter := h.buildFilter(c)
+	filter := h.buildFilterFromRequest(req)
 
 	// 从数据库获取日志条目
 	entries, err := h.storage.GetLogEntries(queryFileID, filter)
@@ -168,6 +187,33 @@ func (h *LogHandler) buildFilter(c *gin.Context) model.LogFilter {
 	if offsetStr := c.Query("offset"); offsetStr != "" {
 		if offset, err := strconv.Atoi(offsetStr); err == nil {
 			filter.Offset = offset
+		}
+	}
+
+	return filter
+}
+
+// buildFilterFromRequest 从JSON请求构建过滤条件
+func (h *LogHandler) buildFilterFromRequest(req LogQueryRequest) model.LogFilter {
+	filter := model.LogFilter{
+		Levels:   req.Levels,
+		Keywords: req.Keywords,
+		Source:   req.Source,
+		Module:   req.Module,
+		Limit:    req.Limit,
+		Offset:   req.Offset,
+	}
+
+	// 解析时间范围
+	if req.StartTime != nil {
+		if t, err := time.Parse("2006-01-02T15:04:05", *req.StartTime); err == nil {
+			filter.StartTime = &t
+		}
+	}
+
+	if req.EndTime != nil {
+		if t, err := time.Parse("2006-01-02T15:04:05", *req.EndTime); err == nil {
+			filter.EndTime = &t
 		}
 	}
 

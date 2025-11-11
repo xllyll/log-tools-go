@@ -55,7 +55,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 		api.POST("/files/batch-delete", uploadHandler.BatchDeleteFiles)
 
 		// 日志相关
-		api.GET("/logs", logHandler.GetLogs)
+		api.POST("/logs", logHandler.GetLogs)
 		api.GET("/logs/stats", logHandler.GetLogStats)
 		api.GET("/logs/levels", logHandler.GetLogLevels)
 		api.GET("/logs/search", logHandler.SearchLogs)

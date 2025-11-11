@@ -221,63 +221,65 @@ new Vue({
         },
         /** 加载日志内容列表 */
         loadLogs() {
-
-            this.loading = true;
-            // 检查是否选择了多个文件
-            let params;
-            if (this.selectedFileIds.length > 1) {
-                // 多文件查询
-                params = new URLSearchParams({
-                    file_ids: this.selectedFileIds.join(','),
-                    limit: this.pageSize,
-                    offset: this.currentPage * this.pageSize
-                });
-            } else {
-                if (this.currentFileId === null || this.currentFileId==='') {
-                    this.loading = false;
-                    this.logs = [];
-                    return;
-                }
-                // 单文件查询
-                params = new URLSearchParams({
-                    file_id: this.currentFileId,
-                    limit: this.pageSize,
-                    offset: this.currentPage * this.pageSize
-                });
+            if (this.selectedFileIds.length === 0) {
+                this.logs = [];
+                this.totalLogs = 0;
+                this.stats = {};
+                return;
             }
+            this.loading = true;
             
+            // 构造请求数据
+            const requestData = {
+                file_ids: this.selectedFileIds.join(','),
+                limit: this.pageSize,
+                offset: this.currentPage * this.pageSize
+            };
+            
+            // 添加过滤条件
             if (this.filterForm.module && this.filterForm.module !== '') {
-                params.append('module', this.filterForm.module);
+                requestData.module = this.filterForm.module;
             }
             if (this.filterForm.levels.length > 0) {
-                params.append('levels', this.filterForm.levels.join(','));
+                requestData.levels = this.filterForm.levels;
             }
             if (this.filterForm.keywords) {
-                params.append('keywords', this.filterForm.keywords);
+                requestData.keywords = this.filterForm.keywords.split(',');
             }
-            fetch(`/api/logs?${params}`)
+
+            // 使用POST请求替代原来的GET请求
+            fetch('/api/logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
                 .then(response => response.json())
                 .then(data => {
+                    debugger
                     this.loading = false;
                     if (data.success) {
+                        this.stats = data.stats;
+                        this.totalLogs = data.stats.total_entries || 0;
                         if (data.data && data.data.length > 0) {
                             this.logs = data.data;
-                            this.stats = data.stats;
-                            this.totalLogs = data.stats.total_entries;
                         } else {
                             this.logs = [];
-                            this.stats = data.stats;
-                            this.totalLogs = 0;
                         }
                     } else {
-                        this.$message.error(data.error);
+                        this.logs = [];
+                        this.totalLogs = 0;
+                        this.$message.error(data.error || '获取日志失败');
                     }
                 })
                 .catch(error => {
                     this.loading = false;
-                    this.$message.error('加载日志失败: ' + error.message);
+                    console.error('获取日志失败:', error);
+                    this.$message.error('获取日志失败: ' + error.message);
                 });
         },
+
         // 新增方法：高亮代码块
         highlightCode() {
             this.$nextTick(() => {
