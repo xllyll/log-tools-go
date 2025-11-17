@@ -7,7 +7,7 @@ go mod tidy
 
 REM 构建exe文件
 echo 构建exe文件...
-go build -ldflags="-s -w" -o log-analyzer.exe
+go build -ldflags="-s -w" -o main.exe
 
 if %ERRORLEVEL% EQU 0 (
     echo 构建成功！
@@ -16,4 +16,4 @@ if %ERRORLEVEL% EQU 0 (
 ) else (
     echo 构建失败！
     pause
-) 
+)

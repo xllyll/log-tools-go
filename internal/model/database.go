@@ -210,7 +210,7 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 	if len(filter.Keywords) > 0 {
 		for _, keyword := range filter.Keywords {
 			w := "'%" + keyword + "%'"
-			query += (" AND message LIKE " + w)
+			query += (" AND content LIKE " + w)
 		}
 	}
 
