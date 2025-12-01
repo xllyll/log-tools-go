@@ -65,6 +65,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 		api.POST("/logs/analysis", aiHandler.AnalysisLog)
 		api.POST("/logs/analysis/stream", aiHandler.AnalysisLogStream)
 		api.POST("/logs/rule/generate", aiHandler.GenerateLogRule)
+		api.POST("/ai/chat/completions", aiHandler.ChatCompletions) // 聊天
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/openai/openai-go/option"
 	"io"
 	"log"
+	"log-tools-go/internal/model"
 	"net/http"
 	"os"
 )
@@ -110,22 +111,16 @@ func Qwen3Chat(apiKey string, model *string, msg string) (*string, error) {
 }
 
 // ai/stream.go 或 ai/ai.go 中添加
-func Qwen3ChatStream(apiKey, model, userMsg string, writer http.ResponseWriter) error {
+func Qwen3ChatStream(apiKey string, model string, messages []*model.AiChatMessage, writer http.ResponseWriter) error {
 	url := "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-
 	if model == "" {
 		model = _qwen_model // 假设你有默认 model
 	}
-
 	requestBody := map[string]interface{}{
-		"model": model,
-		"messages": []map[string]string{
-			{"role": "assistant", "content": "你好啊，我是通义千问。"},
-			{"role": "user", "content": userMsg},
-		},
-		"stream": true,
+		"model":    model,
+		"messages": messages,
+		"stream":   true,
 	}
-
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
 		return fmt.Errorf("序列化请求体失败: %v", err)

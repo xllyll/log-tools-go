@@ -69,6 +69,8 @@ new Vue({
             selectedFileIds: [],
             selectAll: false,
             batchDeleting: false,
+            aiMessage:'',
+            aiMessages:[]
         }
     },
     mounted() {
@@ -653,6 +655,12 @@ new Vue({
         },
         resetGenerateLogRule() {
             this.aiRuleRes = '';
+        },
+        /**
+         * 发送消息[继续追问]
+         */
+        handleAiMessageSend(){
+
         }
     }
 });

@@ -24,6 +24,44 @@ func NewAiHandler(cfg *config.Config, storage *service.StorageService, parser *s
 	}
 }
 
+func (h *AiHandler) ChatCompletions(ctx *gin.Context) {
+	req := &model.AiChatCompletions{}
+	if err := ctx.ShouldBindJSON(req); err != nil {
+		// ❌ 不要再用 ctx.JSON
+		// ✅ 改为通过流输出错误，并结束
+		ctx.Header("Content-Type", "text/event-stream")
+		ctx.Header("Cache-Control", "no-cache")
+		ctx.Header("Connection", "keep-alive")
+
+		// 发送错误并结束
+		fmt.Fprintf(ctx.Writer, "data: %s\n\n", fmt.Sprintf(`{"success":false,"error":"%s","type":"error"}`, err.Error()))
+		fmt.Fprintf(ctx.Writer, "data: %s\n\n", `{"type":"done"}`)
+		ctx.Writer.Flush()
+		return
+	}
+	// 设置流式响应头
+	ctx.Header("Content-Type", "text/event-stream")
+	ctx.Header("Cache-Control", "no-cache")
+	ctx.Header("Connection", "keep-alive")
+	ctx.Header("Transfer-Encoding", "chunked")
+
+	// 自定义 success 标志开头
+	fmt.Fprintf(ctx.Writer, "data: %s\n\n", `{"success":true,"type":"start"}`)
+	ctx.Writer.Flush()
+
+	// 调用流式 AI 接口
+	err := ai.Qwen3ChatStream(h.config.AiConfig.ApiKey, req.Model, req.Messages, ctx.Writer)
+	if err != nil {
+		// 发送错误信息（仍走流）
+		fmt.Fprintf(ctx.Writer, "data: %s\n\n", fmt.Sprintf(`{"error":"%s","type":"error"}`, err.Error()))
+		ctx.Writer.Flush()
+		return
+	}
+	// 结束标记
+	fmt.Fprintf(ctx.Writer, "data: %s\n\n", `{"type":"done"}`)
+	ctx.Writer.Flush()
+}
+
 func (h *AiHandler) AnalysisLog(ctx *gin.Context) {
 	req := &model.AnalysisLogRequest{}
 	if err := ctx.ShouldBindJSON(req); err != nil {
@@ -77,8 +115,14 @@ func (h *AiHandler) AnalysisLogStream(ctx *gin.Context) {
 	// 构造提示词
 	chatMsg := req.Logs
 
+	messages := make([]*model.AiChatMessage, 0)
+	messages = append(messages, &model.AiChatMessage{
+		Role:    "user",
+		Content: chatMsg,
+	})
+
 	// 调用流式 AI 接口
-	err := ai.Qwen3ChatStream(h.config.AiConfig.ApiKey, h.config.AiConfig.Model, chatMsg, ctx.Writer)
+	err := ai.Qwen3ChatStream(h.config.AiConfig.ApiKey, h.config.AiConfig.Model, messages, ctx.Writer)
 	if err != nil {
 		// 发送错误信息（仍走流）
 		fmt.Fprintf(ctx.Writer, "data: %s\n\n", fmt.Sprintf(`{"error":"%s","type":"error"}`, err.Error()))

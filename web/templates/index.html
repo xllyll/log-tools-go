@@ -345,6 +345,12 @@
                 </div>
             </div>
         </el-card>
+        <el-card>
+            <div class="flex-row">
+                <el-input v-model="aiMessage" placeholder="输入关键你要提问的问题..."></el-input>
+                <el-button type="primary" style="width: 80px;" @click="handleAiMessageSend">发送</el-button>
+            </div>
+        </el-card>
     </el-dialog>
 </div>
 <script>hljs.highlightAll();</script>
