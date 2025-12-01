@@ -70,7 +70,8 @@ new Vue({
             selectAll: false,
             batchDeleting: false,
             aiMessage:'',
-            aiMessages:[]
+            aiMessages:[
+            ]
         }
     },
     mounted() {
@@ -324,28 +325,33 @@ new Vue({
                 return;
             }
             this.aiShow = true;
-            this.aiLoading = true;
             this.highlightCode();
             let logs = [];
             this.logs.forEach(log => {
                 logs.push(log.content);
             })
             const aiMsg = `分析下面的日志文件：\n${logs.join('\n')}`
-            let data = {
-                logs: aiMsg,
-                fileId: this.currentFileId,
-            }
-            this.startStream(data).catch(err => {
+            this.startAiChatStream(aiMsg).catch(err => {
 
             })
         },
-        async startStream(reqData) {
-            const response = await fetch('/api/logs/analysis/stream', {
+        async startAiChatStream(msg) {
+            let msgs = this.aiMessages;
+            msgs.push({
+                role: 'user',
+                content: msg,
+            });
+            const playload = {
+                module: 'qwen3-max',
+                messages: msgs
+            }
+            this.aiLoading = true;
+            const response = await fetch('/api/ai/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(reqData)
+                body: JSON.stringify(playload),
             });
 
             if (!response.ok) {
@@ -355,7 +361,7 @@ new Vue({
             const reader = response.body.getReader();
             const decoder = new TextDecoder('utf-8');
             let result = '';
-
+            this.aiRes = "";
             // 用于通知外部的回调（可选）
             const onText = (data) => {
                 //console.log('Received:', data);
@@ -366,6 +372,11 @@ new Vue({
             const onDone = () => {
                 console.log('Done');
                 this.aiLoading = false;
+                this.aiMessages.push({
+                    role: 'assistant',
+                    content: this.aiRes,
+                })
+                this.aiRes = "";
             }
             const onError = (error) => {
                 console.log('Error:', error);
@@ -660,7 +671,7 @@ new Vue({
          * 发送消息[继续追问]
          */
         handleAiMessageSend(){
-
+            this.startAiChatStream(this.aiMessage);
         }
     }
 });

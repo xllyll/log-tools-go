@@ -332,15 +332,16 @@
     <el-dialog :visible.sync="aiShow" title="AI日志分析" width="80vw">
         <el-card style="height: 70vh;">
             <div ref="aiContentRef" style="width:100%;height:calc(70vh - 40px);overflow-y: auto;">
-                <div v-if="aiLoading"
-                     style="display: flex;flex-direction: column;align-items: center;justify-content: center ;">
-                    <div class="loader"></div>
-                    <span>AI 分析中...</span>
-                </div>
-                <div v-if="aiRes.length > 0" style="width: 100%">
-                    <i class="el-icon-success" style="font-size: 64px;color: #13ce66;"></i>
-                    <div class="" style="white-space: pre-line;">
-                        <div v-html="buildMarkdownCode(aiRes)"></div>
+                <div v-if="aiMessages.length > 0" style="width: 100%">
+                    <template v-for="msg in aiMessages">
+                        <div class="ai-message" :class="{user:msg.role=='user'}" style="white-space: pre-line;">
+                            <div class="ai-message-box" :class="{user:msg.role=='user'}"
+                                 v-html="buildMarkdownCode(msg.content)"></div>
+                        </div>
+                    </template>
+                    <div v-if="aiRes && aiRes.length>0" class="ai-message" style="white-space: pre-line;">
+                        <div class="ai-message-box"
+                             v-html="buildMarkdownCode(aiRes)"></div>
                     </div>
                 </div>
             </div>
@@ -348,7 +349,7 @@
         <el-card>
             <div class="flex-row">
                 <el-input v-model="aiMessage" placeholder="输入关键你要提问的问题..."></el-input>
-                <el-button type="primary" style="width: 80px;" @click="handleAiMessageSend">发送</el-button>
+                <el-button type="primary" v-loading="aiLoading" style="width: 80px;margin-left: 10px;" @click="handleAiMessageSend">发送</el-button>
             </div>
         </el-card>
     </el-dialog>

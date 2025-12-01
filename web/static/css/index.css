@@ -21,6 +21,32 @@ body { margin: 0; padding: 0; background-color: #f5f7fa; }
 .tooltip-view-content{
     display: none;
 }
+.ai-message {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    &.user {
+        justify-content: flex-end;
+    }
+    margin-bottom: 10px;
+}
+.ai-message-box{
+    max-width: 80%;
+    margin-left: 20px;
+    border: 1px solid #eaeaea;
+    padding: 0 20px;
+    border-radius: 0px 12px 12px 12px;
+    background: #f0f0f0;
+    &.user {
+        background: #0aaeb3;
+        color: #fff;
+        margin-left: 0px;
+        margin-right: 20px;
+        border-radius: 12px 0px 12px 12px;
+    }
+}
+
 .level-color-set {display: inline-flex;align-items: center;justify-content: center;}
 .el-upload-dragger { width: 280px; }
 .el-card__header { padding: 10px; font-weight: bold;background: linear-gradient(135deg, #8cc5ff55 0%, #8cc5ff99 50%, #8cc5ff 100%);}
