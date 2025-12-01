@@ -22,7 +22,7 @@
 </head>
 <body>
 <div id="app" class="app-container">
-    <log-header-view 
+    <log-header-view
         @on-setting="showSettings"
         @dark-mode-toggle="toggleDarkMode"
     ></log-header-view>
@@ -71,9 +71,10 @@
                                     </el-form-item>
                                     <el-form-item label="关键词">
                                         <el-input v-model="filterForm.keywords" placeholder="输入关键词搜索" clearable>
-                                            123
-                                            <el-tag>123</el-tag>
                                         </el-input>
+                                    </el-form-item>
+                                    <el-form-item label="查询筛选">
+                                        <el-checkbox v-model="filterForm.useRegex">正则匹配</el-checkbox>
                                     </el-form-item>
                                 </el-form>
                                 <el-button type="primary" style="width: 100%;" @click="applyFilter">搜索
@@ -84,7 +85,7 @@
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <span>已上传文件</span>
                                         <div>
-                                            <el-checkbox 
+                                            <el-checkbox
                                                 v-if="files.length > 0"
                                                 v-model="selectAll"
                                                 @change="handleSelectAllChange"
@@ -92,10 +93,10 @@
                                             >
                                                 全选
                                             </el-checkbox>
-                                            <el-button 
+                                            <el-button
                                                 v-if="selectedFileIds.length > 0"
-                                                type="danger" 
-                                                size="mini" 
+                                                type="danger"
+                                                size="mini"
                                                 @click="batchRemoveFiles"
                                                 :disabled="batchDeleting"
                                             >
@@ -107,7 +108,7 @@
                                 <div v-if="files.length === 0">暂无文件</div>
                                 <div v-else>
                                     <div v-for="(file,index) in files" :key="index" class="file-list"
-                                         :class="{select: selectedFileIds.includes(file.id)}" 
+                                         :class="{select: selectedFileIds.includes(file.id)}"
                                          @click.stop="toggleFileSelection(file.id)">
                                         <div style="display: flex; align-items: center;">
                                             <el-checkbox
@@ -194,9 +195,9 @@
                                 style="margin-top: 20px; text-align: center;">
                         </el-pagination>
                         <div style="margin-top: 10px; text-align: center;">
-                            <el-button 
-                                v-if="selectedFileIds.length > 1 && selectedFileIds.length !== files.length" 
-                                type="primary" 
+                            <el-button
+                                v-if="selectedFileIds.length > 1 && selectedFileIds.length !== files.length"
+                                type="primary"
                                 size="small"
                                 @click="loadLogs"
                                 :disabled="loading">

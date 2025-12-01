@@ -27,7 +27,8 @@ new Vue({
             filterForm: {
                 levels: [],
                 module: '',
-                keywords: ''
+                keywords: '',
+                useRegex: false
             },
             projectList: [],
             selectedProject: {},
@@ -186,14 +187,14 @@ new Vue({
                 // 如果未选中，则添加到选中列表
                 this.selectedFileIds.push(fileId);
             }
-            
+
             // 更新全选状态
             this.selectAll = this.selectedFileIds.length === this.files.length && this.files.length > 0;
-            
+
             // 如果选择了多个文件，自动触发查询
             if (this.selectedFileIds.length > 1) {
                 this.loadLogs();
-            } 
+            }
             // 如果只选择了一个文件，则查询该文件
             else if (this.selectedFileIds.length === 1) {
                 this.selectFile(this.selectedFileIds[0]);
@@ -228,14 +229,14 @@ new Vue({
                 return;
             }
             this.loading = true;
-            
+
             // 构造请求数据
             const requestData = {
                 file_ids: this.selectedFileIds.join(','),
                 limit: this.pageSize,
                 offset: this.currentPage * this.pageSize
             };
-            
+
             // 添加过滤条件
             if (this.filterForm.module && this.filterForm.module !== '') {
                 requestData.module = this.filterForm.module;
@@ -536,10 +537,10 @@ new Vue({
                 // 从选中列表移除
                 this.selectedFileIds = this.selectedFileIds.filter(id => id !== fileId);
             }
-            
+
             // 更新全选状态
             this.selectAll = this.selectedFileIds.length === this.files.length && this.files.length > 0;
-            
+
             // 如果选择了多个文件，自动触发查询
             if (this.selectedFileIds.length > 1) {
                 this.loadLogs();
@@ -554,7 +555,7 @@ new Vue({
                 // 取消全选
                 this.selectedFileIds = [];
             }
-            
+
             // 如果选择了多个文件，自动触发查询
             if (this.selectedFileIds.length > 1) {
                 this.loadLogs();

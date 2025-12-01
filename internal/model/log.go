@@ -37,6 +37,7 @@ type LogFilter struct {
 	Keywords  []string   `json:"keywords"`
 	StartTime *time.Time `json:"start_time"`
 	EndTime   *time.Time `json:"end_time"`
+	UseRegex  bool       `json:"use_regex"`
 	Source    string     `json:"source"`
 	Limit     int        `json:"limit"`
 	Offset    int        `json:"offset"`

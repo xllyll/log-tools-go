@@ -28,14 +28,15 @@ func NewLogHandler(cfg *config.Config, storage *service.StorageService, parser *
 
 // LogQueryRequest 定义日志查询请求的JSON结构
 type LogQueryRequest struct {
-	FileID    string   `json:"file_id"`
-	FileIDs   string   `json:"file_ids"`
-	Levels    []string `json:"levels"`
-	Keywords  []string `json:"keywords"`
+	FileID    string   `json:"file_id"`  // 文件ID
+	FileIDs   string   `json:"file_ids"` // 多个文件ID
+	Levels    []string `json:"levels"`   // 日志级别
+	Keywords  []string `json:"keywords"` // 关键词ss
 	StartTime *string  `json:"start_time"`
 	EndTime   *string  `json:"end_time"`
 	Source    string   `json:"source"`
 	Module    string   `json:"module"`
+	UseRegex  *bool    `json:"useRegex"` // 是否使用正则匹配
 	Limit     int      `json:"limit"`
 	Offset    int      `json:"offset"`
 }
@@ -200,8 +201,12 @@ func (h *LogHandler) buildFilterFromRequest(req LogQueryRequest) model.LogFilter
 		Keywords: req.Keywords,
 		Source:   req.Source,
 		Module:   req.Module,
+		UseRegex: false,
 		Limit:    req.Limit,
 		Offset:   req.Offset,
+	}
+	if req.UseRegex != nil {
+		filter.UseRegex = *req.UseRegex
 	}
 
 	// 解析时间范围
