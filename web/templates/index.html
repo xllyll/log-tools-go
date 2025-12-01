@@ -271,20 +271,24 @@
                 </el-card>
             </el-tab-pane>
             <el-tab-pane label="项目配置">
-                <el-card style="height: 60vh;">
-                    <!-- 项目配置 projects 折叠配置 -->
-                    <el-collapse accordion>
-                        <el-collapse-item v-for="(project,index) in projectList" :name="index" :key="index">
-                            <template #title="{ isActive }">
-                                <div class="project-entry" :class="{active:isActive}"
-                                     style="font-size: 14px;white-space: nowrap;overflow: hidden;">
-                                    <div class="flex-row">
-                                        <span class="project-name">{{ project.project_name }}</span>
-                                    </div>
-                                </div>
+                <el-card style="height: 70vh;">
+                    <div  slot="header" style="text-align: start;">
+                        <el-button type="success" @click="showAddProjectDialog" icon="el-icon-plus">新增项目</el-button>
+                        <el-button type="primary" @click="saveProjectConfig" icon="el-icon-check">保存配置</el-button>
+                    </div>
+                    <!-- 项目配置列表 -->
+                    <el-table :data="projectList" style="width: 100%" stripe>
+                        <el-table-column prop="project_name" label="项目名称" width="200"></el-table-column>
+                        <el-table-column prop="rule.timestamp" label="时间正则" width="200"></el-table-column>
+                        <el-table-column prop="rule.level" label="级别正则" width="200"></el-table-column>
+                        <el-table-column prop="rule.module" label="模块正则" width="200"></el-table-column>
+                        <el-table-column label="操作" width="200">
+                            <template slot-scope="scope">
+                                <el-button size="mini" @click="showEditProjectDialog(scope.row, scope.$index)">编辑</el-button>
+                                <el-button size="mini" type="danger" @click="deleteProject(scope.$index)">删除</el-button>
                             </template>
-                        </el-collapse-item>
-                    </el-collapse>
+                        </el-table-column>
+                    </el-table>
                 </el-card>
             </el-tab-pane>
             <el-tab-pane label="AI日志正则">
@@ -328,6 +332,164 @@
                 </el-card>
             </el-tab-pane>
         </el-tabs>
+    </el-dialog>
+    <el-dialog :visible.sync="projectDialogVisible" title="项目配置" width="80vw" :before-close="handleProjectDialogClose">
+        <el-form :model="currentProject" label-width="120px" ref="projectForm">
+            <el-card shadow="hover" style="margin-bottom: 15px;">
+                <div slot="header" class="clearfix">
+                    <span style="font-weight: bold;">基础配置</span>
+                </div>
+                <el-form-item label="项目名称" prop="project_name" :rules="{ required: true, message: '请输入项目名称', trigger: 'blur' }">
+                    <el-input v-model="currentProject.project_name" placeholder="请输入项目名称"></el-input>
+                </el-form-item>
+            </el-card>
+
+            <el-card shadow="hover" style="margin-bottom: 15px;">
+                <div slot="header" class="clearfix">
+                    <span style="font-weight: bold;">解析规则</span>
+                </div>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="时间正则">
+                            <el-input v-model="currentProject.rule.timestamp" placeholder="时间正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="时间格式">
+                            <el-input v-model="currentProject.rule.timestamp_format" placeholder="时间格式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="进程正则">
+                            <el-input v-model="currentProject.rule.process" placeholder="进程正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="线程正则">
+                            <el-input v-model="currentProject.rule.thread" placeholder="线程正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="日志级别正则">
+                            <el-input v-model="currentProject.rule.level" placeholder="日志级别正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="模块正则">
+                            <el-input v-model="currentProject.rule.module" placeholder="模块正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="类名正则">
+                            <el-input v-model="currentProject.rule.class" placeholder="类名正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="类行号正则">
+                            <el-input v-model="currentProject.rule.class_line" placeholder="类行号正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="标签正则">
+                            <el-input v-model="currentProject.rule.tag" placeholder="标签正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="消息正则">
+                            <el-input v-model="currentProject.rule.message" placeholder="消息正则表达式"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </el-card>
+
+            <el-card shadow="hover">
+                <div slot="header" class="clearfix">
+                    <span style="font-weight: bold;">模块配置</span>
+                    <el-button style="float: right; padding: 3px 0" type="primary" icon="el-icon-plus" @click="addModule(currentProject)">添加模块</el-button>
+                </div>
+
+                <div v-for="(module, mIndex) in currentProject.modules" :key="mIndex" style="margin-bottom: 15px;">
+                    <el-card shadow="hover">
+                        <div slot="header" class="clearfix">
+                            <span>模块 {{ mIndex+1 }}</span>
+                            <el-button style="float: right; padding: 3px 0" type="text" @click="currentProject.modules.splice(mIndex, 1)">删除模块</el-button>
+                        </div>
+
+                        <el-form-item label="模块名称">
+                            <el-input v-model="module.name" placeholder="请输入模块名称"></el-input>
+                        </el-form-item>
+
+                        <div style="margin: 15px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-weight: bold;">场景配置</span>
+                                <el-button type="primary" icon="el-icon-plus" @click="addScene(module)">添加场景</el-button>
+                            </div>
+
+                            <div v-for="(scene, sIndex) in module.scenes" :key="sIndex" style="margin-bottom: 10px;">
+                                <el-card>
+                                    <div slot="header" class="clearfix">
+                                        <span>场景 {{ sIndex+1 }}</span>
+                                        <el-button style="float: right; padding: 3px 0" type="text" @click="module.scenes.splice(sIndex, 1)">删除场景</el-button>
+                                    </div>
+
+                                    <el-form-item label="场景名称">
+                                        <el-input v-model="scene.name" placeholder="请输入场景名称"></el-input>
+                                    </el-form-item>
+
+                                    <div style="margin: 15px 0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <span style="font-weight: bold;">关键词配置</span>
+                                            <el-button type="primary" icon="el-icon-plus" @click="addKeyword(scene)">添加关键词</el-button>
+                                        </div>
+
+                                        <div v-for="(keyword, kIndex) in scene.keywords" :key="kIndex" style="margin-bottom: 10px;">
+                                            <el-card>
+                                                <el-row :gutter="10" style="align-items: center;">
+                                                    <el-col :span="5">
+                                                        <el-input v-model="keyword.keyword" placeholder="关键词"></el-input>
+                                                    </el-col>
+                                                    <el-col :span="4">
+                                                        <el-select v-model="keyword.mode" placeholder="匹配模式" style="width: 100%;">
+                                                            <el-option label="单词匹配" value="word"></el-option>
+                                                            <el-option label="正则匹配" value="regular"></el-option>
+                                                        </el-select>
+                                                    </el-col>
+                                                    <el-col :span="7">
+                                                        <el-input v-model="keyword.desc" placeholder="描述"></el-input>
+                                                    </el-col>
+                                                    <el-col :span="5">
+                                                        <el-color-picker v-model="keyword.color" show-alpha></el-color-picker>
+                                                    </el-col>
+                                                    <el-col :span="3">
+                                                        <el-button type="danger" icon="el-icon-delete" circle @click="scene.keywords.splice(kIndex, 1)"></el-button>
+                                                    </el-col>
+                                                </el-row>
+                                            </el-card>
+                                        </div>
+                                    </div>
+                                </el-card>
+                            </div>
+                        </div>
+                    </el-card>
+                </div>
+            </el-card>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="projectDialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="saveProject">确 定</el-button>
+        </div>
     </el-dialog>
     <el-dialog :visible.sync="aiShow" title="AI日志分析" width="80vw">
         <el-card style="height: 70vh;">

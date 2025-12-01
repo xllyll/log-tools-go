@@ -1,87 +1,107 @@
 [
     {
-        "project_name": "默认项目",
+        "project_name": "默认项目2",
         "rule": {
             "timestamp": "^(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3})",
             "timestamp_format": "MM-dd hh:mm:ss.SSS",
-            "process":"^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+(\\d+)",
+            "process": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+(\\d+)",
             "thread": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+(\\d+)",
             "level": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+([A-Z{1}])",
-            "module":"^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+([^:]+)",
+            "module": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+([^:]+)",
             "class": "",
             "class_line": "",
             "tag": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+[^:]+:\\s*([^\\s+]+)",
             "message": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+[^:]+:\\s*[^\\s+]+\\s*(.*)$"
         },
-        "modules":[{
-            "name": "DeviceService",
-            "scenes":[
-                {
-                    "name": "测试场景1",
-                    "keywords": [
-                        {
-                            "keyword": "[notify] ",
-                            "mode": "word",
-                            "desc": "这是一个测试写入【哈哈哈】的日志",
-                            "color": "#ff3333"
-                        },
-                        {
-                            "keyword": "[write] ",
-                            "mode": "word",
-                            "desc": "写入数据提示",
-                            "color": "#33ff33"
-                        },
-                        {
-                            "keyword": "beginning of main",
-                            "mode": "word",
-                            "desc": "开机打印",
-                            "color": "#ff3333"
-                        },
-                        {
-                            "keyword": "00 09 0a",
-                            "mode": "word",
-                            "desc": "重启原因",
-                            "color": "#33ff33"
-                        },
-                        {
-                            "keyword": "SystemServer: Entered the Android system server",
-                            "mode": "word",
-                            "desc": "SystemServer启动",
-                            "color": "#33ff33"
-                        }
-                    ]
-                }
-            ]
-        }]
+        "modules": [
+            {
+                "name": "DeviceService",
+                "scenes": [
+                    {
+                        "name": "测试场景1",
+                        "keywords": [
+                            {
+                                "keyword": "[notify] ",
+                                "desc": "这是一个测试写入【哈哈哈】的日志",
+                                "mode": "word",
+                                "color": "#ff3333"
+                            },
+                            {
+                                "keyword": "[write] ",
+                                "desc": "写入数据提示",
+                                "mode": "word",
+                                "color": "#33ff33"
+                            },
+                            {
+                                "keyword": "beginning of main",
+                                "desc": "开机打印",
+                                "mode": "word",
+                                "color": "#ff3333"
+                            },
+                            {
+                                "keyword": "00 09 0a",
+                                "desc": "重启原因",
+                                "mode": "word",
+                                "color": "#33ff33"
+                            },
+                            {
+                                "keyword": "SystemServer: Entered the Android system server",
+                                "desc": "SystemServer启动",
+                                "mode": "word",
+                                "color": "#33ff33"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
     },
     {
         "project_name": "SpringBoot项目",
         "rule": {
             "timestamp": "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
             "timestamp_format": "YYYY-MM-dd hh:mm:ss",
-            "process":"",
+            "process": "",
             "thread": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[([^\\]]+)\\]",
             "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
-            "module":"",
+            "module": "",
             "class": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\[[^\\]]+\\] \\w+\\s+([a-zA-Z][\\w.]*)",
             "class_line": "",
             "tag": "",
-            "message": "->\\s*(.*)"
-        }
+            "message": "-\u003e\\s*(.*)"
+        },
+        "modules": null
     },
     {
-        "project_name": "默认项目2",
+        "project_name": "默认项目3",
         "rule": {
             "timestamp": "(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
             "timestamp_format": "MM-dd hh:mm:ss",
-            "process":"",
+            "process": "",
             "thread": "$[^$]+$",
             "level": "(ERROR|INFO|WARN|DEBUG|TRACE|FATAL)",
-            "module":"",
-            "class": "([a-zA-Z0-9.$]+)\\s*->",
+            "module": "",
+            "class": "([a-zA-Z0-9.$]+)\\s*-\u003e",
             "class_line": "",
             "tag": "",
             "message": ".*"
-        }
+        },
+        "modules": null
+    },
+    {
+        "project_name": "新项目44",
+        "rule": {
+            "timestamp": "",
+            "timestamp_format": "",
+            "process": "",
+            "thread": "",
+            "level": "",
+            "module": "",
+            "class": "",
+            "class_line": "",
+            "tag": "",
+            "message": ""
+        },
+        "modules": []
     }
 ]

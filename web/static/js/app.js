@@ -71,7 +71,27 @@ new Vue({
             batchDeleting: false,
             aiMessage:'',
             aiMessages:[
-            ]
+            ],
+            // 项目配置相关
+            projectDialogVisible: false,
+            currentProject: {
+                project_name: '',
+                rule: {
+                    timestamp: '',
+                    timestamp_format: '',
+                    process: '',
+                    thread: '',
+                    level: '',
+                    module: '',
+                    class: '',
+                    class_line: '',
+                    tag: '',
+                    message: ''
+                },
+                modules: []
+            },
+            currentProjectIndex: -1,
+            isEditProject: false
         }
     },
     mounted() {
@@ -538,6 +558,156 @@ new Vue({
             }).catch(() => {
                 this.$message.info('已取消删除');
             });
+        },
+        // 添加模块
+        addModule(project) {
+            if (!project.modules) {
+                project.modules = [];
+            }
+            project.modules.push({
+                name: '',
+                scenes: []
+            });
+        },
+        // 添加场景
+        addScene(module) {
+            if (!module.scenes) {
+                module.scenes = [];
+            }
+            module.scenes.push({
+                name: '',
+                keywords: []
+            });
+        },
+        // 添加关键词
+        addKeyword(scene) {
+            if (!scene.keywords) {
+                scene.keywords = [];
+            }
+            scene.keywords.push({
+                keyword: '',
+                mode: '',
+                desc: '',
+                color: ''
+            });
+        },
+        // 显示添加项目对话框
+        showAddProjectDialog() {
+            this.isEditProject = false;
+            this.currentProjectIndex = -1;
+            // 初始化一个新的项目对象
+            this.currentProject = {
+                project_name: this.generateUniqueProjectName(),
+                rule: {
+                    timestamp: '',
+                    timestamp_format: '',
+                    process: '',
+                    thread: '',
+                    level: '',
+                    module: '',
+                    class: '',
+                    class_line: '',
+                    tag: '',
+                    message: ''
+                },
+                modules: []
+            };
+            this.projectDialogVisible = true;
+        },
+        // 显示编辑项目对话框
+        showEditProjectDialog(project, index) {
+            this.isEditProject = true;
+            this.currentProjectIndex = index;
+            // 深拷贝项目对象，避免直接修改原对象
+            this.currentProject = JSON.parse(JSON.stringify(project));
+            this.projectDialogVisible = true;
+        },
+        // 生成唯一的项目名称
+        generateUniqueProjectName() {
+            let projectName = '新项目';
+            let counter = 1;
+            while (this.projectList.some(p => p.project_name === projectName)) {
+                projectName = `新项目${counter}`;
+                counter++;
+            }
+            return projectName;
+        },
+        // 保存项目（在对话框中点击确定时调用）
+        saveProject() {
+            // 检查项目名称是否为空
+            if (!this.currentProject.project_name || this.currentProject.project_name.trim() === '') {
+                this.$message.error('项目名称不能为空');
+                return;
+            }
+
+            // 检查项目名称是否重复（排除当前编辑的项目）
+            const isDuplicate = this.projectList.some((p, index) => {
+                return p.project_name === this.currentProject.project_name && 
+                       (this.isEditProject ? index !== this.currentProjectIndex : true);
+            });
+
+            if (isDuplicate) {
+                this.$message.error('项目名称不能重复，请修改项目名称');
+                return;
+            }
+
+            if (this.isEditProject) {
+                // 更新现有项目
+                this.projectList.splice(this.currentProjectIndex, 1, this.currentProject);
+                this.$message.success('项目更新成功');
+            } else {
+                // 添加新项目
+                this.projectList.push(this.currentProject);
+                this.$message.success('项目添加成功');
+            }
+            this.projectDialogVisible = false;
+        },
+        // 处理项目对话框关闭事件
+        handleProjectDialogClose(done) {
+            this.$confirm('确认关闭？未保存的更改将会丢失').then(_ => {
+                done();
+            }).catch(_ => {});
+        },
+        // 添加项目
+        addProject() {
+            // 此方法已被替换为 showAddProjectDialog
+        },
+        // 删除项目
+        deleteProject(index) {
+            this.$confirm('确定要删除这个项目吗?', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.projectList.splice(index, 1);
+                this.$message.success('删除成功！');
+            }).catch(() => {
+                this.$message.info('已取消删除');
+            });
+        },
+        // 保存项目配置
+        saveProjectConfig() {
+            // 检查项目名称是否重复
+            const projectNames = this.projectList.map(p => p.project_name);
+            const uniqueNames = new Set(projectNames);
+            
+            if (uniqueNames.size !== projectNames.length) {
+                this.$message.error('项目名称不能重复，请修改重复的项目名称！');
+                return;
+            }
+            
+            // 调用后端API保存配置
+            baseRequest('/api/projects/save', 'POST', this.projectList, {'Content-Type': 'application/json'})
+                .then(data => {
+                    if (data.success) {
+                        this.$message.success('项目配置保存成功');
+                    } else {
+                        this.$message.error('保存失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    this.$message.error('保存失败: ' + error.message);
+                });
         },
         // 处理文件选择变化
         handleFileSelectChange(selected, fileId) {

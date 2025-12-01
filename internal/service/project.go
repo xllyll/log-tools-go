@@ -38,3 +38,17 @@ func (s *ProjectService) GetAllProjects() ([]*config.LogProjectRule, error) {
 	}
 	return ps, nil
 }
+
+// 保存项目配置到config.json文件
+func (s *ProjectService) SaveProjects(projects []config.LogProjectRule) error {
+	// 写入到 /config/config.json 文件
+	file, err := os.Create("config/config.json")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "    ") // 格式化输出
+	return encoder.Encode(projects)
+}

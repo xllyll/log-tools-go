@@ -47,6 +47,7 @@ func InitRouter(r *gin.Engine, cfg *config.Config) {
 	{
 		// 项目相关
 		api.GET("/projects", projectHandler.GetProjects)
+		api.POST("/projects/save", projectHandler.SaveProjects)
 
 		// 文件上传相关
 		api.POST("/upload", uploadHandler.UploadFile)

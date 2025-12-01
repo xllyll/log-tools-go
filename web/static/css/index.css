@@ -76,17 +76,6 @@ body { margin: 0; padding: 0; background-color: #f5f7fa; }
         transform: scale(1.2);
     }
 }
-table{
-    /** 添加线条 */
-    border: 2px solid #999999; /* 外边框 */
-    border-collapse: collapse; /* 合并单元格边框，避免双线 */
-    width: 100%;
-}
-th, td {
-    border: 1px solid #999999; /* 每个单元格的边框 */
-    padding: 8px;
-    text-align: left;
-}
 /* 整体滚动条宽度（垂直） */
 ::-webkit-scrollbar {
     width: 6px; /* 垂直滚动条宽度 */
