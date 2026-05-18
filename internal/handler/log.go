@@ -28,17 +28,18 @@ func NewLogHandler(cfg *config.Config, storage *service.StorageService, parser *
 
 // LogQueryRequest 定义日志查询请求的JSON结构
 type LogQueryRequest struct {
-	FileID    string   `json:"file_id"`  // 文件ID
-	FileIDs   string   `json:"file_ids"` // 多个文件ID
-	Levels    []string `json:"levels"`   // 日志级别
-	Keywords  []string `json:"keywords"` // 关键词ss
-	StartTime *string  `json:"start_time"`
-	EndTime   *string  `json:"end_time"`
-	Source    string   `json:"source"`
-	Module    string   `json:"module"`
-	UseRegex  *bool    `json:"useRegex"` // 是否使用正则匹配
-	Limit     int      `json:"limit"`
-	Offset    int      `json:"offset"`
+	FileID        string   `json:"file_id"`        // 文件ID
+	FileIDs       string   `json:"file_ids"`       // 多个文件ID
+	Levels        []string `json:"levels"`         // 日志级别
+	Keywords      []string `json:"keywords"`       // 用户手动输入的关键词（AND连接）
+	SceneKeywords []string `json:"scene_keywords"` // 场景关键词（OR连接）
+	StartTime     *string  `json:"start_time"`
+	EndTime       *string  `json:"end_time"`
+	Source        string   `json:"source"`
+	Module        string   `json:"module"`
+	UseRegex      *bool    `json:"useRegex"` // 是否使用正则匹配
+	Limit         int      `json:"limit"`
+	Offset        int      `json:"offset"`
 }
 
 func (h *LogHandler) GetLogs(c *gin.Context) {
@@ -197,13 +198,14 @@ func (h *LogHandler) buildFilter(c *gin.Context) model.LogFilter {
 // buildFilterFromRequest 从JSON请求构建过滤条件
 func (h *LogHandler) buildFilterFromRequest(req LogQueryRequest) model.LogFilter {
 	filter := model.LogFilter{
-		Levels:   req.Levels,
-		Keywords: req.Keywords,
-		Source:   req.Source,
-		Module:   req.Module,
-		UseRegex: false,
-		Limit:    req.Limit,
-		Offset:   req.Offset,
+		Levels:        req.Levels,
+		Keywords:      req.Keywords,
+		SceneKeywords: req.SceneKeywords,
+		Source:        req.Source,
+		Module:        req.Module,
+		UseRegex:      false,
+		Limit:         req.Limit,
+		Offset:        req.Offset,
 	}
 	if req.UseRegex != nil {
 		filter.UseRegex = *req.UseRegex

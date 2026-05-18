@@ -32,15 +32,16 @@ type LogFile struct {
 }
 
 type LogFilter struct {
-	Levels    []string   `json:"levels"`
-	Module    string     `json:"module"`
-	Keywords  []string   `json:"keywords"`
-	StartTime *time.Time `json:"start_time"`
-	EndTime   *time.Time `json:"end_time"`
-	UseRegex  bool       `json:"use_regex"`
-	Source    string     `json:"source"`
-	Limit     int        `json:"limit"`
-	Offset    int        `json:"offset"`
+	Levels        []string   `json:"levels"`
+	Module        string     `json:"module"`
+	Keywords      []string   `json:"keywords"`       // 用户手动输入的关键词（AND连接）
+	SceneKeywords []string   `json:"scene_keywords"` // 场景关键词（OR连接）
+	StartTime     *time.Time `json:"start_time"`
+	EndTime       *time.Time `json:"end_time"`
+	UseRegex      bool       `json:"use_regex"`
+	Source        string     `json:"source"`
+	Limit         int        `json:"limit"`
+	Offset        int        `json:"offset"`
 }
 
 type LogStats struct {

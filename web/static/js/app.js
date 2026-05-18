@@ -27,7 +27,8 @@ new Vue({
             filterForm: {
                 levels: [],
                 module: '',
-                keywords: '',
+                keywords: '',        // 用户手动输入的关键词（AND连接）
+                sceneKeywords: [],   // 场景关键词（OR连接）
                 useRegex: false
             },
             projectList: [],
@@ -36,6 +37,7 @@ new Vue({
             selectedModule: {},
             selectedModuleName: '',
             selectedSceneName: '',
+            enableModuleFilter: false, // 模块过滤器启用状态（默认禁用）
             keywords: [],
             showDialog: false,
             settingForm: {
@@ -155,20 +157,48 @@ new Vue({
             })
             console.log('selectedModule end:', this.selectedModule)
         },
+        onModuleFilterChange(enabled) {
+            console.log('onModuleFilterChange', enabled)
+            if (!enabled) {
+                // 禁用模块过滤时，清空模块选择
+                this.filterForm.module = '';
+                this.selectedModule = null;
+                this.selectedSceneName = null;
+                this.keywords = [];
+                this.$message.info('已禁用模块过滤');
+            } else {
+                // 启用模块过滤时，如果已选择模块则提示
+                if (this.filterForm.module) {
+                    this.$message.success(`已启用模块过滤，当前模块: ${this.filterForm.module}`);
+                } else {
+                    this.$message.warning('请先选择一个模块');
+                }
+            }
+        },
         onSelectModuleScene(e) {
             console.log('onSelectModuleScene', e)
             if (e == null || e === '') {
                 this.selectedSceneName = null;
                 this.keywords = [];
+                this.filterForm.sceneKeywords = []; // 清空场景关键词
+                return;
             }
             if (this.selectedModule) {
                 this.selectedModule.scenes.forEach(scene => {
                     if (scene.name === e.toString()) {
                         this.keywords = scene.keywords;
+                        // 将场景关键词存储到sceneKeywords字段
+                        if (this.keywords.length > 0) {
+                            const keywordStrs = this.keywords.map(k => k.keyword).filter(k => k);
+                            this.filterForm.sceneKeywords = keywordStrs;
+                            this.$message.success(`已加载场景 "${e}" 的 ${keywordStrs.length} 个关键词（OR匹配）`);
+                        } else {
+                            this.filterForm.sceneKeywords = [];
+                        }
                     }
                 })
             }
-            console.log('keywords', this.keywords)
+            console.log('sceneKeywords', this.filterForm.sceneKeywords)
         },
         loadFileList() {
             fetch('/api/files')
@@ -261,14 +291,26 @@ new Vue({
             };
 
             // 添加过滤条件
-            if (this.filterForm.module && this.filterForm.module !== '') {
+            // 只有当启用模块过滤且选择了模块时，才添加module参数
+            console.log('loadLogs - enableModuleFilter:', this.enableModuleFilter);
+            console.log('loadLogs - filterForm.module:', this.filterForm.module);
+            
+            if (this.enableModuleFilter && this.filterForm.module && this.filterForm.module !== '') {
                 requestData.module = this.filterForm.module;
+                console.log('loadLogs - 已添加module参数:', this.filterForm.module);
+            } else {
+                console.log('loadLogs - 未添加module参数（enableModuleFilter=', this.enableModuleFilter, '）');
             }
             if (this.filterForm.levels.length > 0) {
                 requestData.levels = this.filterForm.levels;
             }
+            // 用户手动输入的关键词（AND连接）
             if (this.filterForm.keywords) {
                 requestData.keywords = this.filterForm.keywords.split(',');
+            }
+            // 场景关键词（OR连接）
+            if (this.filterForm.sceneKeywords && this.filterForm.sceneKeywords.length > 0) {
+                requestData.scene_keywords = this.filterForm.sceneKeywords;
             }
 
             // 使用POST请求替代原来的GET请求
@@ -281,7 +323,6 @@ new Vue({
             })
                 .then(response => response.json())
                 .then(data => {
-                    debugger
                     this.loading = false;
                     if (data.success) {
                         this.stats = data.stats;

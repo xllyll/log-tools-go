@@ -60,9 +60,12 @@
                                         </el-select>
                                     </el-form-item>
                                     <el-form-item label="模块">
-                                        <el-select clearable placeholder="请选择日志模块" style="width: 100%;" v-model="filterForm.module" @change="onSelectModule">
-                                            <el-option v-for="(module,m_index) in selectedProject.modules" :key="m_index" :value="module.name" :label="module.name"/>
-                                        </el-select>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <el-select clearable placeholder="请选择日志模块" style="flex: 1;" v-model="filterForm.module" @change="onSelectModule">
+                                                <el-option v-for="(module,m_index) in selectedProject.modules" :key="m_index" :value="module.name" :label="module.name"/>
+                                            </el-select>
+                                            <el-checkbox v-model="enableModuleFilter" @change="onModuleFilterChange">启用</el-checkbox>
+                                        </div>
                                     </el-form-item>
                                     <el-form-item label="场景">
                                         <el-select clearable placeholder="请选择日志模块" style="width: 100%;" v-model="selectedSceneName" @change="onSelectModuleScene">
@@ -144,10 +147,10 @@
                 </div>
                 <div v-if="loading">正在加载日志...</div>
                 <div v-if="!currentFileId">请上传日志文件开始分析</div>
-                <div v-if="currentFileId && logs.length === 0">
+                <div v-if="(currentFileId || selectedFileIds.length > 0) && logs.length === 0">
                     <el-empty description="暂无数据"></el-empty>
                 </div>
-                <div v-if="currentFileId && logs.length > 0">
+                <div v-if="(currentFileId || selectedFileIds.length > 0) && logs.length > 0">
                     <el-collapse accordion>
                         <el-collapse-item v-for="(log,index) in logs" :name="index" :key="index">
                             <template #title="{ isActive }">

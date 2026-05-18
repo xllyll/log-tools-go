@@ -23,10 +23,28 @@ func NewDatabase(cfg *config.Config) (*Database, error) {
 	if err != nil {
 		return nil, fmt.Errorf("打开数据库失败: %w", err)
 	}
+
+	// SQLite性能优化配置
+	pragmas := []string{
+		`PRAGMA journal_mode = WAL`,    // WAL模式提高并发性能
+		`PRAGMA synchronous = NORMAL`,  // 平衡安全性和性能
+		`PRAGMA cache_size = -64000`,   // 64MB缓存
+		`PRAGMA temp_store = MEMORY`,   // 临时表使用内存
+		`PRAGMA mmap_size = 268435456`, // 256MB内存映射
+		`PRAGMA page_size = 4096`,      // 页面大小
+	}
+
+	for _, pragma := range pragmas {
+		if _, err := db.Exec(pragma); err != nil {
+			log.Printf("SQLite配置警告: %v (%s)", err, pragma)
+		}
+	}
+
 	// 测试连接
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("数据库连接失败: %w", err)
 	}
+
 	database := &Database{db: db}
 	// 初始化表结构
 	if err := database.initTables(); err != nil {
@@ -89,6 +107,7 @@ func (d *Database) initTables() error {
 	CREATE INDEX IF NOT EXISTS idx_log_entries_file_module_time ON log_entries(file_id, module, log_time);
 	CREATE INDEX IF NOT EXISTS idx_log_entries_file_time ON log_entries(file_id, log_time);
 	CREATE INDEX IF NOT EXISTS idx_log_entries_file_level ON log_entries(file_id, level);
+	CREATE INDEX IF NOT EXISTS idx_log_entries_covering ON log_entries(file_id, log_time, line_number, level, module, content);
 	`
 
 	// 执行创建表语句
@@ -245,6 +264,19 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 		}
 	}
 
+	// 场景关键词（OR连接）- 匹配任意一个即可
+	if len(filter.SceneKeywords) > 0 {
+		query += " AND ("
+		for i, keyword := range filter.SceneKeywords {
+			if i > 0 {
+				query += " OR "
+			}
+			query += "content LIKE ?"
+			args = append(args, "%"+keyword+"%")
+		}
+		query += ")"
+	}
+
 	// 添加排序和分页
 	query += " ORDER BY log_time ASC, line_number ASC"
 
@@ -257,10 +289,8 @@ func (d *Database) GetLogEntries(fileID string, filter LogFilter) ([]LogEntry, e
 		query += " OFFSET ?"
 		args = append(args, filter.Offset)
 	}
-
-	// 只在调试时打印SQL
-	// log.Printf("SQL: %s", query)
-
+	log.Printf("SQL:%s", query)
+	log.Printf("SQL v:%s", args)
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查询日志条目失败: %w", err)
@@ -308,7 +338,7 @@ func (d *Database) GetLogStats(fileID string, filter LogFilter) (LogStats, error
 	// 构建基础WHERE条件
 	whereClause, args := d.buildWhereClause(fileIDs, filter)
 
-	// 使用单个查询获取所有统计信息
+	// 使用单个查询获取所有统计信息（一次性获取总数和时间范围）
 	query := fmt.Sprintf(`
 		SELECT 
 			COUNT(*) as total,
@@ -317,24 +347,12 @@ func (d *Database) GetLogStats(fileID string, filter LogFilter) (LogStats, error
 		FROM log_entries
 		%s`, whereClause)
 
-	err := d.db.QueryRow(query, args...).Scan(&stats.TotalEntries, &sql.NullString{}, &sql.NullString{})
-	if err != nil {
-		return stats, fmt.Errorf("获取总条目数失败: %w", err)
-	}
-
-	// 重新执行查询以获取时间范围
-	timeQuery := fmt.Sprintf(`
-		SELECT MIN(log_time), MAX(log_time) 
-		FROM log_entries
-		%s`, whereClause)
-
 	var startTimeStr, endTimeStr sql.NullString
-	err = d.db.QueryRow(timeQuery, args...).Scan(&startTimeStr, &endTimeStr)
+	err := d.db.QueryRow(query, args...).Scan(&stats.TotalEntries, &startTimeStr, &endTimeStr)
 	if err != nil && err != sql.ErrNoRows {
-		return stats, fmt.Errorf("获取时间范围失败: %w", err)
+		return stats, fmt.Errorf("获取统计信息失败: %w", err)
 	}
 
-	// 解析时间字符串
 	if startTimeStr.Valid {
 		if t, err := time.Parse("2006-01-02 15:04:05", startTimeStr.String); err == nil {
 			stats.TimeRange.Start = t
@@ -422,6 +440,19 @@ func (d *Database) buildWhereClause(fileIDs []string, filter LogFilter) (string,
 			query += " AND message LIKE ?"
 			args = append(args, "%"+keyword+"%")
 		}
+	}
+
+	// 场景关键词（OR连接）- 匹配任意一个即可
+	if len(filter.SceneKeywords) > 0 {
+		query += " AND ("
+		for i, keyword := range filter.SceneKeywords {
+			if i > 0 {
+				query += " OR "
+			}
+			query += "message LIKE ?"
+			args = append(args, "%"+keyword+"%")
+		}
+		query += ")"
 	}
 
 	return query, args
