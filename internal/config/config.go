@@ -68,9 +68,10 @@ type LogProjectModule struct {
 }
 
 type LogProjectRule struct {
-	ProjectName string             `json:"project_name"`
-	Rule        LogParseRule       `json:"rule"`
-	Modules     []LogProjectModule `json:"modules"`
+	ProjectName   string             `json:"project_name"`
+	Rule          LogParseRule       `json:"rule"`
+	DefaultModule string             `json:"default_module"`
+	Modules       []LogProjectModule `json:"modules"`
 }
 
 var AppConfig *Config

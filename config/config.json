@@ -1,6 +1,6 @@
 [
     {
-        "project_name": "默认项目2",
+        "project_name": "BWIC",
         "rule": {
             "timestamp": "^(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3})",
             "timestamp_format": "MM-dd hh:mm:ss.SSS",
@@ -13,40 +13,53 @@
             "tag": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+[^:]+:\\s*([^\\s+]+)",
             "message": "^\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}\\s+\\d+\\s+\\d+\\s+[A-Z{1}]\\s+[^:]+:\\s*[^\\s+]+\\s*(.*)$"
         },
+        "default_module": "system",
         "modules": [
             {
                 "name": "DeviceService",
                 "scenes": [
                     {
-                        "name": "测试场景1",
+                        "name": "System问题分析",
                         "keywords": [
                             {
-                                "keyword": "[notify] ",
-                                "desc": "这是一个测试写入【哈哈哈】的日志",
-                                "mode": "word",
-                                "color": "#ff3333"
-                            },
-                            {
-                                "keyword": "[write] ",
-                                "desc": "写入数据提示",
-                                "mode": "word",
-                                "color": "#33ff33"
-                            },
-                            {
-                                "keyword": "beginning of main",
-                                "desc": "开机打印",
+                                "keyword": "--------- beginning of main",
+                                "desc": "系统启动",
                                 "mode": "word",
                                 "color": "#ff3333"
                             },
                             {
                                 "keyword": "00 09 0a",
-                                "desc": "重启原因",
+                                "desc": "系统重启原因",
                                 "mode": "word",
                                 "color": "#33ff33"
                             },
                             {
-                                "keyword": "SystemServer: Entered the Android system server",
-                                "desc": "SystemServer启动",
+                                "keyword": "onLocalAccChanged: false",
+                                "desc": "ACC关闭",
+                                "mode": "word",
+                                "color": "#33ff33"
+                            },
+                            {
+                                "keyword": "onLocalAccChanged: true",
+                                "desc": "ACC打开",
+                                "mode": "word",
+                                "color": "#33ff33"
+                            },
+                            {
+                                "keyword": "BluetoothManagerService: ACTION_QB_POWERON",
+                                "desc": "唤醒",
+                                "mode": "word",
+                                "color": "#33ff33"
+                            },
+                            {
+                                "keyword": "BluetoothManagerService: ACTION_QB_POWEROFF",
+                                "desc": "休眠",
+                                "mode": "word",
+                                "color": "#33ff33"
+                            },
+                            {
+                                "keyword": "ActivityTaskManager: START u0",
+                                "desc": "打开应用",
                                 "mode": "word",
                                 "color": "#33ff33"
                             }
@@ -73,7 +86,7 @@
         "modules": null
     },
     {
-        "project_name": "默认项目3",
+        "project_name": "默认项目2",
         "rule": {
             "timestamp": "(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})",
             "timestamp_format": "MM-dd hh:mm:ss",
@@ -87,21 +100,5 @@
             "message": ".*"
         },
         "modules": null
-    },
-    {
-        "project_name": "新项目44",
-        "rule": {
-            "timestamp": "",
-            "timestamp_format": "",
-            "process": "",
-            "thread": "",
-            "level": "",
-            "module": "",
-            "class": "",
-            "class_line": "",
-            "tag": "",
-            "message": ""
-        },
-        "modules": []
     }
 ]
