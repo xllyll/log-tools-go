@@ -1,2 +1,2 @@
-test:
-    echo test
+build:
+    go build -o main.exe .\main.go
