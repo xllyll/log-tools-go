@@ -1,0 +1,1954 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="9d6ff1d4-a002-4414-bdef-f76ed55eade8" name="Changes" comment="refactor(xmatch): 优化正则表达式匹配性能&#10;&#10;- 添加正则表达式编译结果缓存机制，避免重复编译&#10;- 实现 RuleMatcher 结构体预编译常用字段正则表达式&#10;- 提供方法分别提取时间戳、进程、线程、级别等日志字段&#10;- 封装正则匹配逻辑到独立的 matchSub 函数&#10;- 使用 sync.Map 确保并发安全的缓存访问&#10;- 重构 Match 函数使用缓存的正则表达式实例">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/conf.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/config/config.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/handler/ai.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/handler/log.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/handler/project.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/handler/upload.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/model/ai.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/model/database.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/model/log.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/service/parser.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/service/project.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/service/storage.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/ai/ai.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/ai/ai_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xip/ip.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xip/ip_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xjob/job.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xlog/log.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xmatch/match.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xmatch/match_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xtime/time.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/xtime/time_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/router/router.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_performance.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/components/header.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/components/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/components/log-view.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/components/upload.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/css/dark-theme.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/css/index.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/css/loading.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/element-ui/fonts/element-icons.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/element-ui/fonts/element-icons.woff" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/element-ui/index.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/element-ui/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/DIGESTS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/LICENSE" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/core.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/core.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/highlight.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/highlight.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/1c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/1c.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/abnf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/abnf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/accesslog.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/accesslog.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/actionscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/actionscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ada.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ada.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/angelscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/angelscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/apache.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/apache.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/applescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/applescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/arcade.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/arcade.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/arduino.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/arduino.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/armasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/armasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/asciidoc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/asciidoc.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/aspectj.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/aspectj.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/autohotkey.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/autohotkey.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/autoit.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/autoit.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/avrasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/avrasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/awk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/awk.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/axapta.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/axapta.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/bash.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/bash.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/basic.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/basic.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/bnf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/bnf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/brainfuck.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/brainfuck.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/c.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cal.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cal.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/capnproto.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/capnproto.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ceylon.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ceylon.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/clean.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/clean.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/clojure-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/clojure-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/clojure.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/clojure.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cmake.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cmake.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/coffeescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/coffeescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/coq.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/coq.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cos.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cos.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cpp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/cpp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/crmsh.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/crmsh.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/crystal.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/crystal.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/csharp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/csharp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/csp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/csp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/css.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/css.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/d.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dart.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/delphi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/delphi.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/diff.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/diff.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/django.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/django.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dns.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dns.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dockerfile.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dockerfile.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dos.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dos.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dsconfig.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dsconfig.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dts.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dts.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dust.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/dust.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ebnf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ebnf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/elixir.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/elixir.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/elm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/elm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/erb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/erb.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/erlang-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/erlang-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/erlang.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/erlang.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/excel.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/excel.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/fix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/fix.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/flix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/flix.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/fortran.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/fortran.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/fsharp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/fsharp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gams.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gams.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gauss.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gauss.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gcode.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gcode.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gherkin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gherkin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/glsl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/glsl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/go.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/go.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/golo.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/golo.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gradle.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/gradle.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/graphql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/graphql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/groovy.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/groovy.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/haml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/haml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/handlebars.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/handlebars.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/haskell.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/haskell.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/haxe.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/haxe.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/hsp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/hsp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/http.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/http.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/hy.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/hy.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/inform7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/inform7.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ini.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ini.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/irpf90.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/irpf90.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/isbl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/isbl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/java.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/java.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/javascript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/javascript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/jboss-cli.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/jboss-cli.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/json.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/json.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/julia-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/julia-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/julia.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/julia.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/kotlin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/kotlin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lasso.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lasso.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/latex.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/latex.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ldif.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ldif.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/leaf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/leaf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/less.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/less.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lisp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lisp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/livecodeserver.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/livecodeserver.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/livescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/livescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/llvm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/llvm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lsl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lsl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lua.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/lua.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/makefile.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/makefile.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/markdown.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/markdown.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mathematica.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mathematica.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/matlab.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/matlab.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/maxima.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/maxima.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mel.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mel.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mercury.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mercury.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mipsasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mipsasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mizar.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mizar.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mojolicious.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/mojolicious.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/monkey.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/monkey.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/moonscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/moonscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/n1ql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/n1ql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nestedtext.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nestedtext.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nginx.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nginx.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nim.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nim.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nix.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/node-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/node-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nsis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/nsis.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/objectivec.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/objectivec.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ocaml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ocaml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/openscad.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/openscad.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/oxygene.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/oxygene.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/parser3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/parser3.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/perl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/perl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/pf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/pf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/pgsql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/pgsql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/php-template.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/php-template.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/php.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/php.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/plaintext.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/plaintext.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/pony.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/pony.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/powershell.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/powershell.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/processing.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/processing.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/profile.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/profile.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/prolog.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/prolog.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/properties.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/properties.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/protobuf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/protobuf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/puppet.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/puppet.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/purebasic.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/purebasic.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/python-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/python-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/python.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/python.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/q.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/q.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/qml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/qml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/r.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/r.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/reasonml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/reasonml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/rib.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/rib.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/roboconf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/roboconf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/routeros.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/routeros.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/rsl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/rsl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ruby.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ruby.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ruleslanguage.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/ruleslanguage.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/rust.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/rust.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sas.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sas.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scala.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scala.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scheme.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scheme.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scilab.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scilab.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scss.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/scss.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/shell.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/shell.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/smali.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/smali.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/smalltalk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/smalltalk.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sqf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sqf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/sql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/stan.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/stan.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/stata.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/stata.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/step21.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/step21.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/stylus.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/stylus.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/subunit.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/subunit.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/swift.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/swift.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/taggerscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/taggerscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/tap.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/tap.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/tcl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/tcl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/thrift.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/thrift.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/tp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/tp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/twig.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/twig.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/typescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/typescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vala.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vala.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vbnet.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vbnet.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vbscript-html.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vbscript-html.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vbscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vbscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/verilog.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/verilog.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vhdl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vhdl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vim.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/vim.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/wasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/wasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/wren.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/wren.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/x86asm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/x86asm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/xl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/xl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/xml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/xml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/xquery.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/xquery.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/yaml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/yaml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/zephir.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/languages/zephir.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/es/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/highlight.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/highlight.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/1c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/1c.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/abnf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/abnf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/accesslog.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/accesslog.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/actionscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/actionscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ada.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ada.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/angelscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/angelscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/apache.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/apache.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/applescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/applescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/arcade.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/arcade.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/arduino.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/arduino.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/armasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/armasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/asciidoc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/asciidoc.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/aspectj.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/aspectj.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/autohotkey.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/autohotkey.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/autoit.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/autoit.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/avrasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/avrasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/awk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/awk.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/axapta.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/axapta.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/bash.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/bash.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/basic.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/basic.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/bnf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/bnf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/brainfuck.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/brainfuck.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/c.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cal.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cal.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/capnproto.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/capnproto.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ceylon.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ceylon.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/clean.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/clean.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/clojure-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/clojure-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/clojure.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/clojure.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cmake.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cmake.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/coffeescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/coffeescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/coq.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/coq.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cos.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cos.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cpp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/cpp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/crmsh.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/crmsh.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/crystal.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/crystal.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/csharp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/csharp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/csp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/csp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/css.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/css.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/d.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dart.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/delphi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/delphi.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/diff.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/diff.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/django.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/django.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dns.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dns.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dockerfile.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dockerfile.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dos.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dos.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dsconfig.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dsconfig.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dts.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dts.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dust.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/dust.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ebnf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ebnf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/elixir.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/elixir.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/elm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/elm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/erb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/erb.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/erlang-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/erlang-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/erlang.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/erlang.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/excel.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/excel.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/fix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/fix.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/flix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/flix.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/fortran.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/fortran.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/fsharp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/fsharp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gams.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gams.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gauss.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gauss.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gcode.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gcode.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gherkin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gherkin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/glsl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/glsl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/go.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/go.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/golo.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/golo.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gradle.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/gradle.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/graphql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/graphql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/groovy.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/groovy.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/haml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/haml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/handlebars.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/handlebars.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/haskell.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/haskell.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/haxe.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/haxe.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/hsp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/hsp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/http.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/http.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/hy.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/hy.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/inform7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/inform7.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ini.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ini.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/irpf90.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/irpf90.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/isbl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/isbl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/java.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/java.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/javascript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/javascript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/jboss-cli.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/jboss-cli.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/json.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/json.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/julia-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/julia-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/julia.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/julia.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/kotlin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/kotlin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lasso.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lasso.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/latex.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/latex.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ldif.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ldif.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/leaf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/leaf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/less.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/less.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lisp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lisp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/livecodeserver.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/livecodeserver.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/livescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/livescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/llvm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/llvm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lsl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lsl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lua.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/lua.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/makefile.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/makefile.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/markdown.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/markdown.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mathematica.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mathematica.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/matlab.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/matlab.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/maxima.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/maxima.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mel.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mel.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mercury.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mercury.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mipsasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mipsasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mizar.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mizar.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mojolicious.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/mojolicious.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/monkey.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/monkey.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/moonscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/moonscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/n1ql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/n1ql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nestedtext.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nestedtext.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nginx.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nginx.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nim.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nim.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nix.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/node-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/node-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nsis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/nsis.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/objectivec.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/objectivec.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ocaml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ocaml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/openscad.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/openscad.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/oxygene.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/oxygene.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/parser3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/parser3.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/perl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/perl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/pf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/pf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/pgsql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/pgsql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/php-template.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/php-template.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/php.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/php.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/plaintext.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/plaintext.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/pony.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/pony.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/powershell.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/powershell.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/processing.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/processing.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/profile.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/profile.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/prolog.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/prolog.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/properties.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/properties.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/protobuf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/protobuf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/puppet.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/puppet.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/purebasic.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/purebasic.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/python-repl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/python-repl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/python.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/python.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/q.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/q.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/qml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/qml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/r.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/r.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/reasonml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/reasonml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/rib.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/rib.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/roboconf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/roboconf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/routeros.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/routeros.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/rsl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/rsl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ruby.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ruby.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ruleslanguage.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/ruleslanguage.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/rust.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/rust.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sas.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sas.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scala.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scala.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scheme.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scheme.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scilab.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scilab.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scss.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/scss.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/shell.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/shell.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/smali.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/smali.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/smalltalk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/smalltalk.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sqf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sqf.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sql.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/sql.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/stan.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/stan.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/stata.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/stata.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/step21.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/step21.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/stylus.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/stylus.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/subunit.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/subunit.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/swift.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/swift.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/taggerscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/taggerscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/tap.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/tap.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/tcl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/tcl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/thrift.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/thrift.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/tp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/tp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/twig.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/twig.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/typescript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/typescript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vala.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vala.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vbnet.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vbnet.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vbscript-html.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vbscript-html.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vbscript.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vbscript.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/verilog.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/verilog.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vhdl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vhdl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vim.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/vim.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/wasm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/wasm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/wren.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/wren.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/x86asm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/x86asm.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/xl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/xl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/xml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/xml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/xquery.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/xquery.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/yaml.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/yaml.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/zephir.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/languages/zephir.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/1c-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/1c-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/a11y-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/a11y-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/a11y-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/a11y-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/agate.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/agate.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/an-old-hope.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/an-old-hope.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/androidstudio.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/androidstudio.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/arduino-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/arduino-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/arta.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/arta.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/ascetic.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/ascetic.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/atom-one-dark-reasonable.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/atom-one-dark-reasonable.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/atom-one-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/atom-one-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/atom-one-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/atom-one-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/3024.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/3024.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/apathy.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/apathy.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/apprentice.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/apprentice.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ashes.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ashes.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-cave-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-cave-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-cave.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-cave.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-dune-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-dune-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-dune.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-dune.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-estuary-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-estuary-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-estuary.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-estuary.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-forest-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-forest-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-forest.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-forest.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-heath-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-heath-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-heath.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-heath.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-lakeside-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-lakeside-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-lakeside.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-lakeside.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-plateau-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-plateau-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-plateau.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-plateau.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-savanna-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-savanna-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-savanna.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-savanna.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-seaside-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-seaside-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-seaside.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-seaside.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-sulphurpool-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-sulphurpool-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-sulphurpool.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atelier-sulphurpool.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atlas.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/atlas.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/bespin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/bespin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-bathory.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-bathory.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-burzum.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-burzum.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-dark-funeral.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-dark-funeral.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-gorgoroth.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-gorgoroth.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-immortal.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-immortal.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-khold.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-khold.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-marduk.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-marduk.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-mayhem.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-mayhem.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-nile.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-nile.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-venom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal-venom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/black-metal.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brewer.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brewer.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/bright.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/bright.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brogrammer.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brogrammer.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brush-trees-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brush-trees-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brush-trees.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/brush-trees.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/chalk.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/chalk.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/circus.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/circus.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/classic-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/classic-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/classic-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/classic-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/codeschool.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/codeschool.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/colors.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/colors.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/cupcake.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/cupcake.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/cupertino.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/cupertino.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/danqing.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/danqing.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/darcula.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/darcula.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/dark-violet.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/dark-violet.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/darkmoss.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/darkmoss.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/darktooth.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/darktooth.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/decaf.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/decaf.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/default-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/default-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/default-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/default-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/dirtysea.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/dirtysea.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/dracula.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/dracula.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/edge-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/edge-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/edge-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/edge-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/eighties.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/eighties.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/embers.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/embers.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-gray-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-gray-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-gray-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-gray-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/equilibrium-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/espresso.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/espresso.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/eva-dim.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/eva-dim.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/eva.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/eva.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/flat.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/flat.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/framer.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/framer.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/fruit-soda.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/fruit-soda.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gigavolt.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gigavolt.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/github.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/github.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/google-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/google-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/google-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/google-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/grayscale-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/grayscale-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/grayscale-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/grayscale-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/green-screen.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/green-screen.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-hard.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-hard.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-medium.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-medium.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-pale.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-pale.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-soft.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-dark-soft.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-light-hard.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-light-hard.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-light-medium.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-light-medium.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-light-soft.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/gruvbox-light-soft.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/hardcore.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/hardcore.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/harmonic16-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/harmonic16-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/harmonic16-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/harmonic16-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/heetch-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/heetch-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/heetch-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/heetch-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/helios.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/helios.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/hopscotch.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/hopscotch.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/horizon-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/horizon-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/horizon-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/horizon-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/humanoid-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/humanoid-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/humanoid-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/humanoid-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ia-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ia-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ia-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ia-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/icy-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/icy-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ir-black.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ir-black.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/isotope.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/isotope.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/kimber.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/kimber.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/london-tube.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/london-tube.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/macintosh.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/macintosh.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/marrakesh.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/marrakesh.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/materia.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/materia.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-darker.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-darker.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-lighter.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-lighter.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-palenight.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-palenight.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-vivid.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material-vivid.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/material.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/mellow-purple.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/mellow-purple.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/mexico-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/mexico-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/mocha.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/mocha.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/monokai.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/monokai.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/nebula.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/nebula.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/nord.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/nord.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/nova.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/nova.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ocean.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ocean.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/oceanicnext.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/oceanicnext.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/one-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/one-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/onedark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/onedark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/outrun-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/outrun-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/papercolor-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/papercolor-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/papercolor-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/papercolor-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/paraiso.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/paraiso.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/pasque.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/pasque.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/phd.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/phd.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/pico.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/pico.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/pop.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/pop.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/porple.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/porple.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/qualia.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/qualia.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/railscasts.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/railscasts.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/rebecca.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/rebecca.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ros-pine-dawn.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ros-pine-dawn.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ros-pine-moon.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ros-pine-moon.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ros-pine.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/ros-pine.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/sagelight.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/sagelight.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/sandcastle.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/sandcastle.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/seti-ui.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/seti-ui.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/shapeshifter.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/shapeshifter.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/silk-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/silk-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/silk-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/silk-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/snazzy.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/snazzy.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solar-flare-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solar-flare-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solar-flare.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solar-flare.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solarized-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solarized-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solarized-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/solarized-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/spacemacs.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/spacemacs.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/summercamp.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/summercamp.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/summerfruit-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/summerfruit-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/summerfruit-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/summerfruit-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/synth-midnight-terminal-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/synth-midnight-terminal-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/synth-midnight-terminal-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/synth-midnight-terminal-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tango.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tango.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tender.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tender.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tomorrow-night.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tomorrow-night.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tomorrow.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/tomorrow.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/twilight.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/twilight.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/unikitty-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/unikitty-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/unikitty-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/unikitty-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/vulcan.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/vulcan.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-10-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-10-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-10.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-10.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-95-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-95-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-95.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-95.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-high-contrast-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-high-contrast-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-high-contrast.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-high-contrast.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-nt-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-nt-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-nt.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/windows-nt.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/woodland.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/woodland.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/xcode-dusk.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/xcode-dusk.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/zenburn.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/base16/zenburn.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/brown-paper.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/brown-paper.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/brown-papersq.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/codepen-embed.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/codepen-embed.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/color-brewer.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/color-brewer.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-cherry.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-cherry.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-dimmer.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-dimmer.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-icecap.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-icecap.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-saturated.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/cybertopia-saturated.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/default.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/default.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/devibeans.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/devibeans.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/docco.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/docco.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/far.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/far.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/felipec.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/felipec.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/foundation.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/foundation.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/github-dark-dimmed.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/github-dark-dimmed.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/github-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/github-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/github.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/github.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/gml.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/gml.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/googlecode.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/googlecode.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/gradient-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/gradient-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/gradient-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/gradient-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/grayscale.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/grayscale.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/hybrid.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/hybrid.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/idea.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/idea.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/intellij-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/intellij-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/ir-black.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/ir-black.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/isbl-editor-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/isbl-editor-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/isbl-editor-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/isbl-editor-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/kimbie-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/kimbie-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/kimbie-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/kimbie-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/lightfair.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/lightfair.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/lioshi.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/lioshi.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/magula.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/magula.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/mono-blue.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/mono-blue.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/monokai-sublime.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/monokai-sublime.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/monokai.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/monokai.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/night-owl.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/night-owl.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/nnfx-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/nnfx-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/nnfx-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/nnfx-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/nord.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/nord.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/obsidian.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/obsidian.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/panda-syntax-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/panda-syntax-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/panda-syntax-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/panda-syntax-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/paraiso-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/paraiso-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/paraiso-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/paraiso-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/pojoaque.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/pojoaque.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/pojoaque.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/purebasic.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/purebasic.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/qtcreator-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/qtcreator-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/qtcreator-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/qtcreator-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rainbow.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rainbow.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rose-pine-dawn.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rose-pine-dawn.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rose-pine-moon.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rose-pine-moon.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rose-pine.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/rose-pine.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/routeros.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/routeros.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/school-book.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/school-book.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/shades-of-purple.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/shades-of-purple.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/srcery.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/srcery.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/stackoverflow-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/stackoverflow-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/stackoverflow-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/stackoverflow-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/sunburst.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/sunburst.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tokyo-night-dark.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tokyo-night-dark.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tokyo-night-light.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tokyo-night-light.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tomorrow-night-blue.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tomorrow-night-blue.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tomorrow-night-bright.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/tomorrow-night-bright.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/vs.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/vs.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/vs2015.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/vs2015.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/xcode.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/xcode.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/xt256.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/highlight/styles/xt256.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/js/app.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/js/gen.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/js/marked.umd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/js/request.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/js/vue.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/marked-highlight/index.umd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
+  </component>
+  <component name="GOROOT" url="file://$USER_HOME$/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.5.windows-amd64" />
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="dev" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;xllyll&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/xllyll/log-tools-go.git&quot;,
+    &quot;accountId&quot;: &quot;0af079c9-6ca3-45db-b47f-e1847eed6517&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="31DJMmbQbBHhllsEg3Ve2oAdtAk" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultGoTemplateProperty&quot;: &quot;Go File&quot;,
+    &quot;Go Build.go build log-tools-go.executor&quot;: &quot;Debug&quot;,
+    &quot;Go Test.TestCCC in log-tools-go/pkg/xmatch.executor&quot;: &quot;Run&quot;,
+    &quot;Go Test.TestChat in log-tools-go/pkg/ai.executor&quot;: &quot;Run&quot;,
+    &quot;Go Test.TestGetLocalIP in log-tools-go/pkg/xip.executor&quot;: &quot;Run&quot;,
+    &quot;Makefile Target.test.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/word/ai/log-tools-go/web/static/marked-highlight&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;http.proxy&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\word\ai\log-tools-go\web\static\marked-highlight" />
+      <recent name="E:\word\ai\log-tools-go\web\static\js" />
+      <recent name="E:\word\ai\log-tools-go\web\static" />
+      <recent name="E:\word\ai\log-tools-go" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Go Build.go build log-tools-go">
+    <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <module name="log-tools-go" />
+      <working_directory value="$PROJECT_DIR$" />
+      <go_parameters value="-i" />
+      <kind value="FILE" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build log-tools-go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="log-tools-go" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="FILE" />
+      <package value="log-tools-go" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$/main.go" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestCCC in log-tools-go/pkg/xmatch" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="log-tools-go" />
+      <working_directory value="$PROJECT_DIR$/pkg/xmatch" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="log-tools-go/pkg/xmatch" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestCCC\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestChat in log-tools-go/pkg/ai" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="log-tools-go" />
+      <working_directory value="$PROJECT_DIR$/pkg/ai" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="log-tools-go/pkg/ai" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestChat\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestGetLocalIP in log-tools-go/pkg/xip" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="log-tools-go" />
+      <working_directory value="$PROJECT_DIR$/pkg/xip" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="log-tools-go/pkg/xip" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestGetLocalIP\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="log-tools-go" />
+      <working_directory value="$PROJECT_DIR$" />
+      <go_parameters value="-i" />
+      <kind value="DIRECTORY" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test" type="MAKEFILE_TARGET_RUN_CONFIGURATION" factoryName="Makefile" temporary="true">
+      <makefile filename="$PROJECT_DIR$/Makefile" target="test" workingDirectory="" arguments="">
+        <envs />
+      </makefile>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Makefile Target.test" />
+        <item itemvalue="Go Test.TestGetLocalIP in log-tools-go/pkg/xip" />
+        <item itemvalue="Go Test.TestChat in log-tools-go/pkg/ai" />
+        <item itemvalue="Go Test.TestCCC in log-tools-go/pkg/xmatch" />
+        <item itemvalue="Go Build.go build log-tools-go" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-a94e463ab2e7-intellij.indexing.shared.core-IU-243.25659.59" />
+        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-IU-243.25659.59" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="StructureViewState">
+    <option name="selectedTab" value="Physical" />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9d6ff1d4-a002-4414-bdef-f76ed55eade8" name="Changes" comment="" />
+      <created>1755052665591</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1755052665591</updated>
+      <workItem from="1755052667286" duration="5573000" />
+      <workItem from="1755071151363" duration="411000" />
+      <workItem from="1755071583204" duration="7538000" />
+      <workItem from="1755133051777" duration="23017000" />
+      <workItem from="1755219468163" duration="3189000" />
+      <workItem from="1755229697529" duration="12577000" />
+      <workItem from="1755479302032" duration="56000" />
+      <workItem from="1755589031122" duration="1003000" />
+      <workItem from="1755754668779" duration="9319000" />
+      <workItem from="1755832669176" duration="17907000" />
+      <workItem from="1756083574216" duration="10904000" />
+      <workItem from="1756112707490" duration="587000" />
+      <workItem from="1756113533880" duration="1165000" />
+      <workItem from="1756189542535" duration="2544000" />
+      <workItem from="1756256997200" duration="1884000" />
+      <workItem from="1756347165111" duration="5571000" />
+      <workItem from="1756429216721" duration="10447000" />
+      <workItem from="1756688769047" duration="5355000" />
+      <workItem from="1756774605971" duration="3125000" />
+      <workItem from="1756802629458" duration="1223000" />
+      <workItem from="1760407307778" duration="1053000" />
+      <workItem from="1760597276968" duration="908000" />
+      <workItem from="1760665608999" duration="78000" />
+      <workItem from="1760692179967" duration="1759000" />
+      <workItem from="1760924497161" duration="604000" />
+      <workItem from="1760925269197" duration="599000" />
+      <workItem from="1761890797159" duration="3836000" />
+      <workItem from="1762131875380" duration="587000" />
+      <workItem from="1762396349335" duration="8450000" />
+      <workItem from="1762735785740" duration="13873000" />
+      <workItem from="1762823155875" duration="20694000" />
+      <workItem from="1762909254147" duration="608000" />
+      <workItem from="1762911400024" duration="1597000" />
+      <workItem from="1762994996937" duration="1233000" />
+      <workItem from="1763082687620" duration="1303000" />
+      <workItem from="1763340957722" duration="2020000" />
+      <workItem from="1763427371066" duration="2488000" />
+      <workItem from="1763514175829" duration="832000" />
+      <workItem from="1763601441446" duration="371000" />
+      <workItem from="1763603025573" duration="10000" />
+      <workItem from="1764550005376" duration="3188000" />
+      <workItem from="1764553207466" duration="4922000" />
+      <workItem from="1764558282115" duration="2344000" />
+      <workItem from="1765187553409" duration="255000" />
+      <workItem from="1765242208197" duration="180000" />
+      <workItem from="1766043697979" duration="634000" />
+      <workItem from="1767773083031" duration="1647000" />
+      <workItem from="1779066870744" duration="13132000" />
+      <workItem from="1779151948404" duration="20000" />
+      <workItem from="1779154468331" duration="294000" />
+      <workItem from="1779154776556" duration="3229000" />
+      <workItem from="1779323971687" duration="236000" />
+      <workItem from="1779324249686" duration="6470000" />
+    </task>
+    <task id="LOCAL-00001" summary="feat(code): 代码上传&#10;&#10;完成第一个版本">
+      <option name="closed" value="true" />
+      <created>1755052925253</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1755052925253</updated>
+    </task>
+    <task id="LOCAL-00002" summary="perf(code): 代码上传&#10;&#10;优化设置功能">
+      <option name="closed" value="true" />
+      <created>1755075593849</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1755075593849</updated>
+    </task>
+    <task id="LOCAL-00003" summary="perf(code): 代码上传&#10;&#10;优化删除已上传的文件">
+      <option name="closed" value="true" />
+      <created>1755078992611</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1755078992611</updated>
+    </task>
+    <task id="LOCAL-00004" summary="perf(code): 代码上传&#10;&#10;AI 分析完成">
+      <option name="closed" value="true" />
+      <created>1755162090924</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1755162090924</updated>
+    </task>
+    <task id="LOCAL-00005" summary="perf(code): 代码上传&#10;&#10;AI 分析完成失败提示">
+      <option name="closed" value="true" />
+      <created>1755221088586</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1755221088586</updated>
+    </task>
+    <task id="LOCAL-00006" summary="perf(code): 代码上传&#10;&#10;AI 分析完成失败提示">
+      <option name="closed" value="true" />
+      <created>1755221738871</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1755221738871</updated>
+    </task>
+    <task id="LOCAL-00007" summary="perf(code): 代码上传&#10;&#10;AI 优化AI日志分析的界面">
+      <option name="closed" value="true" />
+      <created>1755247116001</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1755247116001</updated>
+    </task>
+    <task id="LOCAL-00008" summary="perf(code): 代码上传&#10;&#10;AI 优化AI日志分析的界面">
+      <option name="closed" value="true" />
+      <created>1755856634534</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1755856634534</updated>
+    </task>
+    <task id="LOCAL-00009" summary="perf(code): 代码上传&#10;&#10;AI 优化AI日志分析的界面">
+      <option name="closed" value="true" />
+      <created>1756100933533</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1756100933533</updated>
+    </task>
+    <task id="LOCAL-00010" summary="perf(code): 代码上传&#10;&#10;代码格式化">
+      <option name="closed" value="true" />
+      <created>1756113197352</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1756113197352</updated>
+    </task>
+    <task id="LOCAL-00011" summary="perf(code): 代码上传&#10;&#10;自动打开浏览器预览页面功能添加">
+      <option name="closed" value="true" />
+      <created>1756351197681</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1756351197681</updated>
+    </task>
+    <task id="LOCAL-00012" summary="perf(code): 代码上传&#10;&#10;delete db">
+      <option name="closed" value="true" />
+      <created>1756351710048</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1756351710048</updated>
+    </task>
+    <task id="LOCAL-00013" summary="perf(code): 代码上传&#10;&#10;获取本机局域网IP">
+      <option name="closed" value="true" />
+      <created>1756448251465</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1756448251465</updated>
+    </task>
+    <task id="LOCAL-00014" summary="perf(code): 代码上传&#10;&#10;暗黑模式修正">
+      <option name="closed" value="true" />
+      <created>1756451899678</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1756451899678</updated>
+    </task>
+    <task id="LOCAL-00015" summary="perf(code): 代码上传&#10;&#10;暗黑模式修正">
+      <option name="closed" value="true" />
+      <created>1756454273911</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1756454273911</updated>
+    </task>
+    <task id="LOCAL-00016" summary="perf(code): 代码上传&#10;&#10;暗黑模式修正">
+      <option name="closed" value="true" />
+      <created>1760407402597</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1760407402597</updated>
+    </task>
+    <task id="LOCAL-00017" summary="perf(code): 代码上传&#10;&#10;修正模版选择无法清空">
+      <option name="closed" value="true" />
+      <created>1761893993690</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1761893993690</updated>
+    </task>
+    <task id="LOCAL-00018" summary="perf(code): 代码上传&#10;&#10;修正模版选择无法清空">
+      <option name="closed" value="true" />
+      <created>1762396519522</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1762396519522</updated>
+    </task>
+    <task id="LOCAL-00019" summary="perf(code): 代码上传&#10;&#10;优化显示逻辑">
+      <option name="closed" value="true" />
+      <created>1762397640432</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1762397640432</updated>
+    </task>
+    <task id="LOCAL-00020" summary="perf(code): 代码上传&#10;&#10;批量删除日志">
+      <option name="closed" value="true" />
+      <created>1762407310211</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1762407310211</updated>
+    </task>
+    <task id="LOCAL-00021" summary="perf(code): 代码上传&#10;&#10;批量删除日志">
+      <option name="closed" value="true" />
+      <created>1762410278229</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1762410278229</updated>
+    </task>
+    <task id="LOCAL-00022" summary="perf(code): 代码上传&#10;&#10;多文件查询">
+      <option name="closed" value="true" />
+      <created>1762737566122</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1762737566122</updated>
+    </task>
+    <task id="LOCAL-00023" summary="perf(code): 代码上传&#10;&#10;批量删除优化">
+      <option name="closed" value="true" />
+      <created>1762765123283</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1762765123283</updated>
+    </task>
+    <task id="LOCAL-00024" summary="perf(code): 代码上传&#10;&#10;批量删除优化">
+      <option name="closed" value="true" />
+      <created>1762829589598</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1762829589598</updated>
+    </task>
+    <task id="LOCAL-00025" summary="perf(code): 代码上传&#10;&#10;批量删除优化">
+      <option name="closed" value="true" />
+      <created>1762830098151</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1762830098151</updated>
+    </task>
+    <task id="LOCAL-00026" summary="perf(code): 代码上传&#10;&#10;优化匹配">
+      <option name="closed" value="true" />
+      <created>1762832558816</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1762832558816</updated>
+    </task>
+    <task id="LOCAL-00027" summary="perf(code): 代码上传&#10;&#10;删除文件优化">
+      <option name="closed" value="true" />
+      <created>1762843708035</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1762843708035</updated>
+    </task>
+    <task id="LOCAL-00028" summary="perf(code): 代码上传&#10;&#10;压缩文件">
+      <option name="closed" value="true" />
+      <created>1762844169258</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1762844169258</updated>
+    </task>
+    <task id="LOCAL-00029" summary="perf(code): 代码上传&#10;&#10;7z压缩文件">
+      <option name="closed" value="true" />
+      <created>1762845054396</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1762845054396</updated>
+    </task>
+    <task id="LOCAL-00030" summary="perf(code): 代码上传&#10;&#10;查询接口修正">
+      <option name="closed" value="true" />
+      <created>1762849439428</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1762849439428</updated>
+    </task>
+    <task id="LOCAL-00031" summary="perf(code): 代码上传&#10;&#10;查询接口修正">
+      <option name="closed" value="true" />
+      <created>1763360816547</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1763360816547</updated>
+    </task>
+    <task id="LOCAL-00032" summary="perf(code): 代码上传&#10;&#10;正则查询优化">
+      <option name="closed" value="true" />
+      <created>1764551304574</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1764551304574</updated>
+    </task>
+    <task id="LOCAL-00033" summary="perf(code): 代码上传&#10;&#10;聊天优化">
+      <option name="closed" value="true" />
+      <created>1764553183386</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1764553183387</updated>
+    </task>
+    <task id="LOCAL-00034" summary="perf(code): 代码上传&#10;&#10;聊天优化">
+      <option name="closed" value="true" />
+      <created>1764557545874</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1764557545874</updated>
+    </task>
+    <task id="LOCAL-00035" summary="perf(code): 代码上传&#10;&#10;聊天优化">
+      <option name="closed" value="true" />
+      <created>1764560505000</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1764560505000</updated>
+    </task>
+    <task id="LOCAL-00036" summary="feat(config): 更新配置文件和日志解析规则&#10;&#10;- 替换AI API密钥为新的有效密钥&#10;- 在LogProjectRule结构体中添加DefaultModule字段&#10;- 将默认项目名称从&quot;默认项目2&quot;更改为&quot;BWIC&quot;&#10;- 添加default_module字段并设置为&quot;system&quot;&#10;- 更新设备服务模块的场景关键词配置&#10;- 重命名&quot;测试场景1&quot;为&quot;System问题分析&quot;&#10;- 更新多个关键词描述包括系统启动、重启原因、ACC状态变化等&#10;- 添加蓝牙电源管理相关的关键词配置&#10;- 重命名&quot;默认项目3&quot;为&quot;默认项目2&quot;&#10;- 删除不再需要的新项目模板配置">
+      <option name="closed" value="true" />
+      <created>1779069918758</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1779069918758</updated>
+    </task>
+    <task id="LOCAL-00037" summary="perf(database): 优化日志查询性能和索引结构&#10;&#10;- 添加多个复合索引提升查询效率：idx_log_entries_module、idx_log_entries_file_module_time、idx_log_entries_file_time、idx_log_entries_file_level&#10;- 重构日志条目查询逻辑，优化过滤条件顺序，将高选择性条件前置&#10;- 将关键词搜索移到查询条件末尾，减少低效LIKE操作的影响&#10;- 合并统计查询，通过单一查询获取所有统计数据，减少数据库访问次数&#10;- 实现buildWhereClause辅助函数统一构建WHERE子句，提高代码复用性&#10;- 移除生产环境中的SQL日志打印，仅保留调试用途">
+      <option name="closed" value="true" />
+      <created>1779070828249</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1779070828251</updated>
+    </task>
+    <task id="LOCAL-00038" summary="feat(filter): 添加模块过滤和场景关键词功能&#10;&#10;- 在前端添加了模块过滤开关和场景关键词功能&#10;- 实现了场景关键词OR连接查询逻辑&#10;- 添加了SQLite性能优化配置&#10;- 新增覆盖索引提升查询性能&#10;- 重构了统计信息查询减少数据库访问次数&#10;- 更新了日志查询API支持场景关键词参数&#10;- 优化了前端显示逻辑支持多文件选择状态">
+      <option name="closed" value="true" />
+      <created>1779085489028</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1779085489028</updated>
+    </task>
+    <task id="LOCAL-00039" summary="refactor(database): 重构数据库索引和Makefile配置&#10;&#10;- 删除migrate_indexes.go迁移脚本&#10;- 删除PERFORMANCE_OPTIMIZATION.md性能优化文档&#10;- 修改Makefile将test目标改为build目标并更新构建命令&#10;- 移除数据库索引优化相关代码实现&#10;- 清理性能监控和统计信息计算相关功能&#10;- 重命名GetLogStatsAsync为GetLogStats并简化实现&#10;- 移除数据库性能监控和调试日志功能&#10;- 简化日志查询处理流程和错误处理逻辑&#10;- 优化数据库连接管理和资源释放机制">
+      <option name="closed" value="true" />
+      <created>1779154699614</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1779154699614</updated>
+    </task>
+    <task id="LOCAL-00040" summary="refactor(xmatch): 优化正则表达式匹配性能&#10;&#10;- 添加正则表达式编译结果缓存机制，避免重复编译&#10;- 实现 RuleMatcher 结构体预编译常用字段正则表达式&#10;- 提供方法分别提取时间戳、进程、线程、级别等日志字段&#10;- 封装正则匹配逻辑到独立的 matchSub 函数&#10;- 使用 sync.Map 确保并发安全的缓存访问&#10;- 重构 Match 函数使用缓存的正则表达式实例">
+      <option name="closed" value="true" />
+      <created>1779161826804</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1779161826804</updated>
+    </task>
+    <option name="localTasksCounter" value="41" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;AI 分析完成" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;AI 分析完成失败提示" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;AI 优化AI日志分析的界面" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;代码格式化" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;自动打开浏览器预览页面功能添加" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;delete db" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;获取本机局域网IP" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;暗黑模式修正" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;修正模版选择无法清空" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;优化显示逻辑" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;批量删除日志" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;多文件查询" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;批量删除优化" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;优化匹配" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;删除文件优化" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;压缩文件" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;7z压缩文件" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;查询接口修正" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;正则查询优化" />
+    <MESSAGE value="perf(code): 代码上传&#10;&#10;聊天优化" />
+    <MESSAGE value="feat(config): 更新配置文件和日志解析规则&#10;&#10;- 替换AI API密钥为新的有效密钥&#10;- 在LogProjectRule结构体中添加DefaultModule字段&#10;- 将默认项目名称从&quot;默认项目2&quot;更改为&quot;BWIC&quot;&#10;- 添加default_module字段并设置为&quot;system&quot;&#10;- 更新设备服务模块的场景关键词配置&#10;- 重命名&quot;测试场景1&quot;为&quot;System问题分析&quot;&#10;- 更新多个关键词描述包括系统启动、重启原因、ACC状态变化等&#10;- 添加蓝牙电源管理相关的关键词配置&#10;- 重命名&quot;默认项目3&quot;为&quot;默认项目2&quot;&#10;- 删除不再需要的新项目模板配置" />
+    <MESSAGE value="perf(database): 优化日志查询性能和索引结构&#10;&#10;- 添加多个复合索引提升查询效率：idx_log_entries_module、idx_log_entries_file_module_time、idx_log_entries_file_time、idx_log_entries_file_level&#10;- 重构日志条目查询逻辑，优化过滤条件顺序，将高选择性条件前置&#10;- 将关键词搜索移到查询条件末尾，减少低效LIKE操作的影响&#10;- 合并统计查询，通过单一查询获取所有统计数据，减少数据库访问次数&#10;- 实现buildWhereClause辅助函数统一构建WHERE子句，提高代码复用性&#10;- 移除生产环境中的SQL日志打印，仅保留调试用途" />
+    <MESSAGE value="feat(filter): 添加模块过滤和场景关键词功能&#10;&#10;- 在前端添加了模块过滤开关和场景关键词功能&#10;- 实现了场景关键词OR连接查询逻辑&#10;- 添加了SQLite性能优化配置&#10;- 新增覆盖索引提升查询性能&#10;- 重构了统计信息查询减少数据库访问次数&#10;- 更新了日志查询API支持场景关键词参数&#10;- 优化了前端显示逻辑支持多文件选择状态" />
+    <MESSAGE value="refactor(database): 重构数据库索引和Makefile配置&#10;&#10;- 删除migrate_indexes.go迁移脚本&#10;- 删除PERFORMANCE_OPTIMIZATION.md性能优化文档&#10;- 修改Makefile将test目标改为build目标并更新构建命令&#10;- 移除数据库索引优化相关代码实现&#10;- 清理性能监控和统计信息计算相关功能&#10;- 重命名GetLogStatsAsync为GetLogStats并简化实现&#10;- 移除数据库性能监控和调试日志功能&#10;- 简化日志查询处理流程和错误处理逻辑&#10;- 优化数据库连接管理和资源释放机制" />
+    <MESSAGE value="refactor(xmatch): 优化正则表达式匹配性能&#10;&#10;- 添加正则表达式编译结果缓存机制，避免重复编译&#10;- 实现 RuleMatcher 结构体预编译常用字段正则表达式&#10;- 提供方法分别提取时间戳、进程、线程、级别等日志字段&#10;- 封装正则匹配逻辑到独立的 matchSub 函数&#10;- 使用 sync.Map 确保并发安全的缓存访问&#10;- 重构 Match 函数使用缓存的正则表达式实例" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor(xmatch): 优化正则表达式匹配性能&#10;&#10;- 添加正则表达式编译结果缓存机制，避免重复编译&#10;- 实现 RuleMatcher 结构体预编译常用字段正则表达式&#10;- 提供方法分别提取时间戳、进程、线程、级别等日志字段&#10;- 封装正则匹配逻辑到独立的 matchSub 函数&#10;- 使用 sync.Map 确保并发安全的缓存访问&#10;- 重构 Match 函数使用缓存的正则表达式实例" />
+  </component>
+  <component name="VgoProject">
+    <settings-migrated>true</settings-migrated>
+  </component>
+</project>
