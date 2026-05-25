@@ -1,0 +1,30 @@
+# 复制为 config/config.yaml 后按环境修改
+# cp config.example.yaml config/config.yaml
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  host: "10.0.0.1"          # 外部 PostgreSQL 地址（容器需能访问）
+  port: 5432
+  user: "postgres"
+  password: "CHANGE_ME"
+  dbname: "logs"
+  sslmode: "disable"
+
+storage:
+  upload_dir: "/app/data/uploads"
+  max_file_size: 524288000
+  retention_days: 30
+  cleanup_interval_hours: 24
+
+ingest:
+  batch_size: 500
+  worker_count: 4
+
+jira:
+  enabled: false
+  base_url: "https://jira.example.com"
+  email: "your-email@example.com"
+  api_token: "your-api-token"

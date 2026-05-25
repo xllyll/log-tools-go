@@ -1,0 +1,19 @@
+# 在 server/docker 目录下执行：docker compose up -d
+# 需先准备 config/config.yaml（数据库指向已部署的外部 PostgreSQL）
+
+services:
+  log-tools-server:
+    image: ${IMAGE_FULL:-log-tools-server:latest}
+    container_name: log-tools-server
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    environment:
+      CONFIG_PATH: /app/config/config.yaml
+      TZ: Asia/Shanghai
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+      - ./data:/app/data

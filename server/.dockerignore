@@ -1,0 +1,9 @@
+data/
+*.exe
+*.test
+.git
+.idea
+docker/data/
+docker/*.tar
+**/*.md
+!docker/README.md

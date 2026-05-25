@@ -1,0 +1,5 @@
+.env
+config/config.yaml
+*.tar
+data/uploads/*
+!data/uploads/.gitkeep

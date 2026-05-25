@@ -27,6 +27,17 @@ go run .
 
 默认监听 `0.0.0.0:8080`。
 
+## Docker 部署
+
+PostgreSQL 需单独部署，compose 仅包含应用。详见 [docker/README.md](docker/README.md)。
+
+```bash
+cd server/docker
+cp .env.example .env && cp config.example.yaml config/config.yaml
+# 编辑 config/config.yaml 中的 database 连接外部 PG
+chmod +x deploy.sh && ./deploy.sh up
+```
+
 ## API 说明
 
 所有 `/api/*` 接口需请求头 `X-Device-ID`（浏览器设备标识）。

@@ -6,7 +6,7 @@
           <el-icon :size="20"><Document /></el-icon>
         </div>
         <div>
-          <h1>车机日志分析</h1>
+          <h1>BWIC日志分析</h1>
           <p>Log Tools · 上传 · 检索 · 场景匹配</p>
         </div>
       </div>
