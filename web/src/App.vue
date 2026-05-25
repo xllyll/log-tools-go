@@ -39,6 +39,7 @@
           <el-tab-pane label="上传" name="upload">
             <div class="panel-card upload-card">
               <el-upload
+                ref="uploadRef"
                 drag
                 multiple
                 :auto-upload="false"
@@ -241,13 +242,12 @@
                   </template>
                   <template v-else>
                     <span class="ln">{{ row.line }}</span>
-                    <span class="log-body">
+                    <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc }">
                       <span class="log-text" v-html="highlightLine(row)"></span>
                       <span
                         v-if="row.scene_desc"
                         class="scene-desc"
                         :style="sceneDescStyle(row.color)"
-                        :title="row.scene_desc"
                       >{{ row.scene_desc }}</span>
                     </span>
                   </template>
@@ -267,13 +267,12 @@
               >
                 <span v-if="row.line === ctxCenterLine" class="ctx-origin-tag">当前</span>
                 <span class="ln">{{ row.line }}</span>
-                <span class="log-body">
+                <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc }">
                   <span class="log-text">{{ row.display || row.content }}</span>
                   <span
                     v-if="row.scene_desc"
                     class="scene-desc"
                     :style="sceneDescStyle(row.color)"
-                    :title="row.scene_desc"
                   >{{ row.scene_desc }}</span>
                 </span>
               </div>
@@ -333,6 +332,7 @@ let searchDebounceTimer = null
 const loadingLogs = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
+const uploadRef = ref(null)
 const pendingFiles = ref([])
 const parseTasks = ref([])
 const parseLogs = ref([])
@@ -508,6 +508,7 @@ async function doUpload() {
     }
     ElMessage.success('上传成功，后台解析中')
     pendingFiles.value = []
+    uploadRef.value?.clearFiles()
     uploadProgress.value = 100
     await loadFiles()
     startPolling()
@@ -1186,18 +1187,38 @@ onUnmounted(() => {
   min-width: 0;
   display: flex;
   flex-wrap: nowrap;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+/* 无 desc：正文占满一行并可省略 */
+.log-body:not(.has-scene-desc) .log-text {
+  flex: 1 1 auto;
 }
 
 .log-text {
-  flex: 1 1 auto;
   min-width: 0;
-  max-width: 100%;
   color: var(--line-color, var(--app-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 有 desc：正文紧跟内容后、过长则压缩省略；desc 紧贴正文右侧，不顶到行尾 */
+.log-body.has-scene-desc {
+  gap: 6px;
+}
+
+.log-body.has-scene-desc .log-text {
+  flex: 0 1 auto;
+  max-width: 100%;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.log-body.has-scene-desc .scene-desc {
+  flex: 0 0 auto;
 }
 
 .ctx-list .log-line {
@@ -1215,6 +1236,18 @@ onUnmounted(() => {
 
 .ctx-list .log-body {
   flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.ctx-list .log-body:not(.has-scene-desc) .log-text {
+  flex: 1 1 auto;
+}
+
+.ctx-list .log-body.has-scene-desc .log-text {
+  flex: 0 1 auto;
+  max-width: 100%;
+  font-size: 11px;
 }
 
 .ctx-list .ln {
