@@ -114,10 +114,11 @@
             <div
               v-for="f in files"
               :key="f.id"
-              :class="['file-item', { active: currentFileId === f.id }]"
-              @click="selectFile(f)"
+              :class="['file-item', { active: isFileSelected(f.id) }]"
+              @click="toggleSelectFile(f)"
             >
               <div class="file-item-main">
+                <span v-if="fileSelectOrder(f.id)" class="file-order">{{ fileSelectOrder(f.id) }}</span>
                 <el-icon class="file-icon"><Document /></el-icon>
                 <div class="file-meta">
                   <span class="file-name" :title="f.name">{{ f.name }}</span>
@@ -153,19 +154,19 @@
       </aside>
 
       <main class="content">
-        <div v-if="!currentFileId" class="empty-state">
+        <div v-if="!selectedFileIds.length" class="empty-state">
           <div class="empty-icon">
             <el-icon :size="48"><DocumentCopy /></el-icon>
           </div>
           <h2>选择或上传日志文件</h2>
-          <p>从左侧文件列表选择已解析完成的日志，或上传新的 logcat 文件</p>
+          <p>从左侧点击已解析完成的日志（可多选，按选择顺序展示），或上传新文件</p>
         </div>
 
         <template v-else>
           <div class="log-toolbar panel-card">
             <div class="log-toolbar-left">
               <el-icon><Document /></el-icon>
-              <span class="log-filename">{{ currentFileName }}</span>
+              <span class="log-filename" :title="selectedFilesLabel">{{ selectedFilesLabel }}</span>
             </div>
             <div class="log-toolbar-right">
               <el-tag effect="plain" round>{{ logs.length }} 条记录</el-tag>
@@ -182,15 +183,28 @@
                 <div
                   v-for="row in logs"
                   :key="row.id"
-                  class="log-line"
-                  :style="logLineStyle(row)"
-                  :title="row.display || row.content"
-                  @click="expandContext(row)"
+                  v-memo="[row.id, row.scene_desc, row.content, row._fileHeader]"
+                  :class="row._fileHeader ? 'log-file-header' : 'log-line'"
+                  :style="row._fileHeader ? undefined : logLineStyle(row)"
+                  :title="row._fileHeader ? row.file_name : `${row.display || row.content || ''}（双击查看上下文）`"
+                  @dblclick="!row._fileHeader && expandContext(row)"
                 >
-                  <span class="level-mark" :style="{ background: levelColor(row.level) }" />
-                  <span class="level-badge" :style="{ color: levelColor(row.level) }">{{ levelShort(row.level) }}</span>
-                  <span class="ln">{{ row.line }}</span>
-                  <span class="log-text" v-html="highlightLine(row)"></span>
+                  <template v-if="row._fileHeader">
+                    <el-icon class="log-file-header-icon"><Document /></el-icon>
+                    <span class="log-file-header-name">{{ row.file_name }}</span>
+                  </template>
+                  <template v-else>
+                    <span class="ln">{{ row.line }}</span>
+                    <span class="log-body">
+                      <span class="log-text" v-html="highlightLine(row)"></span>
+                      <span
+                        v-if="row.scene_desc"
+                        class="scene-desc"
+                        :style="sceneDescStyle(row.color)"
+                        :title="row.scene_desc"
+                      >{{ row.scene_desc }}</span>
+                    </span>
+                  </template>
                 </div>
               </div>
             </el-scrollbar>
@@ -206,10 +220,16 @@
                 :title="row.display || row.content"
               >
                 <span v-if="row.line === ctxCenterLine" class="ctx-origin-tag">当前</span>
-                <span class="level-mark" :style="{ background: levelColor(row.level) }" />
-                <span class="level-badge" :style="{ color: levelColor(row.level) }">{{ levelShort(row.level) }}</span>
                 <span class="ln">{{ row.line }}</span>
-                <span class="log-text">{{ row.display || row.content }}</span>
+                <span class="log-body">
+                  <span class="log-text">{{ row.display || row.content }}</span>
+                  <span
+                    v-if="row.scene_desc"
+                    class="scene-desc"
+                    :style="sceneDescStyle(row.color)"
+                    :title="row.scene_desc"
+                  >{{ row.scene_desc }}</span>
+                </span>
               </div>
             </div>
           </el-drawer>
@@ -222,7 +242,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Collection,
@@ -248,16 +268,19 @@ import {
   collectSceneKeywords,
   decorateEntries,
   loadLocalScene,
+  sceneDescStyle,
 } from './utils/scene'
-import { levelColor, levelShort } from './utils/logLevel'
+import { levelColor } from './utils/logLevel'
 
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
 const leftTab = ref('upload')
 const files = ref([])
-const currentFileId = ref('')
-const currentFileName = ref('')
-const logs = ref([])
+const selectedFileIds = ref([])
+const logs = shallowRef([])
+const MAX_LOG_ROWS = 10000
+let searchSeq = 0
+let searchDebounceTimer = null
 const loadingLogs = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
@@ -286,6 +309,24 @@ const allSceneNames = computed(() => {
   }
   return names
 })
+
+const selectedFilesLabel = computed(() => {
+  const names = selectedFileIds.value
+    .map((id) => files.value.find((f) => f.id === id)?.name)
+    .filter(Boolean)
+  if (!names.length) return ''
+  if (names.length === 1) return names[0]
+  return names.join(' → ')
+})
+
+function isFileSelected(id) {
+  return selectedFileIds.value.includes(id)
+}
+
+function fileSelectOrder(id) {
+  const i = selectedFileIds.value.indexOf(id)
+  return i >= 0 ? i + 1 : 0
+}
 
 function toggleTheme() {
   isDark.value = !isDark.value
@@ -396,22 +437,40 @@ async function doUpload() {
   }
 }
 
-async function selectFile(f) {
+async function toggleSelectFile(f) {
   if (f.status !== 'ready') {
     ElMessage.info(f.status_msg || '文件解析中，请稍候')
     startPolling()
     return
   }
-  currentFileId.value = f.id
-  currentFileName.value = f.name
-  await searchLogs()
+  const idx = selectedFileIds.value.indexOf(f.id)
+  if (idx >= 0) {
+    selectedFileIds.value = selectedFileIds.value.filter((id) => id !== f.id)
+  } else {
+    selectedFileIds.value = [...selectedFileIds.value, f.id]
+  }
+  if (selectedFileIds.value.length) {
+    scheduleSearchLogs()
+  } else {
+    logs.value = []
+  }
+}
+
+function scheduleSearchLogs() {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = null
+    searchLogs()
+  }, 350)
 }
 
 async function removeFile(id) {
   await api.deleteFile(id)
-  if (currentFileId.value === id) {
-    currentFileId.value = ''
+  selectedFileIds.value = selectedFileIds.value.filter((x) => x !== id)
+  if (!selectedFileIds.value.length) {
     logs.value = []
+  } else {
+    await searchLogs()
   }
   await loadFiles()
 }
@@ -431,31 +490,73 @@ async function retryIngest(f) {
   }
 }
 
+function perFileQueryLimit(fileCount) {
+  if (fileCount <= 1) return 5000
+  return Math.min(3000, Math.max(400, Math.floor(6000 / fileCount)))
+}
+
 async function searchLogs() {
-  if (!currentFileId.value) return
+  if (!selectedFileIds.value.length) return
+  const seq = ++searchSeq
   loadingLogs.value = true
+  logs.value = []
   try {
     const kws = searchKeywords.value.split('\n').map((s) => s.trim()).filter(Boolean)
     const { keywords: sceneKw, meta } = collectSceneKeywords(sceneConfig.value, selectedScenes.value)
     sceneMeta = meta
-    const { data } = await api.queryLogs({
-      file_id: currentFileId.value,
+    const order = [...selectedFileIds.value]
+    const fileMap = new Map(files.value.map((f) => [f.id, f]))
+    const limit = perFileQueryLimit(order.length)
+    const baseQuery = {
       keywords: kws,
       scene_keywords: sceneKw,
       use_regex: useRegex.value,
-      limit: 5000,
-    })
-    if (!data.success) throw new Error(data.error)
-    logs.value = decorateEntries(data.data?.entries || [], meta)
+      limit,
+    }
+
+    const responses = await Promise.all(
+      order.map((id) => api.queryLogs({ ...baseQuery, file_id: id }))
+    )
+    if (seq !== searchSeq) return
+
+    const merged = []
+    let truncated = false
+    for (let i = 0; i < order.length; i++) {
+      const id = order[i]
+      const { data } = responses[i]
+      if (!data.success) throw new Error(data.error)
+      const f = fileMap.get(id)
+      merged.push({
+        _fileHeader: true,
+        id: `header-${id}`,
+        file_name: f?.name || id,
+      })
+      const batch = decorateEntries(data.data?.entries || [], meta)
+      const room = MAX_LOG_ROWS - merged.length
+      if (batch.length >= room) {
+        merged.push(...batch.slice(0, room))
+        truncated = true
+        break
+      }
+      merged.push(...batch)
+    }
+
+    if (seq !== searchSeq) return
+    await nextTick()
+    if (seq !== searchSeq) return
+    logs.value = merged
+    if (truncated) {
+      ElMessage.warning(`已选 ${order.length} 个文件，仅展示前 ${MAX_LOG_ROWS} 行，请加关键词缩小范围`)
+    }
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || e.message)
+    if (seq === searchSeq) ElMessage.error(e.response?.data?.error || e.message)
   } finally {
-    loadingLogs.value = false
+    if (seq === searchSeq) loadingLogs.value = false
   }
 }
 
 function highlightLine(row) {
-  return (row.display || row.content || '').replace(/</g, '&lt;')
+  return (row.content || row.message || row.display || '').replace(/</g, '&lt;')
 }
 
 function logLineStyle(row) {
@@ -468,9 +569,10 @@ function logLineStyle(row) {
 }
 
 async function expandContext(row) {
+  if (!row.file_id) return
   ctxCenterLine.value = row.line
   const { data } = await api.logContext({
-    file_id: currentFileId.value,
+    file_id: row.file_id,
     line: row.line,
     before: 10,
     after: 10,
@@ -491,7 +593,11 @@ onMounted(async () => {
   if (files.value.some((f) => isProcessing(f.status))) startPolling()
 })
 
-onUnmounted(stopPolling)
+onUnmounted(() => {
+  stopPolling()
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchSeq++
+})
 </script>
 
 <style scoped>
@@ -732,6 +838,50 @@ onUnmounted(stopPolling)
   border-color: var(--app-accent);
 }
 
+.file-order {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--app-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+.log-file-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 6px 4px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-accent);
+  background: var(--app-accent-soft);
+  border-top: 1px solid var(--app-border-light);
+  border-bottom: 1px solid var(--app-border-light);
+  cursor: default;
+  user-select: none;
+}
+
+.log-list > .log-file-header:first-child {
+  margin-top: 0;
+}
+
+.log-file-header-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.log-file-header-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-item-main {
   display: flex;
   align-items: flex-start;
@@ -861,38 +1011,22 @@ onUnmounted(stopPolling)
 }
 
 .log-list {
-  padding: 8px 0;
+  padding: 4px 0;
 }
 
 .log-line {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 16px 4px 8px;
+  gap: 6px;
+  padding: 3px 12px 3px 2px;
   font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
   cursor: pointer;
-  border-left: 3px solid var(--level-color, #3fb950);
+  border-left: 2px solid var(--level-color, #3fb950);
   transition: background 0.1s;
   overflow: hidden;
   max-width: 100%;
-}
-
-.level-mark {
-  flex-shrink: 0;
-  width: 4px;
-  height: 14px;
-  border-radius: 2px;
-}
-
-.level-badge {
-  flex-shrink: 0;
-  width: 14px;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-  user-select: none;
 }
 
 .log-line:hover {
@@ -901,16 +1035,28 @@ onUnmounted(stopPolling)
 
 .log-line .ln {
   flex-shrink: 0;
-  width: 44px;
+  min-width: 28px;
+  padding-right: 2px;
   text-align: right;
   color: var(--app-log-gutter);
   user-select: none;
   font-size: 11px;
+  line-height: 1.45;
+}
+
+.log-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .log-text {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
   color: var(--line-color, var(--app-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
@@ -919,28 +1065,23 @@ onUnmounted(stopPolling)
 
 .ctx-list .log-line {
   cursor: default;
-  align-items: flex-start;
-  overflow: visible;
-  white-space: normal;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .ctx-list .log-text {
-  overflow: visible;
-  text-overflow: unset;
-  white-space: pre-wrap;
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ctx-list .level-mark {
-  margin-top: 3px;
-}
-
-.ctx-list .level-badge {
-  margin-top: 1px;
+.ctx-list .log-body {
+  flex-wrap: nowrap;
 }
 
 .ctx-list .ln {
-  margin-top: 1px;
+  line-height: 1.45;
 }
 
 .ctx-origin {
@@ -955,13 +1096,15 @@ onUnmounted(stopPolling)
 
 .ctx-origin-tag {
   flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
   color: #fff;
   background: var(--app-accent);
-  padding: 1px 6px;
-  border-radius: 4px;
-  line-height: 1.4;
+  padding: 2px 8px;
+  border-radius: var(--app-radius-sm);
+  line-height: 1.35;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
 }
 </style>

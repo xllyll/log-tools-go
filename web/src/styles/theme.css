@@ -17,6 +17,8 @@
   --app-radius-sm: 6px;
   --app-header-h: 56px;
   --app-sidebar-w: 380px;
+  --app-scene-tag-color: #1677ff;
+  --app-scene-tag-bg: rgba(64, 158, 255, 0.14);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -35,6 +37,30 @@ html.dark {
   --app-log-bg: #0d1117;
   --app-log-hover: #21262d;
   --app-log-gutter: #6e7681;
+  --app-scene-tag-color: #79c0ff;
+  --app-scene-tag-bg: rgba(88, 166, 255, 0.2);
+}
+
+/* 场景匹配 desc 标签：日志列表 / 上下文 / 配置预览统一（不用等宽字体，避免小字发糊） */
+.scene-desc {
+  flex-shrink: 0;
+  display: inline-block;
+  max-width: 42%;
+  padding: 2px 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  color: var(--app-scene-tag-color); /* 无配置色时的兜底；有配置时由 :style 覆盖 */
+  background: var(--app-scene-tag-bg);
+  border-radius: var(--app-radius-sm);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html, body, #app {

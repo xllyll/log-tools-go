@@ -55,6 +55,12 @@ export function collectSceneKeywords(config, selectedSceneNames) {
   return { keywords, meta }
 }
 
+/** 场景 desc 标签样式：文字用关键词配置色，背景/圆角由 .scene-desc 统一 */
+export function sceneDescStyle(color) {
+  if (!color) return {}
+  return { color }
+}
+
 /** 前端为匹配行附加 desc 与颜色 */
 export function decorateEntries(entries, meta) {
   if (!meta.length) return entries
@@ -73,12 +79,11 @@ export function decorateEntries(entries, meta) {
         break
       }
     }
-    const suffix = sceneDesc ? ` [${sceneDesc}]` : ''
     return {
       ...e,
       color,
       scene_desc: sceneDesc,
-      display: content + suffix,
+      display: content,
     }
   })
 }

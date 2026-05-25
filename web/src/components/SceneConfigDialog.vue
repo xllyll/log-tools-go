@@ -128,11 +128,13 @@
                 <el-color-picker v-model="row.color" size="small" />
               </template>
             </el-table-column>
-            <el-table-column label="预览" min-width="130">
+            <el-table-column label="预览" min-width="160">
               <template #default="{ row }">
-                <span class="kw-preview" :style="{ color: row.color }">
-                  {{ row.desc || row.keyword || '预览' }}
-                </span>
+                <span
+                  class="scene-desc"
+                  :style="sceneDescStyle(row.color)"
+                  :title="row.desc || row.keyword"
+                >{{ row.desc || row.keyword || '预览' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="70" align="center">
@@ -163,7 +165,13 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Document, Folder, Plus } from '@element-plus/icons-vue'
 import { api } from '../api'
-import { cloneSceneConfig, defaultSceneConfig, emptyKeyword, saveLocalScene } from '../utils/scene'
+import {
+  cloneSceneConfig,
+  defaultSceneConfig,
+  emptyKeyword,
+  saveLocalScene,
+  sceneDescStyle,
+} from '../utils/scene'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -511,9 +519,12 @@ function exportJson() {
   margin-bottom: 8px;
 }
 
-.kw-preview {
-  font-size: 12px;
-  font-weight: 500;
+.kw-table .scene-desc {
+  max-width: 100%;
+}
+
+.kw-table :deep(.cell) {
+  overflow: visible;
 }
 
 .scene-empty {
