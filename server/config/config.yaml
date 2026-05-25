@@ -2,12 +2,19 @@ server:
   host: "0.0.0.0"
   port: 8080
 
+#database:
+#  host: "10.110.4.26"
+#  port: 5432
+#  user: "postgres"
+#  password: "sys.pg.admin0104"
+#  dbname: "logs"
+#  sslmode: "disable"
 database:
-  host: "10.110.4.26"
+  host: "10.110.4.25"          # 外部 PostgreSQL 地址（容器需能访问）
   port: 5432
   user: "postgres"
-  password: "sys.pg.admin0104"
-  dbname: "logs"
+  password: "xXipX2ndtNabbFJ4"
+  dbname: "dev_logs"
   sslmode: "disable"
 
 storage:

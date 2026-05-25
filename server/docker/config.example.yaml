@@ -1,16 +1,19 @@
-# 复制为 config/config.yaml 后按环境修改
-# cp config.example.yaml config/config.yaml
+# 【重要】Docker 只挂载 config/config.yaml，不会读本文件！
+# 修改本文件后必须执行：
+#   cp config.example.yaml config/config.yaml
+# 验证容器内配置：
+#   docker exec log-tools-server cat /app/config/config.yaml | grep -A6 '^database'
 
 server:
   host: "0.0.0.0"
   port: 8080
 
 database:
-  host: "10.0.0.1"          # 外部 PostgreSQL 地址（容器需能访问）
+  host: "10.110.4.25"          # 外部 PostgreSQL 地址（容器需能访问）
   port: 5432
   user: "postgres"
-  password: "CHANGE_ME"
-  dbname: "logs"
+  password: "xXipX2ndtNabbFJ4"
+  dbname: "dev_logs"
   sslmode: "disable"
 
 storage:
@@ -21,10 +24,10 @@ storage:
 
 ingest:
   batch_size: 500
-  worker_count: 4
+  worker_count: 5
 
 jira:
-  enabled: false
-  base_url: "https://jira.example.com"
-  email: "your-email@example.com"
-  api_token: "your-api-token"
+  enabled: true
+  base_url: "http://120.79.4.206:8080"
+  email: "lidaming"
+  api_token: "bwlidaming789"

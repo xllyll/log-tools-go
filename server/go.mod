@@ -2,8 +2,6 @@ module log-tools/server
 
 go 1.22.2
 
-toolchain go1.24.5
-
 require (
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0

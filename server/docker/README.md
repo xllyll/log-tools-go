@@ -22,9 +22,13 @@ cd server/docker
 cp .env.example .env
 cp config.example.yaml config/config.yaml
 # 编辑 config/config.yaml：database.host 填外部 PG 地址（容器需能访问）
+# 注意：改 example 不会生效，必须改 config/config.yaml 或重新 cp
 # 编辑 .env（镜像仓库等）
 
 chmod +x deploy.sh
+
+# 若从 Windows 拷贝后出现 bash\r 或 .env 报错，先执行：
+# sed -i 's/\r$//' deploy.sh .env
 
 ./deploy.sh build    # 仅构建镜像
 ./deploy.sh push     # 构建并推送（需 docker login）
@@ -46,8 +50,22 @@ HOST_PORT=8080
 
 ## 数据库说明
 
+- Compose **只挂载** `docker/config/config.yaml`，**不会**读取 `config.example.yaml`
+- 首次 `deploy.sh up` 若不存在 `config/config.yaml`，会从 example 复制一份；之后改 example **不会**自动同步
 - 使用**已部署的 PostgreSQL**，在 `config/config.yaml` 配置 `database.host` / `password` 等
-- 若 PG 在宿主机上，Linux 可用 `host.docker.internal` 或宿主机内网 IP（不要用 `127.0.0.1`，容器内指向自身）
+
+```bash
+# 修改 example 后同步到实际配置
+cp config.example.yaml config/config.yaml
+
+# 确认容器读到的配置
+docker exec log-tools-server cat /app/config/config.yaml | grep -A6 '^database'
+
+# 改完配置后重启
+docker compose restart log-tools-server
+```
+
+- 若 PG 在宿主机上，不要用 `127.0.0.1`（容器内指向自身），用宿主机内网 IP 如 `10.110.4.25`
 - 确保 PG 的 `pg_hba.conf` 放行 Docker 网段或应用服务器 IP
 
 ## 无镜像仓库（离线）
@@ -71,3 +89,19 @@ docker run -d --name log-tools \
 
 - Docker 构建上下文为 **`server/`** 根目录（非 `docker/`）
 - 容器内通过环境变量 `CONFIG_PATH` 指定配置，默认 `/app/config/config.yaml`
+- 镜像内使用 `GOTOOLCHAIN=local`，不会从 `proxy.golang.org` 下载 Go 1.24 工具链
+- 默认 `GOPROXY=https://goproxy.cn,direct`；海外可覆盖：
+
+```bash
+docker build -f docker/Dockerfile \
+  --build-arg GOPROXY=https://proxy.golang.org,direct \
+  -t log-tools-server:latest ..
+```
+
+- apt 较慢时可指定 Debian 镜像（可选）：
+
+```bash
+docker build -f docker/Dockerfile \
+  --build-arg APT_MIRROR=mirrors.aliyun.com \
+  -t log-tools-server:latest ..
+```

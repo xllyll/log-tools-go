@@ -16,12 +16,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${SCRIPT_DIR}"
 
-if [[ -f .env ]]; then
+load_env() {
+  if [[ ! -f .env ]]; then
+    return 0
+  fi
   set -a
-  # shellcheck disable=SC1091
-  source .env
+  # 兼容 Windows 拷贝的 CRLF 换行
+  # shellcheck disable=SC1090
+  source <(sed 's/\r$//' .env)
   set +a
-fi
+}
+
+load_env
 
 IMAGE_NAME="${IMAGE_NAME:-log-tools-server}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
@@ -46,11 +52,15 @@ ensure_config() {
   if [[ ! -f config/config.yaml ]]; then
     if [[ -f config.example.yaml ]]; then
       cp config.example.yaml config/config.yaml
-      log "已生成 config/config.yaml，请修改数据库等配置后重新部署"
+      log "已从 config.example.yaml 生成 config/config.yaml，请确认 database.host 后重新部署"
     else
       log "错误: 缺少 config/config.yaml"
       exit 1
     fi
+  fi
+  if grep -qE 'host:[[:space:]]*["'\'']?10\.0\.0\.1' config/config.yaml 2>/dev/null; then
+    log "警告: config/config.yaml 中 database.host 仍为示例 10.0.0.1"
+    log "       请改为真实 PostgreSQL 地址: cp config.example.yaml config/config.yaml 或手动编辑"
   fi
 }
 
