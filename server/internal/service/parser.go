@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"log-tools/server/internal/model"
+	"log-tools/server/pkg/xencoding"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +22,9 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
-func (p *Parser) ParseFile(deviceID, fileID, filePath string) (*model.LogFile, error) {
+type ParseProgress func(lines int)
+
+func (p *Parser) ParseFile(deviceID, fileID, filePath string, onProgress ParseProgress) (*model.LogFile, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -58,7 +61,7 @@ func (p *Parser) ParseFile(deviceID, fileID, filePath string) (*model.LogFile, e
 	now := time.Now()
 	for scanner.Scan() {
 		lineNo++
-		line := scanner.Text()
+		line := xencoding.DecodeLogLine(scanner.Bytes())
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
@@ -70,6 +73,12 @@ func (p *Parser) ParseFile(deviceID, fileID, filePath string) (*model.LogFile, e
 			Level:   "INFO",
 			Message: line,
 		})
+		if onProgress != nil && lineNo%5000 == 0 {
+			onProgress(lineNo)
+		}
+	}
+	if onProgress != nil && lineNo > 0 {
+		onProgress(lineNo)
 	}
 	logFile.Total = len(logFile.Entries)
 	if err := scanner.Err(); err != nil {

@@ -16,15 +16,17 @@ type LogEntry struct {
 }
 
 type LogFile struct {
-	ID         string     `json:"id"`
-	DeviceID   string     `json:"device_id"`
-	Name       string     `json:"name"`
-	Size       int64      `json:"size"`
-	UploadAt   time.Time  `json:"upload_at"`
-	Total      int        `json:"total"`
-	Status     string     `json:"status"` // parsing | ready | failed
-	StatusMsg  string     `json:"status_msg,omitempty"`
-	Entries    []LogEntry `json:"-"`
+	ID          string     `json:"id"`
+	DeviceID    string     `json:"device_id"`
+	Name        string     `json:"name"`
+	Size        int64      `json:"size"`
+	UploadAt    time.Time  `json:"upload_at"`
+	Total       int        `json:"total"`
+	ParsedLines int        `json:"parsed_lines"`
+	Progress    int        `json:"progress"`
+	Status      string     `json:"status"` // parsing | inserting | ready | failed
+	StatusMsg   string     `json:"status_msg,omitempty"`
+	Entries     []LogEntry `json:"-"`
 }
 
 type LogFilter struct {

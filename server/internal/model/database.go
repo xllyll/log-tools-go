@@ -8,6 +8,8 @@ import (
 
 	"log-tools/server/internal/config"
 
+	"log-tools/server/pkg/xencoding"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -76,6 +78,9 @@ CREATE TABLE IF NOT EXISTS scene_configs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(device_id, name)
 );
+
+ALTER TABLE log_files ADD COLUMN IF NOT EXISTS progress INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE log_files ADD COLUMN IF NOT EXISTS parsed_lines INTEGER NOT NULL DEFAULT 0;
 `
 	_, err := d.pool.Exec(ctx, ddl)
 	return err
@@ -94,10 +99,34 @@ ON CONFLICT (id) DO UPDATE SET
 }
 
 func (d *Database) UpdateFileStatus(ctx context.Context, fileID, status, msg string, total int) error {
+	return d.UpdateFileProgress(ctx, fileID, status, msg, total, total, progressForStatus(status, total))
+}
+
+func (d *Database) UpdateFileProgress(ctx context.Context, fileID, status, msg string, parsedLines, total, progress int) error {
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 100 {
+		progress = 100
+	}
 	_, err := d.pool.Exec(ctx, `
-UPDATE log_files SET status=$2, status_msg=$3, total_entries=$4 WHERE id=$1`,
-		fileID, status, msg, total)
+UPDATE log_files SET status=$2, status_msg=$3, total_entries=$4, parsed_lines=$5, progress=$6 WHERE id=$1`,
+		fileID, status, msg, total, parsedLines, progress)
 	return err
+}
+
+func progressForStatus(status string, total int) int {
+	switch status {
+	case "ready":
+		return 100
+	case "failed":
+		return 0
+	default:
+		if total > 0 {
+			return 50
+		}
+		return 0
+	}
 }
 
 func (d *Database) BatchInsertEntries(ctx context.Context, deviceID, fileID string, entries []LogEntry) error {
@@ -106,11 +135,16 @@ func (d *Database) BatchInsertEntries(ctx context.Context, deviceID, fileID stri
 	}
 	batch := &pgx.Batch{}
 	for _, e := range entries {
+		content := xencoding.SanitizeUTF8(e.Content)
+		message := xencoding.SanitizeUTF8(e.Message)
+		if message == "" {
+			message = content
+		}
 		batch.Queue(`
 INSERT INTO log_entries (id, file_id, device_id, log_time, content, line_number, level, module, message)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 ON CONFLICT (id) DO NOTHING`,
-			e.ID, fileID, deviceID, e.LogTime, e.Content, e.Line, e.Level, e.Module, e.Message)
+			e.ID, fileID, deviceID, e.LogTime, content, e.Line, e.Level, e.Module, message)
 	}
 	br := d.pool.SendBatch(ctx, batch)
 	defer br.Close()
@@ -129,7 +163,7 @@ func (d *Database) DeleteEntriesByFile(ctx context.Context, fileID string) error
 
 func (d *Database) GetLogFiles(ctx context.Context, deviceID string) ([]LogFile, error) {
 	rows, err := d.pool.Query(ctx, `
-SELECT id, device_id, name, size, upload_at, total_entries, status, COALESCE(status_msg,'')
+SELECT id, device_id, name, size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,'')
 FROM log_files WHERE device_id=$1 ORDER BY upload_at DESC`, deviceID)
 	if err != nil {
 		return nil, err
@@ -138,7 +172,7 @@ FROM log_files WHERE device_id=$1 ORDER BY upload_at DESC`, deviceID)
 	var files []LogFile
 	for rows.Next() {
 		var f LogFile
-		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.Status, &f.StatusMsg); err != nil {
+		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.ParsedLines, &f.Progress, &f.Status, &f.StatusMsg); err != nil {
 			return nil, err
 		}
 		files = append(files, f)
@@ -149,9 +183,9 @@ FROM log_files WHERE device_id=$1 ORDER BY upload_at DESC`, deviceID)
 func (d *Database) GetLogFile(ctx context.Context, deviceID, fileID string) (*LogFile, error) {
 	var f LogFile
 	err := d.pool.QueryRow(ctx, `
-SELECT id, device_id, name, size, upload_at, total_entries, status, COALESCE(status_msg,'')
+SELECT id, device_id, name, size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,'')
 FROM log_files WHERE id=$1 AND device_id=$2`, fileID, deviceID).
-		Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.Status, &f.StatusMsg)
+		Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.ParsedLines, &f.Progress, &f.Status, &f.StatusMsg)
 	if err != nil {
 		return nil, err
 	}

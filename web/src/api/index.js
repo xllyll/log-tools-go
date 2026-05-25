@@ -18,7 +18,7 @@ export const api = {
     return http.post('/upload', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: onProgress,
-    })
+    }).then((res) => res)
   },
   listFiles() {
     return http.get('/files')

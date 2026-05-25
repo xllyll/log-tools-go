@@ -29,6 +29,14 @@ export function saveLocalScene(config) {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(config))
 }
 
+export function cloneSceneConfig(config) {
+  return JSON.parse(JSON.stringify(config || defaultSceneConfig()))
+}
+
+export function emptyKeyword() {
+  return { keyword: '', desc: '', mode: 'word', color: '#409eff' }
+}
+
 /** 从已选场景名收集 keywords，供服务端 OR 查询 */
 export function collectSceneKeywords(config, selectedSceneNames) {
   const keywords = []

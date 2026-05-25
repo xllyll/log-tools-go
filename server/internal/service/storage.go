@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -164,14 +165,33 @@ func (s *StorageService) extractArchiver(path string) ([]string, error) {
 }
 
 func (s *StorageService) ingestFile(ctx context.Context, deviceID, fileID, path string) error {
-	parsed, err := s.parser.ParseFile(deviceID, fileID, path)
+	info, err := os.Stat(path)
 	if err != nil {
-		_ = s.db.UpdateFileStatus(ctx, fileID, "failed", err.Error(), 0)
 		return err
 	}
+	fileSize := info.Size()
+	name := filepath.Base(path)
+
+	s.report(ctx, fileID, name, "parsing", "开始解析文件", 0, 0, 5)
+
+	parsed, err := s.parser.ParseFile(deviceID, fileID, path, func(lines int) {
+		progress := parsingProgress(lines, fileSize)
+		msg := fmt.Sprintf("解析中，已读取 %d 行", lines)
+		s.report(ctx, fileID, name, "parsing", msg, lines, 0, progress)
+	})
+	if err != nil {
+		s.report(ctx, fileID, name, "failed", err.Error(), 0, 0, 0)
+		return err
+	}
+
+	total := len(parsed.Entries)
+	s.report(ctx, fileID, name, "inserting", fmt.Sprintf("解析完成，共 %d 行，开始入库", total), total, total, 40)
+
 	if err := s.db.DeleteEntriesByFile(ctx, parsed.ID); err != nil {
+		s.report(ctx, fileID, name, "failed", err.Error(), 0, 0, 0)
 		return err
 	}
+
 	batch := s.cfg.Ingest.BatchSize
 	if batch <= 0 {
 		batch = 500
@@ -183,11 +203,52 @@ func (s *StorageService) ingestFile(ctx context.Context, deviceID, fileID, path 
 			end = len(entries)
 		}
 		if err := s.db.BatchInsertEntries(ctx, deviceID, parsed.ID, entries[i:end]); err != nil {
-			_ = s.db.UpdateFileStatus(ctx, parsed.ID, "failed", err.Error(), 0)
+			s.report(ctx, fileID, name, "failed", err.Error(), end, total, 0)
 			return err
 		}
+		progress := 40 + end*60/total
+		if total == 0 {
+			progress = 100
+		}
+		msg := fmt.Sprintf("入库中 %d / %d 行", end, total)
+		s.report(ctx, fileID, name, "inserting", msg, end, total, progress)
 	}
-	return s.db.UpdateFileStatus(ctx, parsed.ID, "ready", "", len(entries))
+
+	s.report(ctx, fileID, name, "ready", fmt.Sprintf("完成，共 %d 行", total), total, total, 100)
+	return nil
+}
+
+func (s *StorageService) report(ctx context.Context, fileID, name, status, msg string, parsedLines, total, progress int) {
+	_ = s.db.UpdateFileProgress(ctx, fileID, status, msg, parsedLines, total, progress)
+	log.Printf("[ingest] file=%s name=%s status=%s progress=%d%% %s", fileID, name, status, progress, msg)
+}
+
+func parsingProgress(lines int, fileSize int64) int {
+	if fileSize <= 0 {
+		if lines >= 100000 {
+			return 35
+		}
+		return min(35, lines/3000)
+	}
+	estimated := int(fileSize / 80)
+	if estimated < 1 {
+		estimated = 1
+	}
+	p := lines * 35 / estimated
+	if p > 35 {
+		p = 35
+	}
+	if p < 5 && lines > 0 {
+		p = 5
+	}
+	return p
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func (s *StorageService) StartIngest(deviceID, path string) (*model.LogFile, error) {
@@ -198,16 +259,19 @@ func (s *StorageService) StartIngest(deviceID, path string) (*model.LogFile, err
 	}
 	fileID := uuid.NewString()
 	f := &model.LogFile{
-		ID:       fileID,
-		DeviceID: deviceID,
-		Name:     filepath.Base(path),
-		Size:     info.Size(),
-		UploadAt: time.Now(),
-		Status:   "parsing",
+		ID:        fileID,
+		DeviceID:  deviceID,
+		Name:      filepath.Base(path),
+		Size:      info.Size(),
+		UploadAt:  time.Now(),
+		Status:    "parsing",
+		StatusMsg: "排队等待解析",
+		Progress:  0,
 	}
 	if err := s.db.SaveLogFile(ctx, f); err != nil {
 		return nil, err
 	}
+	log.Printf("[ingest] queued file=%s name=%s device=%s", fileID, f.Name, deviceID)
 	s.pool.Submit(func(c context.Context) error {
 		return s.ingestFile(c, deviceID, fileID, path)
 	})
