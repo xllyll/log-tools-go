@@ -2,7 +2,7 @@ import axios from 'axios'
 import { getDeviceId } from '../utils/device'
 
 const http = axios.create({
-  baseURL: import.meta.env.VITE_APP_BASE_API,
+  baseURL: '/api',
   timeout: 120000,
 })
 
