@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -128,9 +127,4 @@ func (h *UploadHandler) RetryIngest(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: "re-ingest started"})
-}
-
-// DeletePhysical removes uploaded raw file from disk (optional cleanup)
-func DeletePhysical(path string) {
-	_ = os.Remove(path)
 }

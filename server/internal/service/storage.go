@@ -284,7 +284,38 @@ func (s *StorageService) GetFiles(ctx context.Context, deviceID string) ([]model
 }
 
 func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string) error {
-	return s.db.DeleteLogFile(ctx, deviceID, fileID)
+	f, err := s.db.GetLogFile(ctx, deviceID, fileID)
+	if err != nil {
+		return err
+	}
+	if err := s.db.DeleteLogFile(ctx, deviceID, fileID); err != nil {
+		return err
+	}
+	s.removePhysicalSources(f)
+	log.Printf("[delete] file=%s name=%s device=%s", fileID, f.Name, deviceID)
+	return nil
+}
+
+func (s *StorageService) removePhysicalSources(f *model.LogFile) {
+	seen := make(map[string]struct{})
+	add := func(p string) {
+		if p == "" {
+			return
+		}
+		abs, err := filepath.Abs(p)
+		if err != nil {
+			abs = p
+		}
+		if _, ok := seen[abs]; ok {
+			return
+		}
+		seen[abs] = struct{}{}
+		removePhysicalFile(abs)
+	}
+	add(f.SourcePath)
+	if p, err := s.findPathByName(f.Name); err == nil {
+		add(p)
+	}
 }
 
 func (s *StorageService) GetEntries(ctx context.Context, filter model.LogFilter) ([]model.LogEntry, error) {
