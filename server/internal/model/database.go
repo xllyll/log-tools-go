@@ -210,6 +210,30 @@ func (d *Database) DeleteLogFile(ctx context.Context, deviceID, fileID string) e
 	return nil
 }
 
+func (d *Database) DeleteLogFileByID(ctx context.Context, fileID string) error {
+	_, err := d.pool.Exec(ctx, `DELETE FROM log_files WHERE id=$1`, fileID)
+	return err
+}
+
+func (d *Database) ListLogFilesBefore(ctx context.Context, before time.Time) ([]LogFile, error) {
+	rows, err := d.pool.Query(ctx, `
+SELECT id, device_id, name, size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,''), COALESCE(source_path,'')
+FROM log_files WHERE upload_at < $1`, before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var files []LogFile
+	for rows.Next() {
+		var f LogFile
+		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.ParsedLines, &f.Progress, &f.Status, &f.StatusMsg, &f.SourcePath); err != nil {
+			return nil, err
+		}
+		files = append(files, f)
+	}
+	return files, rows.Err()
+}
+
 func (d *Database) GetLogEntries(ctx context.Context, filter LogFilter) ([]LogEntry, error) {
 	var b strings.Builder
 	args := make([]any, 0)

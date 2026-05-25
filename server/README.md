@@ -15,6 +15,8 @@ CREATE DATABASE log_tools;
 
 修改 `config/config.yaml` 中的数据库连接信息。
 
+上传日志默认保留 **30 天**，服务启动后会立即执行一次清理，之后每 24 小时扫描一次（删除库记录、解析行及磁盘上的源文件/解压目录）。可在 `storage.retention_days` 调整天数，设为 `0` 关闭；`storage.cleanup_interval_hours` 调整间隔。
+
 ## 运行
 
 ```bash

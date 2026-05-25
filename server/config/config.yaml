@@ -13,6 +13,8 @@ database:
 storage:
   upload_dir: "./data/uploads"
   max_file_size: 524288000  # 500MB
+  retention_days: 30          # 超过该天数的日志自动清理；设为 0 关闭
+  cleanup_interval_hours: 24  # 清理任务运行间隔（小时）
 
 ingest:
   batch_size: 500
@@ -20,6 +22,6 @@ ingest:
 
 jira:
   enabled: true
-  base_url: "https://jira.example.com"
+  base_url: "http://120.79.4.206:8080"
   email: "lidaming"
   api_token: "bwlidaming789"

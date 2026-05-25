@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"log-tools/server/internal/config"
 	"log-tools/server/internal/handler"
 	"log-tools/server/internal/model"
@@ -15,6 +17,7 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 	pool := job.NewPool(cfg.Ingest.WorkerCount)
 	parser := service.NewParser()
 	storage := service.NewStorageService(cfg, db, parser, pool)
+	go storage.RunRetentionCleanup(context.Background())
 
 	uploadH := handler.NewUploadHandler(storage)
 	logH := handler.NewLogHandler(storage)

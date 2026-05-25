@@ -29,8 +29,10 @@ type DatabaseConfig struct {
 }
 
 type StorageConfig struct {
-	UploadDir   string `mapstructure:"upload_dir"`
-	MaxFileSize int64  `mapstructure:"max_file_size"`
+	UploadDir            string `mapstructure:"upload_dir"`
+	MaxFileSize          int64  `mapstructure:"max_file_size"`
+	RetentionDays        int    `mapstructure:"retention_days"`
+	CleanupIntervalHours int    `mapstructure:"cleanup_interval_hours"`
 }
 
 type IngestConfig struct {
@@ -62,6 +64,12 @@ func Load(path string) error {
 	}
 	if cfg.Ingest.WorkerCount <= 0 {
 		cfg.Ingest.WorkerCount = 4
+	}
+	if !v.IsSet("storage.retention_days") {
+		cfg.Storage.RetentionDays = 30
+	}
+	if cfg.Storage.CleanupIntervalHours <= 0 {
+		cfg.Storage.CleanupIntervalHours = 24
 	}
 	global = &cfg
 	return nil
