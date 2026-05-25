@@ -22,6 +22,7 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 	uploadH := handler.NewUploadHandler(storage)
 	logH := handler.NewLogHandler(storage)
 	sceneH := handler.NewSceneHandlerDB(db)
+	sceneLibH := handler.NewSceneLibraryHandler(db)
 	jiraH := handler.NewJiraHandler(cfg, storage)
 
 	r := gin.Default()
@@ -48,6 +49,11 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 
 		api.GET("/scenes", sceneH.List)
 		api.POST("/scenes", sceneH.Save)
+
+		api.GET("/scene-library", sceneLibH.List)
+		api.POST("/scene-library", sceneLibH.Publish)
+		api.GET("/scene-library/:id", sceneLibH.Get)
+		api.DELETE("/scene-library/:id", sceneLibH.Delete)
 
 		api.POST("/jira/import", jiraH.Import)
 		api.GET("/jira/issues/:key/attachments", jiraH.ListAttachments)

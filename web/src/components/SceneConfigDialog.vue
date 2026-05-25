@@ -2,7 +2,7 @@
   <el-dialog
     v-model="visible"
     title="场景配置"
-    width="920px"
+    width="80%"
     class="scene-dialog"
     destroy-on-close
     @open="onOpen"
@@ -24,6 +24,14 @@
       <el-button size="small" @click="resetDefault">恢复示例</el-button>
       <el-button size="small" @click="importJson">导入 JSON</el-button>
       <el-button size="small" @click="exportJson">导出 JSON</el-button>
+      <el-divider direction="vertical" />
+      <el-button size="small" type="primary" plain :loading="libraryPublishing" @click="publishToLibrary">
+        <el-icon><Upload /></el-icon>
+        上传到场景库
+      </el-button>
+      <el-button size="small" type="success" plain @click="libraryVisible = true">
+        场景库
+      </el-button>
     </div>
 
     <div v-if="!draft.modules?.length" class="scene-empty">
@@ -157,14 +165,17 @@
     </template>
 
     <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="onFileImport" />
+
+    <SceneLibraryDialog ref="libraryRef" v-model="libraryVisible" :config="draft" @apply="onLibraryApply" />
   </el-dialog>
 </template>
 
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Document, Folder, Plus } from '@element-plus/icons-vue'
+import { Delete, Document, Folder, Plus, Upload } from '@element-plus/icons-vue'
 import { api } from '../api'
+import SceneLibraryDialog from './SceneLibraryDialog.vue'
 import {
   cloneSceneConfig,
   defaultSceneConfig,
@@ -190,6 +201,9 @@ const selectedNode = ref(null)
 const syncing = ref(false)
 const fileInput = ref(null)
 const treeRef = ref(null)
+const libraryVisible = ref(false)
+const libraryRef = ref(null)
+const libraryPublishing = ref(false)
 
 const treeData = computed(() =>
   (draft.value.modules || []).map((mod, mi) => ({
@@ -235,6 +249,45 @@ function onOpen() {
   draft.value = cloneSceneConfig(props.config)
   selectedNode.value = null
   nextTick(() => selectFirstNode())
+}
+
+function onLibraryApply(cfg) {
+  draft.value = cloneSceneConfig(cfg)
+  selectedNode.value = null
+  nextTick(() => selectFirstNode())
+}
+
+async function publishToLibrary() {
+  if (!validate()) return
+  const cfg = cloneSceneConfig(draft.value)
+  try {
+    const { value: title } = await ElMessageBox.prompt('为该场景包取一个名称', '上传到场景库', {
+      confirmButtonText: '上传',
+      cancelButtonText: '取消',
+      inputPlaceholder: '如：车机 System 分析包',
+      inputValidator: (v) => (v?.trim() ? true : '请输入名称'),
+    })
+    const { value: desc } = await ElMessageBox.prompt('可选：补充说明', '场景说明', {
+      confirmButtonText: '继续',
+      cancelButtonText: '跳过',
+      inputPlaceholder: '适用版本、模块说明等',
+    }).catch(() => ({ value: '' }))
+    libraryPublishing.value = true
+    const { data } = await api.publishSceneLibrary({
+      title: title.trim(),
+      description: (desc || '').trim(),
+      config: cfg,
+    })
+    if (!data.success) throw new Error(data.error)
+    ElMessage.success('已分享到场景库')
+    libraryRef.value?.loadList?.()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error(e.response?.data?.error || e.message || '上传失败')
+    }
+  } finally {
+    libraryPublishing.value = false
+  }
 }
 
 function selectFirstNode() {

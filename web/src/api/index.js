@@ -47,6 +47,18 @@ export const api = {
   listScenes() {
     return http.get('/scenes')
   },
+  listSceneLibrary() {
+    return http.get('/scene-library')
+  },
+  getSceneLibrary(id) {
+    return http.get(`/scene-library/${id}`)
+  },
+  publishSceneLibrary(body) {
+    return http.post('/scene-library', body)
+  },
+  deleteSceneLibrary(id) {
+    return http.delete(`/scene-library/${id}`)
+  },
   jiraAttachments(issueKey) {
     return http.get(`/jira/issues/${encodeURIComponent(issueKey)}/attachments`)
   },

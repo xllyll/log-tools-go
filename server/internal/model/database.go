@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -78,6 +79,20 @@ CREATE TABLE IF NOT EXISTS scene_configs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(device_id, name)
 );
+
+CREATE TABLE IF NOT EXISTS scene_library (
+    id TEXT PRIMARY KEY,
+    device_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    config JSONB NOT NULL,
+    module_count INTEGER NOT NULL DEFAULT 0,
+    scene_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(device_id, title)
+);
+CREATE INDEX IF NOT EXISTS idx_scene_library_updated ON scene_library(updated_at DESC);
 
 ALTER TABLE log_files ADD COLUMN IF NOT EXISTS progress INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE log_files ADD COLUMN IF NOT EXISTS parsed_lines INTEGER NOT NULL DEFAULT 0;
@@ -387,4 +402,85 @@ SELECT name, config, updated_at FROM scene_configs WHERE device_id=$1 ORDER BY u
 		list = append(list, map[string]any{"name": name, "config": raw, "updated_at": updated})
 	}
 	return list, rows.Err()
+}
+
+func countSceneConfigStats(cfg SceneConfig) (moduleCount, sceneCount int) {
+	moduleCount = len(cfg.Modules)
+	for _, m := range cfg.Modules {
+		sceneCount += len(m.Scenes)
+	}
+	return moduleCount, sceneCount
+}
+
+func (d *Database) PublishSceneLibrary(ctx context.Context, deviceID, title, description string, cfg SceneConfig) (string, error) {
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return "", err
+	}
+	mc, sc := countSceneConfigStats(cfg)
+	id := uuid.NewString()
+	err = d.pool.QueryRow(ctx, `
+INSERT INTO scene_library (id, device_id, title, description, config, module_count, scene_count, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
+ON CONFLICT (device_id, title) DO UPDATE SET
+  description=EXCLUDED.description,
+  config=EXCLUDED.config,
+  module_count=EXCLUDED.module_count,
+  scene_count=EXCLUDED.scene_count,
+  updated_at=NOW()
+RETURNING id`,
+		id, deviceID, title, description, raw, mc, sc).Scan(&id)
+	return id, err
+}
+
+func (d *Database) ListSceneLibrary(ctx context.Context, viewerDeviceID string, limit int) ([]SceneLibraryItem, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	rows, err := d.pool.Query(ctx, `
+SELECT id, device_id, title, COALESCE(description,''), module_count, scene_count, updated_at
+FROM scene_library
+ORDER BY updated_at DESC
+LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []SceneLibraryItem
+	for rows.Next() {
+		var item SceneLibraryItem
+		if err := rows.Scan(&item.ID, &item.DeviceID, &item.Title, &item.Description, &item.ModuleCount, &item.SceneCount, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		item.IsMine = item.DeviceID == viewerDeviceID
+		list = append(list, item)
+	}
+	return list, rows.Err()
+}
+
+func (d *Database) GetSceneLibrary(ctx context.Context, id string) (*SceneLibraryDetail, error) {
+	var item SceneLibraryDetail
+	var raw []byte
+	err := d.pool.QueryRow(ctx, `
+SELECT id, device_id, title, COALESCE(description,''), module_count, scene_count, updated_at, config
+FROM scene_library WHERE id=$1`, id).
+		Scan(&item.ID, &item.DeviceID, &item.Title, &item.Description, &item.ModuleCount, &item.SceneCount, &item.UpdatedAt, &raw)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(raw, &item.Config); err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (d *Database) DeleteSceneLibrary(ctx context.Context, deviceID, id string) error {
+	tag, err := d.pool.Exec(ctx, `DELETE FROM scene_library WHERE id=$1 AND device_id=$2`, id, deviceID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("not found or forbidden")
+	}
+	return nil
 }

@@ -39,6 +39,10 @@ go run .
 | POST | /api/logs/query | 查询日志（关键词 AND / 场景 OR） |
 | GET | /api/logs/context | 上下文行（前后 N 条） |
 | POST | /api/scenes | 保存场景配置 |
+| GET | /api/scene-library | 场景库列表（全员共享） |
+| POST | /api/scene-library | 上传场景包到场景库 |
+| GET | /api/scene-library/:id | 获取场景包详情 |
+| DELETE | /api/scene-library/:id | 删除自己上传的场景包 |
 | GET | /api/jira/issues/:key/attachments | 列出 Issue 日志附件（凭据在服务端） |
 | POST | /api/jira/import | 导入选中 Jira 附件 |
 

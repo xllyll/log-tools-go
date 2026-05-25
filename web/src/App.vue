@@ -91,8 +91,27 @@
                   <el-checkbox v-model="useRegex">启用正则匹配</el-checkbox>
                 </el-form-item>
                 <el-form-item label="场景（OR 组合）">
-                  <el-select v-model="selectedScenes" multiple placeholder="选择场景" class="full-width">
-                    <el-option v-for="s in allSceneNames" :key="s" :label="s" :value="s" />
+                  <el-select
+                    v-model="selectedSceneKeys"
+                    multiple
+                    filterable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    placeholder="选择场景（按模块分组）"
+                    class="full-width"
+                  >
+                    <el-option-group
+                      v-for="group in sceneSelectGroups"
+                      :key="group.moduleName"
+                      :label="group.moduleName"
+                    >
+                      <el-option
+                        v-for="opt in group.options"
+                        :key="opt.key"
+                        :label="opt.label"
+                        :value="opt.key"
+                      />
+                    </el-option-group>
                   </el-select>
                 </el-form-item>
                 <el-button type="primary" :loading="loadingLogs" class="full-btn" @click="searchLogs">
@@ -105,9 +124,30 @@
         </el-tabs>
 
         <div class="panel-card file-panel">
-          <div class="card-title">
-            <span>我的文件</span>
-            <el-badge :value="files.length" :max="99" type="primary" />
+          <div class="card-title file-panel-title">
+            <div class="file-panel-title-left">
+              <span>我的文件</span>
+              <el-badge :value="files.length" :max="99" type="primary" />
+            </div>
+            <div v-if="files.length" class="file-panel-title-actions">
+              <el-checkbox
+                v-model="fileCheckAll"
+                :indeterminate="fileCheckIndeterminate"
+                size="small"
+              >
+                全选
+              </el-checkbox>
+              <el-button
+                type="danger"
+                size="small"
+                plain
+                :disabled="!checkedDeleteIds.length"
+                :loading="batchDeleting"
+                @click="batchRemoveFiles"
+              >
+                删除{{ checkedDeleteIds.length ? `(${checkedDeleteIds.length})` : '' }}
+              </el-button>
+            </div>
           </div>
           <el-scrollbar max-height="240px">
             <div v-if="!files.length" class="file-empty">暂无文件，请先上传</div>
@@ -118,6 +158,12 @@
               @click="toggleSelectFile(f)"
             >
               <div class="file-item-main">
+                <el-checkbox
+                  class="file-check"
+                  :model-value="checkedDeleteIds.includes(f.id)"
+                  @update:model-value="(v) => setFileChecked(f.id, v)"
+                  @click.stop
+                />
                 <span v-if="fileSelectOrder(f.id)" class="file-order">{{ fileSelectOrder(f.id) }}</span>
                 <el-icon class="file-icon"><Document /></el-icon>
                 <div class="file-meta">
@@ -243,7 +289,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Collection,
   Delete,
@@ -265,6 +311,7 @@ import { api } from './api'
 import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
 import {
+  buildSceneSelectGroups,
   collectSceneKeywords,
   decorateEntries,
   loadLocalScene,
@@ -277,6 +324,8 @@ const isDark = ref(getPreferredTheme() === 'dark')
 const leftTab = ref('upload')
 const files = ref([])
 const selectedFileIds = ref([])
+const checkedDeleteIds = ref([])
+const batchDeleting = ref(false)
 const logs = shallowRef([])
 const MAX_LOG_ROWS = 10000
 let searchSeq = 0
@@ -293,7 +342,7 @@ let pollTimer = null
 const sceneConfig = ref(loadLocalScene())
 const sceneDialogVisible = ref(false)
 const jiraDialogVisible = ref(false)
-const selectedScenes = ref([])
+const selectedSceneKeys = ref([])
 const searchKeywords = ref('')
 const useRegex = ref(false)
 
@@ -302,13 +351,7 @@ const ctxLines = ref([])
 const ctxCenterLine = ref(0)
 let sceneMeta = []
 
-const allSceneNames = computed(() => {
-  const names = []
-  for (const m of sceneConfig.value.modules || []) {
-    for (const s of m.scenes || []) names.push(s.name)
-  }
-  return names
-})
+const sceneSelectGroups = computed(() => buildSceneSelectGroups(sceneConfig.value))
 
 const selectedFilesLabel = computed(() => {
   const names = selectedFileIds.value
@@ -326,6 +369,42 @@ function isFileSelected(id) {
 function fileSelectOrder(id) {
   const i = selectedFileIds.value.indexOf(id)
   return i >= 0 ? i + 1 : 0
+}
+
+const fileCheckAll = computed({
+  get() {
+    return files.value.length > 0 && checkedDeleteIds.value.length === files.value.length
+  },
+  set(val) {
+    checkedDeleteIds.value = val ? files.value.map((f) => f.id) : []
+  },
+})
+
+const fileCheckIndeterminate = computed(() => {
+  const n = checkedDeleteIds.value.length
+  return n > 0 && n < files.value.length
+})
+
+function setFileChecked(id, checked) {
+  if (checked) {
+    if (!checkedDeleteIds.value.includes(id)) {
+      checkedDeleteIds.value = [...checkedDeleteIds.value, id]
+    }
+  } else {
+    checkedDeleteIds.value = checkedDeleteIds.value.filter((x) => x !== id)
+  }
+}
+
+async function afterFilesRemoved(ids) {
+  const removed = new Set(ids)
+  selectedFileIds.value = selectedFileIds.value.filter((x) => !removed.has(x))
+  checkedDeleteIds.value = checkedDeleteIds.value.filter((x) => !removed.has(x))
+  if (!selectedFileIds.value.length) {
+    logs.value = []
+  } else {
+    scheduleSearchLogs()
+  }
+  await loadFiles()
 }
 
 function toggleTheme() {
@@ -400,6 +479,8 @@ async function loadFiles() {
   const { data } = await api.listFiles()
   if (data.success) {
     files.value = data.data || []
+    const exist = new Set(files.value.map((f) => f.id))
+    checkedDeleteIds.value = checkedDeleteIds.value.filter((id) => exist.has(id))
     syncParseTasks()
   }
 }
@@ -465,14 +546,43 @@ function scheduleSearchLogs() {
 }
 
 async function removeFile(id) {
-  await api.deleteFile(id)
-  selectedFileIds.value = selectedFileIds.value.filter((x) => x !== id)
-  if (!selectedFileIds.value.length) {
-    logs.value = []
-  } else {
-    await searchLogs()
+  try {
+    await ElMessageBox.confirm('确定删除该文件？关联日志将一并清除。', '删除文件', { type: 'warning' })
+  } catch {
+    return
   }
-  await loadFiles()
+  try {
+    await api.deleteFile(id)
+    await afterFilesRemoved([id])
+    ElMessage.success('已删除')
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || e.message)
+  }
+}
+
+async function batchRemoveFiles() {
+  const ids = [...checkedDeleteIds.value]
+  if (!ids.length) return
+  try {
+    await ElMessageBox.confirm(
+      `确定删除选中的 ${ids.length} 个文件？关联日志将一并清除。`,
+      '批量删除',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  batchDeleting.value = true
+  try {
+    const { data } = await api.batchDelete(ids)
+    if (!data.success) throw new Error(data.error)
+    await afterFilesRemoved(ids)
+    ElMessage.success(`已删除 ${ids.length} 个文件`)
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || e.message)
+  } finally {
+    batchDeleting.value = false
+  }
 }
 
 async function retryIngest(f) {
@@ -502,7 +612,7 @@ async function searchLogs() {
   logs.value = []
   try {
     const kws = searchKeywords.value.split('\n').map((s) => s.trim()).filter(Boolean)
-    const { keywords: sceneKw, meta } = collectSceneKeywords(sceneConfig.value, selectedScenes.value)
+    const { keywords: sceneKw, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
     sceneMeta = meta
     const order = [...selectedFileIds.value]
     const fileMap = new Map(files.value.map((f) => [f.id, f]))
@@ -813,6 +923,33 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.file-panel-title {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.file-panel-title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-panel-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.file-check {
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.file-check :deep(.el-checkbox__label) {
+  display: none;
+}
+
 .file-empty {
   text-align: center;
   padding: 24px 12px;
@@ -884,8 +1021,8 @@ onUnmounted(() => {
 
 .file-item-main {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
 .file-icon {

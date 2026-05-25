@@ -33,25 +33,89 @@ export function cloneSceneConfig(config) {
   return JSON.parse(JSON.stringify(config || defaultSceneConfig()))
 }
 
+/** 将场景库配置合并到本地（按模块名、场景名去重） */
+export function mergeSceneConfig(local, remote) {
+  const out = cloneSceneConfig(local?.modules?.length ? local : defaultSceneConfig())
+  if (!remote?.modules?.length) return out
+  for (const mod of remote.modules) {
+    let targetMod = out.modules.find((m) => m.name === mod.name)
+    if (!targetMod) {
+      out.modules.push(cloneSceneConfig({ modules: [mod] }).modules[0])
+      continue
+    }
+    if (!targetMod.scenes) targetMod.scenes = []
+    for (const scene of mod.scenes || []) {
+      if (!targetMod.scenes.some((s) => s.name === scene.name)) {
+        targetMod.scenes.push(JSON.parse(JSON.stringify(scene)))
+      }
+    }
+  }
+  return out
+}
+
+export function shortDeviceLabel(deviceId) {
+  if (!deviceId) return '未知'
+  return deviceId.length > 8 ? `${deviceId.slice(0, 8)}…` : deviceId
+}
+
 export function emptyKeyword() {
   return { keyword: '', desc: '', mode: 'word', color: '#409eff' }
 }
 
-/** 从已选场景名收集 keywords，供服务端 OR 查询 */
-export function collectSceneKeywords(config, selectedSceneNames) {
+/** 搜索侧下拉：模块分组，仅场景可选 */
+export function buildSceneSelectGroups(config) {
+  const groups = []
+  ;(config?.modules || []).forEach((mod, mi) => {
+    const moduleName = mod.name?.trim() || `模块 ${mi + 1}`
+    const options = []
+    ;(mod.scenes || []).forEach((scene, si) => {
+      const label = scene.name?.trim() || `场景 ${si + 1}`
+      options.push({ key: `${mi}:${si}`, label })
+    })
+    if (options.length) groups.push({ moduleName, options })
+  })
+  return groups
+}
+
+function pushSceneKeywords(keywords, meta, scene) {
+  for (const kw of scene.keywords || []) {
+    if (!kw.keyword) continue
+    keywords.push(kw.keyword)
+    meta.push({ keyword: kw.keyword, desc: kw.desc, color: kw.color, mode: kw.mode || 'word' })
+  }
+}
+
+/** 从已选场景收集 keywords（selected 为 mi:si 或兼容旧版场景名） */
+export function collectSceneKeywords(config, selected) {
   const keywords = []
   const meta = []
-  if (!config?.modules || !selectedSceneNames?.length) return { keywords, meta }
+  if (!config?.modules?.length || !selected?.length) return { keywords, meta }
 
-  for (const mod of config.modules) {
-    for (const scene of mod.scenes || []) {
-      if (!selectedSceneNames.includes(scene.name)) continue
-      for (const kw of scene.keywords || []) {
-        keywords.push(kw.keyword)
-        meta.push({ keyword: kw.keyword, desc: kw.desc, color: kw.color, mode: kw.mode || 'word' })
-      }
+  const selectedSet = new Set(selected)
+  const usedKeys = new Set()
+
+  for (const item of selected) {
+    if (typeof item === 'string' && item.includes(':')) {
+      const [mi, si] = item.split(':').map((n) => parseInt(n, 10))
+      const scene = config.modules[mi]?.scenes?.[si]
+      if (!scene || usedKeys.has(item)) continue
+      usedKeys.add(item)
+      pushSceneKeywords(keywords, meta, scene)
     }
   }
+
+  // 兼容旧数据：仅保存了场景名称
+  config.modules.forEach((mod, mi) => {
+    ;(mod.scenes || []).forEach((scene, si) => {
+      const name = scene.name?.trim()
+      if (!name || !selectedSet.has(name)) return
+      const key = `${mi}:${si}`
+      if (usedKeys.has(key)) return
+      usedKeys.add(key)
+      pushSceneKeywords(keywords, meta, scene)
+    })
+  })
+
   return { keywords, meta }
 }
 
