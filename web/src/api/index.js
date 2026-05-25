@@ -29,6 +29,9 @@ export const api = {
   deleteFile(id) {
     return http.delete(`/files/${id}`)
   },
+  retryIngest(id) {
+    return http.post(`/files/${id}/retry`)
+  },
   batchDelete(ids) {
     return http.post('/files/batch-delete', { ids })
   },
@@ -44,8 +47,8 @@ export const api = {
   listScenes() {
     return http.get('/scenes')
   },
-  jiraAttachments(key, config) {
-    return http.post(`/jira/issues/${key}/attachments`, config)
+  jiraAttachments(issueKey) {
+    return http.get(`/jira/issues/${encodeURIComponent(issueKey)}/attachments`)
   },
   jiraImport(body) {
     return http.post('/jira/import', body)

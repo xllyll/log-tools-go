@@ -4,18 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ff659cdb-1106-4821-9610-b466c801f6c3" name="Changes" comment="">
+    <list default="true" id="ff659cdb-1106-4821-9610-b466c801f6c3" name="Changes" comment="refactor(app): 重构应用界面并优化日志处理功能&#10;&#10;- 重新设计应用整体布局，采用现代化暗色主题风格&#10;- 新增深浅色主题切换功能和场景配置对话框&#10;- 实现文件上传进度显示和实时解析状态监控&#10;- 优化文件列表展示，添加文件大小和上传时间格式化&#10;- 改进日志搜索界面，增强关键词匹配功能&#10;- 添加解析任务状态轮询和进度跟踪机制&#10;- 更新数据库连接配置和表结构，增加进度字段&#10;- 优化日志条目插入性能，添加内容安全过滤处理&#10;- 重构代码结构，提升组件复用性和可维护性">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/server/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/config/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/server/config/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/server/go.mod" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/internal/config/config.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/config/config.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/internal/handler/jira.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/handler/jira.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/internal/handler/upload.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/handler/upload.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/internal/model/database.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/model/database.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/internal/model/log.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/model/log.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/internal/router/router.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/router/router.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/internal/service/parser.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/service/parser.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/internal/service/storage.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/internal/service/storage.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/pkg/xencoding/text.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/pkg/xencoding/text.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/App.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/src/api/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/api/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/src/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/main.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/src/utils/scene.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/utils/scene.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -104,12 +107,25 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1779671982517</updated>
-      <workItem from="1779671984861" duration="2138000" />
+      <workItem from="1779671984861" duration="3819000" />
     </task>
+    <task id="LOCAL-00001" summary="refactor(app): 重构应用界面并优化日志处理功能&#10;&#10;- 重新设计应用整体布局，采用现代化暗色主题风格&#10;- 新增深浅色主题切换功能和场景配置对话框&#10;- 实现文件上传进度显示和实时解析状态监控&#10;- 优化文件列表展示，添加文件大小和上传时间格式化&#10;- 改进日志搜索界面，增强关键词匹配功能&#10;- 添加解析任务状态轮询和进度跟踪机制&#10;- 更新数据库连接配置和表结构，增加进度字段&#10;- 优化日志条目插入性能，添加内容安全过滤处理&#10;- 重构代码结构，提升组件复用性和可维护性">
+      <option name="closed" value="true" />
+      <created>1779677189480</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1779677189480</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="refactor(app): 重构应用界面并优化日志处理功能&#10;&#10;- 重新设计应用整体布局，采用现代化暗色主题风格&#10;- 新增深浅色主题切换功能和场景配置对话框&#10;- 实现文件上传进度显示和实时解析状态监控&#10;- 优化文件列表展示，添加文件大小和上传时间格式化&#10;- 改进日志搜索界面，增强关键词匹配功能&#10;- 添加解析任务状态轮询和进度跟踪机制&#10;- 更新数据库连接配置和表结构，增加进度字段&#10;- 优化日志条目插入性能，添加内容安全过滤处理&#10;- 重构代码结构，提升组件复用性和可维护性" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor(app): 重构应用界面并优化日志处理功能&#10;&#10;- 重新设计应用整体布局，采用现代化暗色主题风格&#10;- 新增深浅色主题切换功能和场景配置对话框&#10;- 实现文件上传进度显示和实时解析状态监控&#10;- 优化文件列表展示，添加文件大小和上传时间格式化&#10;- 改进日志搜索界面，增强关键词匹配功能&#10;- 添加解析任务状态轮询和进度跟踪机制&#10;- 更新数据库连接配置和表结构，增加进度字段&#10;- 优化日志条目插入性能，添加内容安全过滤处理&#10;- 重构代码结构，提升组件复用性和可维护性" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

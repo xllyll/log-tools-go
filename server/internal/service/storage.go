@@ -259,14 +259,15 @@ func (s *StorageService) StartIngest(deviceID, path string) (*model.LogFile, err
 	}
 	fileID := uuid.NewString()
 	f := &model.LogFile{
-		ID:        fileID,
-		DeviceID:  deviceID,
-		Name:      filepath.Base(path),
-		Size:      info.Size(),
-		UploadAt:  time.Now(),
-		Status:    "parsing",
-		StatusMsg: "排队等待解析",
-		Progress:  0,
+		ID:         fileID,
+		DeviceID:   deviceID,
+		Name:       filepath.Base(path),
+		Size:       info.Size(),
+		UploadAt:   time.Now(),
+		Status:     "parsing",
+		StatusMsg:  "排队等待解析",
+		Progress:   0,
+		SourcePath: path,
 	}
 	if err := s.db.SaveLogFile(ctx, f); err != nil {
 		return nil, err
@@ -296,4 +297,65 @@ func (s *StorageService) GetContext(ctx context.Context, deviceID, fileID string
 
 func (s *StorageService) GetFile(ctx context.Context, deviceID, fileID string) (*model.LogFile, error) {
 	return s.db.GetLogFile(ctx, deviceID, fileID)
+}
+
+func (s *StorageService) RetryIngest(ctx context.Context, deviceID, fileID string) error {
+	f, err := s.db.GetLogFile(ctx, deviceID, fileID)
+	if err != nil {
+		return fmt.Errorf("file not found: %w", err)
+	}
+	if f.Status != "failed" {
+		return fmt.Errorf("only failed files can be retried")
+	}
+	path, err := s.resolveSourcePath(f)
+	if err != nil {
+		return err
+	}
+	if err := s.db.DeleteEntriesByFile(ctx, fileID); err != nil {
+		return err
+	}
+	_ = s.db.UpdateFileProgress(ctx, fileID, "parsing", "重新入库中...", 0, 0, 0)
+	log.Printf("[ingest] retry file=%s path=%s", fileID, path)
+	s.pool.Submit(func(c context.Context) error {
+		return s.ingestFile(c, deviceID, fileID, path)
+	})
+	return nil
+}
+
+func (s *StorageService) resolveSourcePath(f *model.LogFile) (string, error) {
+	if f.SourcePath != "" {
+		if _, err := os.Stat(f.SourcePath); err == nil {
+			return f.SourcePath, nil
+		}
+	}
+	return s.findPathByName(f.Name)
+}
+
+func (s *StorageService) findPathByName(name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("empty file name")
+	}
+	var matches []string
+	err := filepath.Walk(s.cfg.Storage.UploadDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil || info.IsDir() {
+			return nil
+		}
+		if filepath.Base(path) == name {
+			matches = append(matches, path)
+		}
+		return nil
+	})
+	_ = err
+	if len(matches) == 0 {
+		return "", fmt.Errorf("源文件不存在，请重新上传: %s", name)
+	}
+	best := matches[0]
+	var bestMod time.Time
+	for _, p := range matches {
+		if st, err := os.Stat(p); err == nil && st.ModTime().After(bestMod) {
+			bestMod = st.ModTime()
+			best = p
+		}
+	}
+	return best, nil
 }

@@ -11,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	Storage  StorageConfig  `mapstructure:"storage"`
 	Ingest   IngestConfig   `mapstructure:"ingest"`
+	Jira     JiraConfig     `mapstructure:"jira"`
 }
 
 type ServerConfig struct {
@@ -35,6 +36,13 @@ type StorageConfig struct {
 type IngestConfig struct {
 	BatchSize   int `mapstructure:"batch_size"`
 	WorkerCount int `mapstructure:"worker_count"`
+}
+
+type JiraConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	BaseURL  string `mapstructure:"base_url"`
+	Email    string `mapstructure:"email"`
+	APIToken string `mapstructure:"api_token"`
 }
 
 var global *Config

@@ -120,6 +120,16 @@ func (h *UploadHandler) BatchDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: "batch deleted"})
 }
 
+func (h *UploadHandler) RetryIngest(c *gin.Context) {
+	deviceID := GetDeviceID(c)
+	fileID := c.Param("id")
+	if err := h.storage.RetryIngest(c.Request.Context(), deviceID, fileID); err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: "re-ingest started"})
+}
+
 // DeletePhysical removes uploaded raw file from disk (optional cleanup)
 func DeletePhysical(path string) {
 	_ = os.Remove(path)

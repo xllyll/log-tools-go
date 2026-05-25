@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS scene_configs (
 
 ALTER TABLE log_files ADD COLUMN IF NOT EXISTS progress INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE log_files ADD COLUMN IF NOT EXISTS parsed_lines INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE log_files ADD COLUMN IF NOT EXISTS source_path TEXT NOT NULL DEFAULT '';
 `
 	_, err := d.pool.Exec(ctx, ddl)
 	return err
@@ -88,13 +89,18 @@ ALTER TABLE log_files ADD COLUMN IF NOT EXISTS parsed_lines INTEGER NOT NULL DEF
 
 func (d *Database) SaveLogFile(ctx context.Context, f *LogFile) error {
 	_, err := d.pool.Exec(ctx, `
-INSERT INTO log_files (id, device_id, name, size, upload_at, total_entries, status, status_msg)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+INSERT INTO log_files (id, device_id, name, size, upload_at, total_entries, status, status_msg, source_path, parsed_lines, progress)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 ON CONFLICT (id) DO UPDATE SET
+  name=EXCLUDED.name,
+  size=EXCLUDED.size,
   total_entries=EXCLUDED.total_entries,
   status=EXCLUDED.status,
-  status_msg=EXCLUDED.status_msg`,
-		f.ID, f.DeviceID, f.Name, f.Size, f.UploadAt, f.Total, f.Status, f.StatusMsg)
+  status_msg=EXCLUDED.status_msg,
+  source_path=CASE WHEN EXCLUDED.source_path <> '' THEN EXCLUDED.source_path ELSE log_files.source_path END,
+  parsed_lines=EXCLUDED.parsed_lines,
+  progress=EXCLUDED.progress`,
+		f.ID, f.DeviceID, f.Name, f.Size, f.UploadAt, f.Total, f.Status, f.StatusMsg, f.SourcePath, f.ParsedLines, f.Progress)
 	return err
 }
 
@@ -135,8 +141,9 @@ func (d *Database) BatchInsertEntries(ctx context.Context, deviceID, fileID stri
 	}
 	batch := &pgx.Batch{}
 	for _, e := range entries {
-		content := xencoding.SanitizeUTF8(e.Content)
-		message := xencoding.SanitizeUTF8(e.Message)
+		content := xencoding.SanitizeForDB(e.Content)
+		message := xencoding.SanitizeForDB(e.Message)
+		module := xencoding.SanitizeForDB(e.Module)
 		if message == "" {
 			message = content
 		}
@@ -144,7 +151,7 @@ func (d *Database) BatchInsertEntries(ctx context.Context, deviceID, fileID stri
 INSERT INTO log_entries (id, file_id, device_id, log_time, content, line_number, level, module, message)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 ON CONFLICT (id) DO NOTHING`,
-			e.ID, fileID, deviceID, e.LogTime, content, e.Line, e.Level, e.Module, message)
+			e.ID, fileID, deviceID, e.LogTime, content, e.Line, e.Level, module, message)
 	}
 	br := d.pool.SendBatch(ctx, batch)
 	defer br.Close()
@@ -163,7 +170,7 @@ func (d *Database) DeleteEntriesByFile(ctx context.Context, fileID string) error
 
 func (d *Database) GetLogFiles(ctx context.Context, deviceID string) ([]LogFile, error) {
 	rows, err := d.pool.Query(ctx, `
-SELECT id, device_id, name, size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,'')
+SELECT id, device_id, name, size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,''), COALESCE(source_path,'')
 FROM log_files WHERE device_id=$1 ORDER BY upload_at DESC`, deviceID)
 	if err != nil {
 		return nil, err
@@ -172,7 +179,7 @@ FROM log_files WHERE device_id=$1 ORDER BY upload_at DESC`, deviceID)
 	var files []LogFile
 	for rows.Next() {
 		var f LogFile
-		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.ParsedLines, &f.Progress, &f.Status, &f.StatusMsg); err != nil {
+		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.ParsedLines, &f.Progress, &f.Status, &f.StatusMsg, &f.SourcePath); err != nil {
 			return nil, err
 		}
 		files = append(files, f)
@@ -183,9 +190,9 @@ FROM log_files WHERE device_id=$1 ORDER BY upload_at DESC`, deviceID)
 func (d *Database) GetLogFile(ctx context.Context, deviceID, fileID string) (*LogFile, error) {
 	var f LogFile
 	err := d.pool.QueryRow(ctx, `
-SELECT id, device_id, name, size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,'')
+SELECT id, device_id, name, size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,''), COALESCE(source_path,'')
 FROM log_files WHERE id=$1 AND device_id=$2`, fileID, deviceID).
-		Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.ParsedLines, &f.Progress, &f.Status, &f.StatusMsg)
+		Scan(&f.ID, &f.DeviceID, &f.Name, &f.Size, &f.UploadAt, &f.Total, &f.ParsedLines, &f.Progress, &f.Status, &f.StatusMsg, &f.SourcePath)
 	if err != nil {
 		return nil, err
 	}

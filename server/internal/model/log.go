@@ -26,6 +26,7 @@ type LogFile struct {
 	Progress    int        `json:"progress"`
 	Status      string     `json:"status"` // parsing | inserting | ready | failed
 	StatusMsg   string     `json:"status_msg,omitempty"`
+	SourcePath  string     `json:"source_path,omitempty"`
 	Entries     []LogEntry `json:"-"`
 }
 

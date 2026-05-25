@@ -25,6 +25,11 @@
             <el-icon><Collection /></el-icon>
           </el-button>
         </el-tooltip>
+        <el-tooltip content="Jira 同步" placement="bottom">
+          <el-button circle class="theme-btn" @click="jiraDialogVisible = true">
+            <el-icon><Link /></el-icon>
+          </el-button>
+        </el-tooltip>
       </div>
     </header>
 
@@ -74,22 +79,6 @@
                 <div v-for="(line, idx) in parseLogs" :key="idx" class="parse-log-line">{{ line }}</div>
               </el-scrollbar>
             </div>
-
-            <el-collapse class="panel-collapse">
-              <el-collapse-item title="Jira 同步" name="jira">
-                <el-form label-position="top" size="small">
-                  <el-form-item label="Base URL"><el-input v-model="jira.base_url" placeholder="https://jira.example.com" /></el-form-item>
-                  <el-form-item label="邮箱"><el-input v-model="jira.email" /></el-form-item>
-                  <el-form-item label="API Token"><el-input v-model="jira.api_token" type="password" show-password /></el-form-item>
-                  <el-form-item label="Issue Key"><el-input v-model="jiraIssueKey" placeholder="PROJ-123" /></el-form-item>
-                  <el-button :loading="jiraLoading" @click="fetchJira">拉取附件</el-button>
-                  <el-checkbox-group v-if="jiraFiles.length" v-model="jiraSelected" class="jira-checks">
-                    <el-checkbox v-for="f in jiraFiles" :key="f.id" :label="f.id">{{ f.filename }}</el-checkbox>
-                  </el-checkbox-group>
-                  <el-button v-if="jiraFiles.length" type="success" class="full-btn" @click="importJira">导入选中</el-button>
-                </el-form>
-              </el-collapse-item>
-            </el-collapse>
           </el-tab-pane>
 
           <el-tab-pane label="搜索" name="search">
@@ -144,6 +133,16 @@
                   class="file-progress"
                 />
                 <el-tag size="small" :type="statusType(f.status)" effect="plain">{{ statusLabel(f.status) }}</el-tag>
+                <el-button
+                  v-if="f.status === 'failed'"
+                  link
+                  type="primary"
+                  size="small"
+                  :loading="retryingId === f.id"
+                  @click.stop="retryIngest(f)"
+                >
+                  重新入库
+                </el-button>
                 <el-button link type="danger" size="small" @click.stop="removeFile(f.id)">
                   <el-icon><Delete /></el-icon>
                 </el-button>
@@ -184,9 +183,12 @@
                   v-for="row in logs"
                   :key="row.id"
                   class="log-line"
-                  :style="{ '--line-color': row.color || 'inherit' }"
+                  :style="logLineStyle(row)"
+                  :title="row.display || row.content"
                   @click="expandContext(row)"
                 >
+                  <span class="level-mark" :style="{ background: levelColor(row.level) }" />
+                  <span class="level-badge" :style="{ color: levelColor(row.level) }">{{ levelShort(row.level) }}</span>
                   <span class="ln">{{ row.line }}</span>
                   <span class="log-text" v-html="highlightLine(row)"></span>
                 </div>
@@ -199,9 +201,13 @@
               <div
                 v-for="row in ctxLines"
                 :key="row.id"
-                class="log-line ctx"
-                :style="{ '--line-color': row.color || 'inherit' }"
+                :class="['log-line', 'ctx', { 'ctx-origin': row.line === ctxCenterLine }]"
+                :style="logLineStyle(row)"
+                :title="row.display || row.content"
               >
+                <span v-if="row.line === ctxCenterLine" class="ctx-origin-tag">当前</span>
+                <span class="level-mark" :style="{ background: levelColor(row.level) }" />
+                <span class="level-badge" :style="{ color: levelColor(row.level) }">{{ levelShort(row.level) }}</span>
                 <span class="ln">{{ row.line }}</span>
                 <span class="log-text">{{ row.display || row.content }}</span>
               </div>
@@ -211,6 +217,7 @@
       </main>
     </div>
     <SceneConfigDialog v-model="sceneDialogVisible" v-model:config="sceneConfig" />
+    <JiraSyncDialog v-model="jiraDialogVisible" @imported="onJiraImported" />
   </div>
 </template>
 
@@ -222,6 +229,7 @@ import {
   Delete,
   Document,
   DocumentCopy,
+  Link,
   Loading,
   Monitor,
   Moon,
@@ -232,6 +240,7 @@ import {
   UploadFilled,
 } from '@element-plus/icons-vue'
 import SceneConfigDialog from './components/SceneConfigDialog.vue'
+import JiraSyncDialog from './components/JiraSyncDialog.vue'
 import { api } from './api'
 import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
@@ -240,6 +249,7 @@ import {
   decorateEntries,
   loadLocalScene,
 } from './utils/scene'
+import { levelColor, levelShort } from './utils/logLevel'
 
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
@@ -254,22 +264,19 @@ const uploadProgress = ref(0)
 const pendingFiles = ref([])
 const parseTasks = ref([])
 const parseLogs = ref([])
+const retryingId = ref('')
 let pollTimer = null
 
 const sceneConfig = ref(loadLocalScene())
 const sceneDialogVisible = ref(false)
+const jiraDialogVisible = ref(false)
 const selectedScenes = ref([])
 const searchKeywords = ref('')
 const useRegex = ref(false)
 
-const jira = ref({ base_url: '', email: '', api_token: '' })
-const jiraIssueKey = ref('')
-const jiraFiles = ref([])
-const jiraSelected = ref([])
-const jiraLoading = ref(false)
-
 const ctxOpen = ref(false)
 const ctxLines = ref([])
+const ctxCenterLine = ref(0)
 let sceneMeta = []
 
 const allSceneNames = computed(() => {
@@ -409,6 +416,21 @@ async function removeFile(id) {
   await loadFiles()
 }
 
+async function retryIngest(f) {
+  retryingId.value = f.id
+  try {
+    const { data } = await api.retryIngest(f.id)
+    if (!data.success) throw new Error(data.error)
+    ElMessage.success('已重新开始入库')
+    await loadFiles()
+    startPolling()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || e.message)
+  } finally {
+    retryingId.value = ''
+  }
+}
+
 async function searchLogs() {
   if (!currentFileId.value) return
   loadingLogs.value = true
@@ -436,7 +458,17 @@ function highlightLine(row) {
   return (row.display || row.content || '').replace(/</g, '&lt;')
 }
 
+function logLineStyle(row) {
+  const lc = levelColor(row.level)
+  return {
+    '--line-color': row.color || 'inherit',
+    '--level-color': lc,
+    borderLeftColor: lc,
+  }
+}
+
 async function expandContext(row) {
+  ctxCenterLine.value = row.line
   const { data } = await api.logContext({
     file_id: currentFileId.value,
     line: row.line,
@@ -449,35 +481,9 @@ async function expandContext(row) {
   }
 }
 
-async function fetchJira() {
-  if (!jiraIssueKey.value) return ElMessage.warning('请输入 Issue Key')
-  jiraLoading.value = true
-  try {
-    const { data } = await api.jiraAttachments(jiraIssueKey.value, jira.value)
-    if (!data.success) throw new Error(data.error)
-    jiraFiles.value = data.data || []
-    jiraSelected.value = jiraFiles.value.map((f) => f.id)
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || e.message)
-  } finally {
-    jiraLoading.value = false
-  }
-}
-
-async function importJira() {
-  const picked = jiraFiles.value.filter((f) => jiraSelected.value.includes(f.id))
-  const { data } = await api.jiraImport({
-    config: jira.value,
-    issue_key: jiraIssueKey.value,
-    attachments: picked.map((f) => ({ id: f.id, filename: f.filename, content_url: f.content_url })),
-  })
-  if (data.success) {
-    ElMessage.success('Jira 附件已排队入库')
-    await loadFiles()
-    startPolling()
-  } else {
-    ElMessage.error(data.error)
-  }
+async function onJiraImported() {
+  await loadFiles()
+  startPolling()
 }
 
 onMounted(async () => {
@@ -696,36 +702,6 @@ onUnmounted(stopPolling)
   padding: 2px 0;
 }
 
-.panel-collapse {
-  border: none;
-  margin-bottom: 12px;
-}
-
-.panel-collapse :deep(.el-collapse-item__header) {
-  background: var(--app-surface-2);
-  border: 1px solid var(--app-border-light);
-  border-radius: var(--app-radius-sm);
-  padding: 0 12px;
-  font-size: 13px;
-  font-weight: 500;
-  height: 40px;
-}
-
-.panel-collapse :deep(.el-collapse-item__wrap) {
-  border: none;
-}
-
-.panel-collapse :deep(.el-collapse-item__content) {
-  padding: 12px 0 0;
-}
-
-.jira-checks {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 10px 0;
-}
-
 .file-panel {
   margin-bottom: 0;
   flex-shrink: 0;
@@ -890,24 +866,42 @@ onUnmounted(stopPolling)
 
 .log-line {
   display: flex;
-  gap: 12px;
-  padding: 3px 16px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 4px 8px;
   font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.5;
   cursor: pointer;
-  border-left: 3px solid transparent;
+  border-left: 3px solid var(--level-color, #3fb950);
   transition: background 0.1s;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.level-mark {
+  flex-shrink: 0;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.level-badge {
+  flex-shrink: 0;
+  width: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  user-select: none;
 }
 
 .log-line:hover {
   background: var(--app-log-hover);
-  border-left-color: var(--app-accent);
 }
 
 .log-line .ln {
   flex-shrink: 0;
-  width: 48px;
+  width: 44px;
   text-align: right;
   color: var(--app-log-gutter);
   user-select: none;
@@ -916,12 +910,58 @@ onUnmounted(stopPolling)
 
 .log-text {
   flex: 1;
+  min-width: 0;
   color: var(--line-color, var(--app-text-secondary));
-  white-space: pre-wrap;
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ctx-list .log-line {
   cursor: default;
+  align-items: flex-start;
+  overflow: visible;
+  white-space: normal;
+}
+
+.ctx-list .log-text {
+  overflow: visible;
+  text-overflow: unset;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ctx-list .level-mark {
+  margin-top: 3px;
+}
+
+.ctx-list .level-badge {
+  margin-top: 1px;
+}
+
+.ctx-list .ln {
+  margin-top: 1px;
+}
+
+.ctx-origin {
+  background: var(--app-accent-soft) !important;
+  box-shadow: inset 3px 0 0 var(--app-accent);
+}
+
+.ctx-origin .log-text {
+  color: var(--app-accent) !important;
+  font-weight: 600;
+}
+
+.ctx-origin-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--app-accent);
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.4;
+  user-select: none;
 }
 </style>

@@ -19,7 +19,7 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 	uploadH := handler.NewUploadHandler(storage)
 	logH := handler.NewLogHandler(storage)
 	sceneH := handler.NewSceneHandlerDB(db)
-	jiraH := handler.NewJiraHandler(storage)
+	jiraH := handler.NewJiraHandler(cfg, storage)
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -37,6 +37,7 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 		api.GET("/files", uploadH.ListFiles)
 		api.GET("/files/:id", uploadH.GetFileStatus)
 		api.DELETE("/files/:id", uploadH.DeleteFile)
+		api.POST("/files/:id/retry", uploadH.RetryIngest)
 		api.POST("/files/batch-delete", uploadH.BatchDelete)
 
 		api.POST("/logs/query", logH.Query)
@@ -45,8 +46,8 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 		api.GET("/scenes", sceneH.List)
 		api.POST("/scenes", sceneH.Save)
 
-		api.POST("/jira/issues/:key/attachments", jiraH.ListAttachments)
 		api.POST("/jira/import", jiraH.Import)
+		api.GET("/jira/issues/:key/attachments", jiraH.ListAttachments)
 	}
 
 	r.GET("/health", func(c *gin.Context) {

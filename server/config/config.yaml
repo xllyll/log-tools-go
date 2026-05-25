@@ -17,3 +17,9 @@ storage:
 ingest:
   batch_size: 500
   worker_count: 4
+
+jira:
+  enabled: true
+  base_url: "https://jira.example.com"
+  email: "lidaming"
+  api_token: "bwlidaming789"

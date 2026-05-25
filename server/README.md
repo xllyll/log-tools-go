@@ -37,5 +37,19 @@ go run .
 | POST | /api/logs/query | 查询日志（关键词 AND / 场景 OR） |
 | GET | /api/logs/context | 上下文行（前后 N 条） |
 | POST | /api/scenes | 保存场景配置 |
-| POST | /api/jira/issues/:key/attachments | 列出 Jira 附件 |
+| GET | /api/jira/issues/:key/attachments | 列出 Issue 日志附件（凭据在服务端） |
 | POST | /api/jira/import | 导入选中 Jira 附件 |
+
+## Jira 同步
+
+在 `config/config.yaml` 中配置（前端只需填写 Issue Key）：
+
+```yaml
+jira:
+  enabled: true
+  base_url: "https://jira.example.com"
+  email: "your-email@example.com"
+  api_token: "your-api-token"
+```
+
+修改后需重启服务。`enabled: false` 时相关接口会返回未启用提示。

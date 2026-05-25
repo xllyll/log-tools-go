@@ -12,6 +12,7 @@ import (
 
 	"log-tools/server/internal/model"
 	"log-tools/server/pkg/xencoding"
+	"log-tools/server/pkg/xlog"
 
 	"github.com/google/uuid"
 )
@@ -70,7 +71,7 @@ func (p *Parser) ParseFile(deviceID, fileID, filePath string, onProgress ParsePr
 			LogTime: now,
 			Content: line,
 			Line:    lineNo,
-			Level:   "INFO",
+			Level:   xlog.ParseLevel(line),
 			Message: line,
 		})
 		if onProgress != nil && lineNo%5000 == 0 {
