@@ -62,7 +62,7 @@
             <div v-if="parseTasks.length" class="panel-card parse-card">
               <div class="card-title">
                 <el-icon><Loading /></el-icon>
-                解析任务
+                入库任务
               </div>
               <div v-for="task in parseTasks" :key="task.id" class="parse-task">
                 <div class="parse-task-head">
@@ -182,14 +182,14 @@
                 />
                 <el-tag size="small" :type="statusType(f.status)" effect="plain">{{ statusLabel(f.status) }}</el-tag>
                 <el-button
-                  v-if="f.status === 'failed'"
+                  v-if="canIngest(f)"
                   link
                   type="primary"
                   size="small"
-                  :loading="retryingId === f.id"
-                  @click.stop="retryIngest(f)"
+                  :loading="ingestingId === f.id"
+                  @click.stop="startIngest(f)"
                 >
-                  重新入库
+                  {{ f.status === 'failed' ? '重新入库' : '入库' }}
                 </el-button>
                 <el-button link type="danger" size="small" @click.stop="removeFile(f.id)">
                   <el-icon><Delete /></el-icon>
@@ -206,7 +206,7 @@
             <el-icon :size="48"><DocumentCopy /></el-icon>
           </div>
           <h2>选择或上传日志文件</h2>
-          <p>从左侧点击已解析完成的日志（可多选，按选择顺序展示），或上传新文件</p>
+          <p>从左侧选择日志文件（未入库也可预览，可多选按顺序展示），或上传新文件</p>
         </div>
 
         <template v-else>
@@ -336,7 +336,7 @@ const uploadRef = ref(null)
 const pendingFiles = ref([])
 const parseTasks = ref([])
 const parseLogs = ref([])
-const retryingId = ref('')
+const ingestingId = ref('')
 let pollTimer = null
 
 const sceneConfig = ref(loadLocalScene())
@@ -426,17 +426,32 @@ function formatTime(t) {
 
 function statusType(s) {
   if (s === 'ready') return 'success'
+  if (s === 'uploaded') return 'info'
   if (s === 'failed') return 'danger'
   return 'warning'
 }
 
 function statusLabel(s) {
-  const map = { parsing: '解析中', inserting: '入库中', ready: '完成', failed: '失败' }
+  const map = {
+    uploaded: '未入库',
+    parsing: '入库中',
+    inserting: '入库中',
+    ready: '已入库',
+    failed: '失败',
+  }
   return map[s] || s
 }
 
 function isProcessing(status) {
   return status === 'parsing' || status === 'inserting'
+}
+
+function isViewable(f) {
+  return f.status === 'uploaded' || f.status === 'ready' || f.status === 'failed'
+}
+
+function canIngest(f) {
+  return f.status === 'uploaded' || f.status === 'failed'
 }
 
 function appendParseLog(msg) {
@@ -503,15 +518,14 @@ async function doUpload() {
         uploadProgress.value = Math.round(((i + single / 100) / total) * 100)
       })
       if (data.file_ids?.length) {
-        data.file_ids.forEach((id) => appendParseLog(`已提交解析任务: ${id.slice(0, 8)}…`))
+        data.file_ids.forEach((id) => appendParseLog(`已上传: ${id.slice(0, 8)}…`))
       }
     }
-    ElMessage.success('上传成功，后台解析中')
+    ElMessage.success('上传成功，可选择文件预览或点击入库')
     pendingFiles.value = []
     uploadRef.value?.clearFiles()
     uploadProgress.value = 100
     await loadFiles()
-    startPolling()
   } catch (e) {
     ElMessage.error(e.response?.data?.error || e.message)
   } finally {
@@ -520,8 +534,8 @@ async function doUpload() {
 }
 
 async function toggleSelectFile(f) {
-  if (f.status !== 'ready') {
-    ElMessage.info(f.status_msg || '文件解析中，请稍候')
+  if (!isViewable(f)) {
+    ElMessage.info(f.status_msg || '文件正在入库，请稍候')
     startPolling()
     return
   }
@@ -586,18 +600,18 @@ async function batchRemoveFiles() {
   }
 }
 
-async function retryIngest(f) {
-  retryingId.value = f.id
+async function startIngest(f) {
+  ingestingId.value = f.id
   try {
-    const { data } = await api.retryIngest(f.id)
+    const { data } = await api.startIngest(f.id)
     if (!data.success) throw new Error(data.error)
-    ElMessage.success('已重新开始入库')
+    ElMessage.success('已开始入库')
     await loadFiles()
     startPolling()
   } catch (e) {
     ElMessage.error(e.response?.data?.error || e.message)
   } finally {
-    retryingId.value = ''
+    ingestingId.value = ''
   }
 }
 
@@ -696,7 +710,6 @@ async function expandContext(row) {
 
 async function onJiraImported() {
   await loadFiles()
-  startPolling()
 }
 
 onMounted(async () => {

@@ -29,6 +29,9 @@ export const api = {
   deleteFile(id) {
     return http.delete(`/files/${id}`)
   },
+  startIngest(id) {
+    return http.post(`/files/${id}/ingest`)
+  },
   retryIngest(id) {
     return http.post(`/files/${id}/retry`)
   },

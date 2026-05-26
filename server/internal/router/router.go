@@ -41,6 +41,7 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 		api.GET("/files", uploadH.ListFiles)
 		api.GET("/files/:id", uploadH.GetFileStatus)
 		api.DELETE("/files/:id", uploadH.DeleteFile)
+		api.POST("/files/:id/ingest", uploadH.IngestFile)
 		api.POST("/files/:id/retry", uploadH.RetryIngest)
 		api.POST("/files/batch-delete", uploadH.BatchDelete)
 

@@ -243,7 +243,8 @@ func ingestProgress(linesRead int, fileSize int64) int {
 	return p
 }
 
-func (s *StorageService) StartIngest(deviceID, path string) (*model.LogFile, error) {
+// RegisterUpload records an uploaded file without ingesting into the database.
+func (s *StorageService) RegisterUpload(deviceID, path string) (*model.LogFile, error) {
 	ctx := context.Background()
 	info, err := os.Stat(path)
 	if err != nil {
@@ -256,19 +257,52 @@ func (s *StorageService) StartIngest(deviceID, path string) (*model.LogFile, err
 		Name:       filepath.Base(path),
 		Size:       info.Size(),
 		UploadAt:   time.Now(),
-		Status:     "parsing",
-		StatusMsg:  "排队等待解析",
+		Status:     "uploaded",
+		StatusMsg:  "已上传，可预览；点击入库写入数据库",
 		Progress:   0,
 		SourcePath: path,
 	}
 	if err := s.db.SaveLogFile(ctx, f); err != nil {
 		return nil, err
 	}
+	log.Printf("[upload] registered file=%s name=%s device=%s path=%s", fileID, f.Name, deviceID, path)
+	return f, nil
+}
+
+func (s *StorageService) usesDatabase(f *model.LogFile) bool {
+	return f.Status == "ready"
+}
+
+// BeginIngest starts background ingest for an uploaded or failed file.
+func (s *StorageService) BeginIngest(ctx context.Context, deviceID, fileID string) error {
+	f, err := s.db.GetLogFile(ctx, deviceID, fileID)
+	if err != nil {
+		return fmt.Errorf("file not found: %w", err)
+	}
+	switch f.Status {
+	case "parsing", "inserting":
+		return fmt.Errorf("文件正在入库中")
+	case "ready":
+		return fmt.Errorf("文件已入库")
+	case "uploaded", "failed":
+	default:
+		return fmt.Errorf("当前状态无法入库: %s", f.Status)
+	}
+	path, err := s.resolveSourcePath(f)
+	if err != nil {
+		return err
+	}
+	if f.Status == "failed" {
+		if err := s.db.DeleteEntriesByFile(ctx, fileID); err != nil {
+			return err
+		}
+	}
+	_ = s.db.UpdateFileProgress(ctx, fileID, "parsing", "排队等待入库", 0, 0, 0)
 	log.Printf("[ingest] queued file=%s name=%s device=%s", fileID, f.Name, deviceID)
 	s.pool.Submit(func(c context.Context) error {
 		return s.ingestFile(c, deviceID, fileID, path)
 	})
-	return f, nil
+	return nil
 }
 
 func (s *StorageService) GetFiles(ctx context.Context, deviceID string) ([]model.LogFile, error) {
@@ -311,11 +345,58 @@ func (s *StorageService) removePhysicalSources(f *model.LogFile) {
 }
 
 func (s *StorageService) GetEntries(ctx context.Context, filter model.LogFilter) ([]model.LogEntry, error) {
-	return s.db.GetLogEntries(ctx, filter)
+	if filter.FileID == "" && len(filter.FileIDs) == 0 {
+		return nil, fmt.Errorf("file_id required")
+	}
+	if len(filter.FileIDs) > 0 {
+		var all []model.LogEntry
+		for _, id := range filter.FileIDs {
+			f, err := s.db.GetLogFile(ctx, filter.DeviceID, id)
+			if err != nil {
+				return nil, err
+			}
+			sub := filter
+			sub.FileID = id
+			sub.FileIDs = nil
+			chunk, err := s.getEntriesForFile(ctx, f, sub)
+			if err != nil {
+				return nil, err
+			}
+			all = append(all, chunk...)
+		}
+		return all, nil
+	}
+	f, err := s.db.GetLogFile(ctx, filter.DeviceID, filter.FileID)
+	if err != nil {
+		return nil, err
+	}
+	return s.getEntriesForFile(ctx, f, filter)
+}
+
+func (s *StorageService) getEntriesForFile(ctx context.Context, f *model.LogFile, filter model.LogFilter) ([]model.LogEntry, error) {
+	if s.usesDatabase(f) {
+		return s.db.GetLogEntries(ctx, filter)
+	}
+	path, err := s.resolveSourcePath(f)
+	if err != nil {
+		return nil, err
+	}
+	return s.parser.QueryFileEntries(f.ID, path, filter)
 }
 
 func (s *StorageService) GetContext(ctx context.Context, deviceID, fileID string, line, before, after int) ([]model.LogEntry, error) {
-	return s.db.GetContextEntries(ctx, deviceID, fileID, line, before, after)
+	f, err := s.db.GetLogFile(ctx, deviceID, fileID)
+	if err != nil {
+		return nil, err
+	}
+	if s.usesDatabase(f) {
+		return s.db.GetContextEntries(ctx, deviceID, fileID, line, before, after)
+	}
+	path, err := s.resolveSourcePath(f)
+	if err != nil {
+		return nil, err
+	}
+	return s.parser.FileContextEntries(fileID, path, line, before, after)
 }
 
 func (s *StorageService) GetFile(ctx context.Context, deviceID, fileID string) (*model.LogFile, error) {
@@ -323,26 +404,7 @@ func (s *StorageService) GetFile(ctx context.Context, deviceID, fileID string) (
 }
 
 func (s *StorageService) RetryIngest(ctx context.Context, deviceID, fileID string) error {
-	f, err := s.db.GetLogFile(ctx, deviceID, fileID)
-	if err != nil {
-		return fmt.Errorf("file not found: %w", err)
-	}
-	if f.Status != "failed" {
-		return fmt.Errorf("only failed files can be retried")
-	}
-	path, err := s.resolveSourcePath(f)
-	if err != nil {
-		return err
-	}
-	if err := s.db.DeleteEntriesByFile(ctx, fileID); err != nil {
-		return err
-	}
-	_ = s.db.UpdateFileProgress(ctx, fileID, "parsing", "重新入库中...", 0, 0, 0)
-	log.Printf("[ingest] retry file=%s path=%s", fileID, path)
-	s.pool.Submit(func(c context.Context) error {
-		return s.ingestFile(c, deviceID, fileID, path)
-	})
-	return nil
+	return s.BeginIngest(ctx, deviceID, fileID)
 }
 
 func (s *StorageService) resolveSourcePath(f *model.LogFile) (string, error) {

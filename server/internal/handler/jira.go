@@ -68,7 +68,7 @@ func (h *JiraHandler) Import(c *gin.Context) {
 		if err := os.WriteFile(finalPath, data, 0o644); err != nil {
 			continue
 		}
-		lf, err := h.storage.StartIngest(deviceID, finalPath)
+		lf, err := h.storage.RegisterUpload(deviceID, finalPath)
 		if err != nil {
 			_ = os.Remove(finalPath)
 			continue
@@ -81,7 +81,7 @@ func (h *JiraHandler) Import(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, model.UploadResponse{
 		Success: true,
-		Message: "jira 附件已排队入库",
+		Message: "jira 附件已上传",
 		FileIDs: fileIDs,
 	})
 }

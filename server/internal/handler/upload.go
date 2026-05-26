@@ -54,7 +54,7 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		if ext != ".log" && ext != ".txt" && ext != ".gz" {
 			continue
 		}
-		lf, err := h.storage.StartIngest(deviceID, p)
+		lf, err := h.storage.RegisterUpload(deviceID, p)
 		if err != nil {
 			continue
 		}
@@ -68,7 +68,7 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 
 	c.JSON(http.StatusOK, model.UploadResponse{
 		Success: true,
-		Message: "upload accepted, parsing in background",
+		Message: "upload accepted",
 		FileIDs: fileIDs,
 	})
 }
@@ -119,12 +119,16 @@ func (h *UploadHandler) BatchDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: "batch deleted"})
 }
 
-func (h *UploadHandler) RetryIngest(c *gin.Context) {
+func (h *UploadHandler) IngestFile(c *gin.Context) {
 	deviceID := GetDeviceID(c)
 	fileID := c.Param("id")
-	if err := h.storage.RetryIngest(c.Request.Context(), deviceID, fileID); err != nil {
+	if err := h.storage.BeginIngest(c.Request.Context(), deviceID, fileID); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Success: false, Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: "re-ingest started"})
+	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: "ingest started"})
+}
+
+func (h *UploadHandler) RetryIngest(c *gin.Context) {
+	h.IngestFile(c)
 }
