@@ -213,17 +213,15 @@ defineExpose({ openFromRow })
 
 .log-line {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  padding: 3px 12px 3px 2px;
+  padding: 6px 12px 6px 2px;
   font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.45;
   cursor: default;
   border-left: 2px solid var(--level-color, #3fb950);
-  overflow: hidden;
   max-width: 100%;
-  white-space: nowrap;
 }
 
 .log-line .ln {
@@ -241,37 +239,26 @@ defineExpose({ openFromRow })
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: flex-start;
-  overflow: hidden;
-}
-
-.log-body:not(.has-scene-desc) .log-text {
-  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .log-text {
-  min-width: 0;
+  width: 100%;
   color: var(--line-color, var(--app-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.log-body.has-scene-desc {
-  gap: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .log-body.has-scene-desc .log-text {
-  flex: 0 1 auto;
-  max-width: 100%;
   font-size: 11px;
   line-height: 1.4;
 }
 
 .log-body.has-scene-desc .scene-desc {
-  flex: 0 0 auto;
+  align-self: flex-start;
 }
 
 .ctx-origin {

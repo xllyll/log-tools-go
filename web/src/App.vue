@@ -947,7 +947,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* 无 desc：正文占满一行并可省略 */
 .log-body:not(.has-scene-desc) .log-text {
   flex: 1 1 auto;
 }
@@ -960,7 +959,6 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-/* 有 desc：正文紧跟内容后、过长则压缩省略；desc 紧贴正文右侧，不顶到行尾 */
 .log-body.has-scene-desc {
   gap: 6px;
 }
