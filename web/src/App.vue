@@ -124,80 +124,14 @@
           </el-tab-pane>
         </el-tabs>
 
-        <div class="panel-card file-panel">
-          <div class="card-title file-panel-title">
-            <div class="file-panel-title-left">
-              <span>我的文件</span>
-              <el-badge :value="files.length" :max="99" type="primary" />
-            </div>
-            <div v-if="files.length" class="file-panel-title-actions">
-              <el-checkbox
-                v-model="fileCheckAll"
-                :indeterminate="fileCheckIndeterminate"
-                size="small"
-              >
-                全选
-              </el-checkbox>
-              <el-button
-                type="danger"
-                size="small"
-                plain
-                :disabled="!checkedDeleteIds.length"
-                :loading="batchDeleting"
-                @click="batchRemoveFiles"
-              >
-                删除{{ checkedDeleteIds.length ? `(${checkedDeleteIds.length})` : '' }}
-              </el-button>
-            </div>
-          </div>
-          <el-scrollbar max-height="240px">
-            <div v-if="!files.length" class="file-empty">暂无文件，请先上传</div>
-            <div
-              v-for="f in files"
-              :key="f.id"
-              :class="['file-item', { active: isFileSelected(f.id) }]"
-              @click="toggleSelectFile(f)"
-            >
-              <div class="file-item-main">
-                <el-checkbox
-                  class="file-check"
-                  :model-value="checkedDeleteIds.includes(f.id)"
-                  @update:model-value="(v) => setFileChecked(f.id, v)"
-                  @click.stop
-                />
-                <span v-if="fileSelectOrder(f.id)" class="file-order">{{ fileSelectOrder(f.id) }}</span>
-                <el-icon class="file-icon"><Document /></el-icon>
-                <div class="file-meta">
-                  <span class="file-name" :title="f.name">{{ f.name }}</span>
-                  <span class="file-sub">{{ formatSize(f.size) }} · {{ formatTime(f.upload_at) }}</span>
-                </div>
-              </div>
-              <div class="file-item-foot">
-                <el-progress
-                  v-if="isProcessing(f.status)"
-                  :percentage="f.progress || 0"
-                  :stroke-width="4"
-                  :show-text="false"
-                  class="file-progress"
-                />
-                <el-tag size="small" :type="statusType(f.status)" effect="plain">{{ statusLabel(f.status) }}</el-tag>
-                <el-button
-                  v-if="canIngest(f)"
-                  link
-                  type="primary"
-                  size="small"
-                  :loading="ingestingId === f.id"
-                  @click.stop="startIngest(f)"
-                >
-                  {{ f.status === 'failed' ? '重新入库' : '入库' }}
-                </el-button>
-                <el-button link type="danger" size="small" @click.stop="removeFile(f.id)">
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </div>
-            </div>
-          </el-scrollbar>
-        </div>
+        <FileListPanel
+          :files="files"
+          v-model:selected-ids="selectedFileIds"
+          @select-change="onFileSelectChange"
+          @removed="afterFilesRemoved"
+          @ingested="onFileIngested"
+          @need-poll="startPolling"
+        />
       </aside>
 
       <main class="content">
@@ -288,10 +222,9 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   Collection,
-  Delete,
   Document,
   DocumentCopy,
   Link,
@@ -306,6 +239,7 @@ import {
 } from '@element-plus/icons-vue'
 import SceneConfigDialog from './components/SceneConfigDialog.vue'
 import JiraSyncDialog from './components/JiraSyncDialog.vue'
+import FileListPanel from './components/FileListPanel.vue'
 import { api } from './api'
 import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
@@ -317,14 +251,13 @@ import {
   sceneDescStyle,
 } from './utils/scene'
 import { levelColor } from './utils/logLevel'
+import { isProcessing, statusLabel, statusType } from './utils/fileStatus'
 
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
 const leftTab = ref('upload')
 const files = ref([])
 const selectedFileIds = ref([])
-const checkedDeleteIds = ref([])
-const batchDeleting = ref(false)
 const logs = shallowRef([])
 const MAX_LOG_ROWS = 10000
 let searchSeq = 0
@@ -336,7 +269,6 @@ const uploadRef = ref(null)
 const pendingFiles = ref([])
 const parseTasks = ref([])
 const parseLogs = ref([])
-const ingestingId = ref('')
 let pollTimer = null
 
 const sceneConfig = ref(loadLocalScene())
@@ -362,43 +294,9 @@ const selectedFilesLabel = computed(() => {
   return names.join(' → ')
 })
 
-function isFileSelected(id) {
-  return selectedFileIds.value.includes(id)
-}
-
-function fileSelectOrder(id) {
-  const i = selectedFileIds.value.indexOf(id)
-  return i >= 0 ? i + 1 : 0
-}
-
-const fileCheckAll = computed({
-  get() {
-    return files.value.length > 0 && checkedDeleteIds.value.length === files.value.length
-  },
-  set(val) {
-    checkedDeleteIds.value = val ? files.value.map((f) => f.id) : []
-  },
-})
-
-const fileCheckIndeterminate = computed(() => {
-  const n = checkedDeleteIds.value.length
-  return n > 0 && n < files.value.length
-})
-
-function setFileChecked(id, checked) {
-  if (checked) {
-    if (!checkedDeleteIds.value.includes(id)) {
-      checkedDeleteIds.value = [...checkedDeleteIds.value, id]
-    }
-  } else {
-    checkedDeleteIds.value = checkedDeleteIds.value.filter((x) => x !== id)
-  }
-}
-
 async function afterFilesRemoved(ids) {
   const removed = new Set(ids)
   selectedFileIds.value = selectedFileIds.value.filter((x) => !removed.has(x))
-  checkedDeleteIds.value = checkedDeleteIds.value.filter((x) => !removed.has(x))
   if (!selectedFileIds.value.length) {
     logs.value = []
   } else {
@@ -412,46 +310,17 @@ function toggleTheme() {
   applyTheme(isDark.value ? 'dark' : 'light')
 }
 
-function formatSize(bytes) {
-  if (!bytes) return '-'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
-
-function formatTime(t) {
-  if (!t) return ''
-  return new Date(t).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
-function statusType(s) {
-  if (s === 'ready') return 'success'
-  if (s === 'uploaded') return 'info'
-  if (s === 'failed') return 'danger'
-  return 'warning'
-}
-
-function statusLabel(s) {
-  const map = {
-    uploaded: '未入库',
-    parsing: '入库中',
-    inserting: '入库中',
-    ready: '已入库',
-    failed: '失败',
+function onFileSelectChange(ids) {
+  if (ids.length) {
+    scheduleSearchLogs()
+  } else {
+    logs.value = []
   }
-  return map[s] || s
 }
 
-function isProcessing(status) {
-  return status === 'parsing' || status === 'inserting'
-}
-
-function isViewable(f) {
-  return f.status === 'uploaded' || f.status === 'ready' || f.status === 'failed'
-}
-
-function canIngest(f) {
-  return f.status === 'uploaded' || f.status === 'failed'
+async function onFileIngested() {
+  await loadFiles()
+  startPolling()
 }
 
 function appendParseLog(msg) {
@@ -494,8 +363,6 @@ async function loadFiles() {
   const { data } = await api.listFiles()
   if (data.success) {
     files.value = data.data || []
-    const exist = new Set(files.value.map((f) => f.id))
-    checkedDeleteIds.value = checkedDeleteIds.value.filter((id) => exist.has(id))
     syncParseTasks()
   }
 }
@@ -533,86 +400,12 @@ async function doUpload() {
   }
 }
 
-async function toggleSelectFile(f) {
-  if (!isViewable(f)) {
-    ElMessage.info(f.status_msg || '文件正在入库，请稍候')
-    startPolling()
-    return
-  }
-  const idx = selectedFileIds.value.indexOf(f.id)
-  if (idx >= 0) {
-    selectedFileIds.value = selectedFileIds.value.filter((id) => id !== f.id)
-  } else {
-    selectedFileIds.value = [...selectedFileIds.value, f.id]
-  }
-  if (selectedFileIds.value.length) {
-    scheduleSearchLogs()
-  } else {
-    logs.value = []
-  }
-}
-
 function scheduleSearchLogs() {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
     searchDebounceTimer = null
     searchLogs()
   }, 350)
-}
-
-async function removeFile(id) {
-  try {
-    await ElMessageBox.confirm('确定删除该文件？关联日志将一并清除。', '删除文件', { type: 'warning' })
-  } catch {
-    return
-  }
-  try {
-    await api.deleteFile(id)
-    await afterFilesRemoved([id])
-    ElMessage.success('已删除')
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || e.message)
-  }
-}
-
-async function batchRemoveFiles() {
-  const ids = [...checkedDeleteIds.value]
-  if (!ids.length) return
-  try {
-    await ElMessageBox.confirm(
-      `确定删除选中的 ${ids.length} 个文件？关联日志将一并清除。`,
-      '批量删除',
-      { type: 'warning' },
-    )
-  } catch {
-    return
-  }
-  batchDeleting.value = true
-  try {
-    const { data } = await api.batchDelete(ids)
-    if (!data.success) throw new Error(data.error)
-    await afterFilesRemoved(ids)
-    ElMessage.success(`已删除 ${ids.length} 个文件`)
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || e.message)
-  } finally {
-    batchDeleting.value = false
-  }
-}
-
-async function startIngest(f) {
-  ingestingId.value = f.id
-  try {
-    const { data } = await api.startIngest(f.id)
-    if (!data.success) throw new Error(data.error)
-    ElMessage.success('已开始入库')
-    await loadFiles()
-    startPolling()
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || e.message)
-  } finally {
-    ingestingId.value = ''
-  }
 }
 
 function perFileQueryLimit(fileCount) {
@@ -812,7 +605,6 @@ onUnmounted(() => {
 }
 
 .sidebar-tabs {
-  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -835,7 +627,9 @@ onUnmounted(() => {
   padding: 14px;
   margin-bottom: 12px;
 }
-
+.file-panel{
+  flex: 1;
+}
 .card-title {
   display: flex;
   align-items: center;
@@ -932,76 +726,6 @@ onUnmounted(() => {
   padding: 2px 0;
 }
 
-.file-panel {
-  margin-bottom: 0;
-  flex-shrink: 0;
-}
-
-.file-panel-title {
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.file-panel-title-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.file-panel-title-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.file-check {
-  flex-shrink: 0;
-  margin-right: 2px;
-}
-
-.file-check :deep(.el-checkbox__label) {
-  display: none;
-}
-
-.file-empty {
-  text-align: center;
-  padding: 24px 12px;
-  font-size: 13px;
-  color: var(--app-text-muted);
-}
-
-.file-item {
-  padding: 10px 12px;
-  border-radius: var(--app-radius-sm);
-  cursor: pointer;
-  border: 1px solid transparent;
-  margin-bottom: 6px;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.file-item:hover {
-  background: var(--app-accent-soft);
-}
-
-.file-item.active {
-  background: var(--app-accent-soft);
-  border-color: var(--app-accent);
-}
-
-.file-order {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--app-accent);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  text-align: center;
-}
-
 .log-file-header {
   display: flex;
   align-items: center;
@@ -1031,51 +755,6 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.file-item-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.file-icon {
-  color: var(--app-accent);
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.file-meta {
-  min-width: 0;
-  flex: 1;
-}
-
-.file-name {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--app-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-sub {
-  font-size: 11px;
-  color: var(--app-text-muted);
-  margin-top: 2px;
-}
-
-.file-item-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding-left: 26px;
-}
-
-.file-progress {
-  flex: 1;
 }
 
 .content {

@@ -1,0 +1,383 @@
+<template>
+  <div class="panel-card file-panel">
+    <div class="card-title file-panel-title">
+      <div class="file-panel-title-left">
+        <span>我的文件</span>
+        <el-badge :value="files.length" :max="99" type="primary" />
+      </div>
+      <div v-if="files.length" class="file-panel-title-actions">
+        <el-button
+          type="danger"
+          size="small"
+          plain
+          :disabled="!selectedIds.length"
+          :loading="batchDeleting"
+          @click="batchRemove"
+        >
+          删除选中{{ selectedIds.length ? `(${selectedIds.length})` : '' }}
+        </el-button>
+      </div>
+    </div>
+    <el-scrollbar max-height="240px">
+      <div v-if="!files.length" class="file-empty">暂无文件，请先上传</div>
+      <div
+        v-for="f in files"
+        :key="f.id"
+        :class="['file-item', { active: isSelected(f.id), 'has-order': !!selectOrder(f.id) }]"
+        @click="toggleSelect(f)"
+      >
+        <span v-if="selectOrder(f.id)" class="file-order">{{ selectOrder(f.id) }}</span>
+
+        <div class="file-item-body">
+          <div class="file-row">
+            <el-icon class="file-icon"><Document /></el-icon>
+            <div class="file-meta">
+              <span class="file-name" :title="f.name">{{ f.name }}</span>
+              <span class="file-sub">{{ formatSize(f.size) }} · {{ formatTime(f.upload_at) }}</span>
+            </div>
+          </div>
+          <el-progress
+            v-if="isProcessing(f.status)"
+            :percentage="f.progress || 0"
+            :stroke-width="3"
+            :show-text="false"
+            class="file-progress"
+          />
+        </div>
+
+        <div class="file-item-side" @click.stop>
+          <el-tag size="small" :type="statusType(f.status)" effect="plain" class="file-status">
+            {{ statusLabel(f.status) }}
+          </el-tag>
+          <el-dropdown trigger="click" placement="bottom-end" @command="(cmd) => onMenuCommand(cmd, f)">
+            <button type="button" class="file-more-btn" aria-label="更多操作">
+              <el-icon><MoreFilled /></el-icon>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  v-if="canIngest(f)"
+                  command="ingest"
+                  :disabled="ingestingLocalId === f.id"
+                >
+                  {{ f.status === 'failed' ? '重新入库' : '入库' }}
+                </el-dropdown-item>
+                <el-dropdown-item command="delete" :divided="canIngest(f)">
+                  <span class="menu-danger">删除</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </div>
+    </el-scrollbar>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Document, MoreFilled } from '@element-plus/icons-vue'
+import { api } from '../api'
+import { canIngest, isProcessing, statusLabel, statusType } from '../utils/fileStatus'
+
+const props = defineProps({
+  files: { type: Array, default: () => [] },
+  selectedIds: { type: Array, default: () => [] },
+})
+
+const emit = defineEmits([
+  'update:selectedIds',
+  'select-change',
+  'removed',
+  'ingested',
+  'need-poll',
+])
+
+const batchDeleting = ref(false)
+const ingestingLocalId = ref('')
+
+function isSelected(id) {
+  return props.selectedIds.includes(id)
+}
+
+function selectOrder(id) {
+  const i = props.selectedIds.indexOf(id)
+  return i >= 0 ? i + 1 : 0
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '-'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatTime(t) {
+  if (!t) return ''
+  return new Date(t).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+function isViewable(f) {
+  return f.status === 'uploaded' || f.status === 'ready' || f.status === 'failed'
+}
+
+function toggleSelect(f) {
+  if (!isViewable(f)) {
+    ElMessage.info(f.status_msg || '文件正在入库，请稍候')
+    emit('need-poll')
+    return
+  }
+  const ids = [...props.selectedIds]
+  const idx = ids.indexOf(f.id)
+  if (idx >= 0) {
+    ids.splice(idx, 1)
+  } else {
+    ids.push(f.id)
+  }
+  emit('update:selectedIds', ids)
+  emit('select-change', ids)
+}
+
+function onMenuCommand(cmd, f) {
+  if (cmd === 'ingest') doIngest(f)
+  else if (cmd === 'delete') removeOne(f.id)
+}
+
+async function removeOne(id) {
+  try {
+    await ElMessageBox.confirm('确定删除该文件？关联日志将一并清除。', '删除文件', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    await api.deleteFile(id)
+    emit('removed', [id])
+    ElMessage.success('已删除')
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || e.message)
+  }
+}
+
+async function batchRemove() {
+  const ids = [...props.selectedIds]
+  if (!ids.length) return
+  try {
+    await ElMessageBox.confirm(
+      `确定删除选中的 ${ids.length} 个文件？关联日志将一并清除。`,
+      '批量删除',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  batchDeleting.value = true
+  try {
+    const { data } = await api.batchDelete(ids)
+    if (!data.success) throw new Error(data.error)
+    emit('removed', ids)
+    ElMessage.success(`已删除 ${ids.length} 个文件`)
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || e.message)
+  } finally {
+    batchDeleting.value = false
+  }
+}
+
+async function doIngest(f) {
+  ingestingLocalId.value = f.id
+  try {
+    const { data } = await api.startIngest(f.id)
+    if (!data.success) throw new Error(data.error)
+    ElMessage.success('已开始入库')
+    emit('ingested', f)
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || e.message)
+  } finally {
+    ingestingLocalId.value = ''
+  }
+}
+</script>
+
+<style scoped>
+.panel-card {
+  background: var(--app-surface-2);
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 12px;
+}
+
+.file-panel {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.file-panel-title {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.file-panel-title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-panel-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.file-empty {
+  text-align: center;
+  padding: 20px 12px;
+  font-size: 12px;
+  color: var(--app-text-muted);
+}
+
+.file-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 6px 5px 8px;
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.file-item:hover {
+  background: var(--app-accent-soft);
+}
+
+.file-item.active {
+  background: var(--app-accent-soft);
+  border-color: var(--app-accent);
+}
+
+.file-item.has-order .file-item-body {
+  padding-top: 10px;
+}
+
+.file-order {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 1;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  background: var(--app-accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+}
+
+.file-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.file-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--app-accent);
+}
+
+.file-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.file-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-sub {
+  display: block;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--app-text-muted);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-progress {
+  margin-top: 4px;
+}
+
+.file-item-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 1px;
+}
+
+.file-status {
+  transform: scale(0.92);
+  transform-origin: top right;
+}
+
+.file-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.file-more-btn:hover {
+  background: var(--app-border-light);
+  color: var(--app-text);
+}
+
+.file-more-btn .el-icon {
+  font-size: 14px;
+}
+
+.menu-danger {
+  color: var(--el-color-danger);
+}
+</style>
