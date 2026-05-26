@@ -7,6 +7,14 @@
       </div>
       <div v-if="files.length" class="file-panel-title-actions">
         <el-button
+          size="small"
+          plain
+          :disabled="!viewableFileIds.length"
+          @click="toggleSelectAll"
+        >
+          {{ allViewableSelected ? '取消全选' : '全选' }}
+        </el-button>
+        <el-button
           type="danger"
           size="small"
           plain
@@ -18,7 +26,7 @@
         </el-button>
       </div>
     </div>
-    <el-scrollbar max-height="240px">
+    <el-scrollbar class="file-list-scroll">
       <div v-if="!files.length" class="file-empty">暂无文件，请先上传</div>
       <div
         v-for="f in files"
@@ -75,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, MoreFilled } from '@element-plus/icons-vue'
 import { api } from '../api'
@@ -96,6 +104,15 @@ const emit = defineEmits([
 
 const batchDeleting = ref(false)
 const ingestingLocalId = ref('')
+
+const viewableFileIds = computed(() =>
+  props.files.filter(isViewable).map((f) => f.id),
+)
+
+const allViewableSelected = computed(() => {
+  const ids = viewableFileIds.value
+  return ids.length > 0 && ids.every((id) => props.selectedIds.includes(id))
+})
 
 function isSelected(id) {
   return props.selectedIds.includes(id)
@@ -122,6 +139,11 @@ function isViewable(f) {
   return f.status === 'uploaded' || f.status === 'ready' || f.status === 'failed'
 }
 
+function setSelection(ids) {
+  emit('update:selectedIds', ids)
+  emit('select-change', ids)
+}
+
 function toggleSelect(f) {
   if (!isViewable(f)) {
     ElMessage.info(f.status_msg || '文件正在入库，请稍候')
@@ -135,8 +157,25 @@ function toggleSelect(f) {
   } else {
     ids.push(f.id)
   }
-  emit('update:selectedIds', ids)
-  emit('select-change', ids)
+  setSelection(ids)
+}
+
+function toggleSelectAll() {
+  const viewable = props.files.filter(isViewable)
+  if (!viewable.length) {
+    ElMessage.info('没有可选择的文件')
+    return
+  }
+  if (allViewableSelected.value) {
+    const viewableSet = new Set(viewableFileIds.value)
+    setSelection(props.selectedIds.filter((id) => !viewableSet.has(id)))
+    return
+  }
+  const skipped = props.files.length - viewable.length
+  if (skipped > 0) {
+    ElMessage.info(`已跳过 ${skipped} 个入库中的文件`)
+  }
+  setSelection(viewable.map((f) => f.id))
 }
 
 function onMenuCommand(cmd, f) {
@@ -220,13 +259,33 @@ async function doIngest(f) {
 }
 
 .file-panel {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   margin-bottom: 0;
-  flex-shrink: 0;
+}
+
+.file-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.file-list-scroll :deep(.el-scrollbar) {
+  height: 100%;
+}
+
+.file-list-scroll :deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
 }
 
 .file-panel-title {
   flex-wrap: wrap;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .file-panel-title-left {

@@ -124,14 +124,16 @@
           </el-tab-pane>
         </el-tabs>
 
-        <FileListPanel
-          :files="files"
-          v-model:selected-ids="selectedFileIds"
-          @select-change="onFileSelectChange"
-          @removed="afterFilesRemoved"
-          @ingested="onFileIngested"
-          @need-poll="startPolling"
-        />
+        <div class="file-panel-slot">
+          <FileListPanel
+            :files="files"
+            v-model:selected-ids="selectedFileIds"
+            @select-change="onFileSelectChange"
+            @removed="afterFilesRemoved"
+            @ingested="onFileIngested"
+            @need-poll="startPolling"
+          />
+        </div>
       </aside>
 
       <main class="content">
@@ -150,7 +152,7 @@
               <span class="log-filename" :title="selectedFilesLabel">{{ selectedFilesLabel }}</span>
             </div>
             <div class="log-toolbar-right">
-              <el-tag effect="plain" round>{{ logs.length }} 条记录</el-tag>
+              <el-tag effect="plain" round>{{ displayLogCount }} 条记录</el-tag>
               <el-button size="small" :loading="loadingLogs" @click="searchLogs">
                 <el-icon><Refresh /></el-icon>
                 刷新
@@ -162,9 +164,9 @@
             <el-scrollbar height="calc(100vh - var(--app-header-h) - 120px)">
               <div class="log-list">
                 <div
-                  v-for="row in logs"
+                  v-for="row in displayLogs"
                   :key="row.id"
-                  v-memo="[row.id, row.scene_desc, row.content, row._fileHeader]"
+                  v-memo="[row.id, row.scene_desc, row.content, row._fileHeader, isFileCollapsed(row.file_id)]"
                   :class="row._fileHeader ? 'log-file-header' : 'log-line'"
                   :style="row._fileHeader ? undefined : logLineStyle(row)"
                   :title="row._fileHeader ? row.file_name : `${row.display || row.content || ''}（双击查看上下文）`"
@@ -173,6 +175,19 @@
                   <template v-if="row._fileHeader">
                     <el-icon class="log-file-header-icon"><Document /></el-icon>
                     <span class="log-file-header-name">{{ row.file_name }}</span>
+                    <el-button
+                      v-if="showFileCollapse"
+                      link
+                      size="small"
+                      class="log-file-collapse-btn"
+                      :title="isFileCollapsed(row.file_id) ? '展开' : '收起'"
+                      @click.stop="toggleFileCollapse(row.file_id)"
+                    >
+                      <el-icon>
+                        <ArrowDown v-if="!isFileCollapsed(row.file_id)" />
+                        <ArrowRight v-else />
+                      </el-icon>
+                    </el-button>
                   </template>
                   <template v-else>
                     <span class="ln">{{ row.line }}</span>
@@ -190,40 +205,21 @@
             </el-scrollbar>
           </div>
 
-          <el-drawer v-model="ctxOpen" title="上下文 · 前后 10 条" size="55%" class="ctx-drawer">
-            <div class="log-list ctx-list">
-              <div
-                v-for="row in ctxLines"
-                :key="row.id"
-                :class="['log-line', 'ctx', { 'ctx-origin': row.line === ctxCenterLine }]"
-                :style="logLineStyle(row)"
-                :title="row.display || row.content"
-              >
-                <span v-if="row.line === ctxCenterLine" class="ctx-origin-tag">当前</span>
-                <span class="ln">{{ row.line }}</span>
-                <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc }">
-                  <span class="log-text">{{ row.display || row.content }}</span>
-                  <span
-                    v-if="row.scene_desc"
-                    class="scene-desc"
-                    :style="sceneDescStyle(row.color)"
-                  >{{ row.scene_desc }}</span>
-                </span>
-              </div>
-            </div>
-          </el-drawer>
         </template>
       </main>
     </div>
     <SceneConfigDialog v-model="sceneDialogVisible" v-model:config="sceneConfig" />
     <JiraSyncDialog v-model="jiraDialogVisible" @imported="onJiraImported" />
+    <LogContextDrawer ref="contextDrawerRef" />
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
+  ArrowDown,
+  ArrowRight,
   Collection,
   Document,
   DocumentCopy,
@@ -240,6 +236,7 @@ import {
 import SceneConfigDialog from './components/SceneConfigDialog.vue'
 import JiraSyncDialog from './components/JiraSyncDialog.vue'
 import FileListPanel from './components/FileListPanel.vue'
+import LogContextDrawer from './components/LogContextDrawer.vue'
 import { api } from './api'
 import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
@@ -259,6 +256,7 @@ const leftTab = ref('upload')
 const files = ref([])
 const selectedFileIds = ref([])
 const logs = shallowRef([])
+const collapsedFileIds = ref(new Set())
 const MAX_LOG_ROWS = 10000
 let searchSeq = 0
 let searchDebounceTimer = null
@@ -278,12 +276,32 @@ const selectedSceneKeys = ref([])
 const searchKeywords = ref('')
 const useRegex = ref(false)
 
-const ctxOpen = ref(false)
-const ctxLines = ref([])
-const ctxCenterLine = ref(0)
+const contextDrawerRef = ref(null)
 let sceneMeta = []
 
 const sceneSelectGroups = computed(() => buildSceneSelectGroups(sceneConfig.value))
+
+const showFileCollapse = computed(() => selectedFileIds.value.length > 1)
+
+const displayLogs = computed(() => {
+  const collapsed = collapsedFileIds.value
+  const out = []
+  let currentFileId = null
+  for (const row of logs.value) {
+    if (row._fileHeader) {
+      currentFileId = row.file_id
+      out.push(row)
+      continue
+    }
+    if (currentFileId && collapsed.has(currentFileId)) {
+      continue
+    }
+    out.push(row)
+  }
+  return out
+})
+
+const displayLogCount = computed(() => displayLogs.value.filter((r) => !r._fileHeader).length)
 
 const selectedFilesLabel = computed(() => {
   const names = selectedFileIds.value
@@ -447,6 +465,7 @@ async function searchLogs() {
       merged.push({
         _fileHeader: true,
         id: `header-${id}`,
+        file_id: id,
         file_name: f?.name || id,
       })
       const batch = decorateEntries(data.data?.entries || [], meta)
@@ -473,6 +492,36 @@ async function searchLogs() {
   }
 }
 
+function isFileCollapsed(fileId) {
+  return fileId ? collapsedFileIds.value.has(fileId) : false
+}
+
+function toggleFileCollapse(fileId) {
+  if (!fileId) return
+  const next = new Set(collapsedFileIds.value)
+  if (next.has(fileId)) {
+    next.delete(fileId)
+  } else {
+    next.add(fileId)
+  }
+  collapsedFileIds.value = next
+}
+
+watch(selectedFileIds, (ids) => {
+  const allowed = new Set(ids)
+  const next = new Set(collapsedFileIds.value)
+  let changed = false
+  for (const id of next) {
+    if (!allowed.has(id)) {
+      next.delete(id)
+      changed = true
+    }
+  }
+  if (changed) {
+    collapsedFileIds.value = next
+  }
+})
+
 function highlightLine(row) {
   return (row.content || row.message || row.display || '').replace(/</g, '&lt;')
 }
@@ -486,19 +535,8 @@ function logLineStyle(row) {
   }
 }
 
-async function expandContext(row) {
-  if (!row.file_id) return
-  ctxCenterLine.value = row.line
-  const { data } = await api.logContext({
-    file_id: row.file_id,
-    line: row.line,
-    before: 10,
-    after: 10,
-  })
-  if (data.success) {
-    ctxLines.value = decorateEntries(data.data || [], sceneMeta)
-    ctxOpen.value = true
-  }
+function expandContext(row) {
+  contextDrawerRef.value?.openFromRow(row, sceneMeta)
 }
 
 async function onJiraImported() {
@@ -519,9 +557,11 @@ onUnmounted(() => {
 
 <style scoped>
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--app-bg);
 }
 
@@ -590,11 +630,13 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   min-height: 0;
+  overflow: hidden;
 }
 
 .sidebar {
   width: var(--app-sidebar-w);
   flex-shrink: 0;
+  min-height: 0;
   background: var(--app-surface);
   border-right: 1px solid var(--app-border);
   display: flex;
@@ -605,15 +647,26 @@ onUnmounted(() => {
 }
 
 .sidebar-tabs {
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: calc(100vh - var(--app-header-h) - 220px);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-tabs :deep(.el-tabs__content) {
-  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.file-panel-slot {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-tabs :deep(.el-tabs__header) {
@@ -626,9 +679,6 @@ onUnmounted(() => {
   border-radius: var(--app-radius);
   padding: 14px;
   margin-bottom: 12px;
-}
-.file-panel{
-  flex: 1;
 }
 .card-title {
   display: flex;
@@ -742,6 +792,17 @@ onUnmounted(() => {
   user-select: none;
 }
 
+.log-file-collapse-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px 4px;
+  color: var(--app-accent);
+}
+
+.log-file-collapse-btn:hover {
+  color: var(--app-text);
+}
+
 .log-list > .log-file-header:first-child {
   margin-top: 0;
 }
@@ -752,6 +813,8 @@ onUnmounted(() => {
 }
 
 .log-file-header-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -913,60 +976,4 @@ onUnmounted(() => {
   flex: 0 0 auto;
 }
 
-.ctx-list .log-line {
-  cursor: default;
-  align-items: center;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.ctx-list .log-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ctx-list .log-body {
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  overflow: hidden;
-}
-
-.ctx-list .log-body:not(.has-scene-desc) .log-text {
-  flex: 1 1 auto;
-}
-
-.ctx-list .log-body.has-scene-desc .log-text {
-  flex: 0 1 auto;
-  max-width: 100%;
-  font-size: 11px;
-}
-
-.ctx-list .ln {
-  line-height: 1.45;
-}
-
-.ctx-origin {
-  background: var(--app-accent-soft) !important;
-  box-shadow: inset 3px 0 0 var(--app-accent);
-}
-
-.ctx-origin .log-text {
-  color: var(--app-accent) !important;
-  font-weight: 600;
-}
-
-.ctx-origin-tag {
-  flex-shrink: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  background: var(--app-accent);
-  padding: 2px 8px;
-  border-radius: var(--app-radius-sm);
-  line-height: 1.35;
-  user-select: none;
-  -webkit-font-smoothing: antialiased;
-}
 </style>
