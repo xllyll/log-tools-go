@@ -23,50 +23,77 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
-type ParseProgress func(lines int)
+type IngestStreamStats struct {
+	LinesRead  int
+	EntryCount int
+	FileSize   int64
+}
 
-func (p *Parser) ParseFile(deviceID, fileID, filePath string, onProgress ParseProgress) (*model.LogFile, error) {
+type IngestStreamHooks struct {
+	OnBatch    func(entries []model.LogEntry, stats IngestStreamStats) error
+	OnProgress func(linesRead int)
+}
+
+// IngestStream reads the file line-by-line, batches non-empty entries, and flushes via OnBatch.
+func (p *Parser) IngestStream(deviceID, fileID, filePath string, batchSize int, hooks IngestStreamHooks) (IngestStreamStats, error) {
+	if batchSize <= 0 {
+		batchSize = 500
+	}
+
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return IngestStreamStats{}, err
 	}
 	defer file.Close()
 
 	reader, err := openReader(file, filePath)
 	if err != nil {
-		return nil, err
+		return IngestStreamStats{}, err
 	}
 
 	info, err := file.Stat()
 	if err != nil {
-		return nil, err
+		return IngestStreamStats{}, err
 	}
 
-	if fileID == "" {
-		fileID = uuid.NewString()
-	}
-	logFile := &model.LogFile{
-		ID:       fileID,
-		DeviceID: deviceID,
-		Name:     filepath.Base(filePath),
-		Size:     info.Size(),
-		UploadAt: time.Now(),
-		Status:   "parsing",
-	}
-
+	stats := IngestStreamStats{FileSize: info.Size()}
 	scanner := bufio.NewScanner(reader)
 	buf := make([]byte, 0, 1024*1024)
 	scanner.Buffer(buf, 10*1024*1024)
 
-	lineNo := 0
 	now := time.Now()
+	lineNo := 0
+	batch := make([]model.LogEntry, 0, batchSize)
+
+	flush := func() error {
+		if len(batch) == 0 {
+			return nil
+		}
+		if hooks.OnBatch != nil {
+			if err := hooks.OnBatch(batch, stats); err != nil {
+				return err
+			}
+		}
+		batch = batch[:0]
+		return nil
+	}
+
+	reportProgress := func() {
+		if hooks.OnProgress != nil && lineNo > 0 && lineNo%10000 == 0 {
+			stats.LinesRead = lineNo
+			hooks.OnProgress(lineNo)
+		}
+	}
+
 	for scanner.Scan() {
 		lineNo++
 		line := xencoding.DecodeLogLine(scanner.Bytes())
 		if strings.TrimSpace(line) == "" {
+			reportProgress()
 			continue
 		}
-		logFile.Entries = append(logFile.Entries, model.LogEntry{
+		stats.EntryCount++
+		batch = append(batch, model.LogEntry{
 			ID:      fmt.Sprintf("%s_%d", fileID, lineNo),
 			LogTime: now,
 			Content: line,
@@ -74,18 +101,26 @@ func (p *Parser) ParseFile(deviceID, fileID, filePath string, onProgress ParsePr
 			Level:   xlog.ParseLevel(line),
 			Message: line,
 		})
-		if onProgress != nil && lineNo%5000 == 0 {
-			onProgress(lineNo)
+		stats.LinesRead = lineNo
+		if len(batch) >= batchSize {
+			if err := flush(); err != nil {
+				return stats, err
+			}
 		}
+		reportProgress()
 	}
-	if onProgress != nil && lineNo > 0 {
-		onProgress(lineNo)
+	if err := flush(); err != nil {
+		return stats, err
 	}
-	logFile.Total = len(logFile.Entries)
+
+	stats.LinesRead = lineNo
+	if hooks.OnProgress != nil && lineNo > 0 {
+		hooks.OnProgress(lineNo)
+	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return stats, err
 	}
-	return logFile, nil
+	return stats, nil
 }
 
 func openReader(file *os.File, path string) (io.Reader, error) {
@@ -99,4 +134,32 @@ func openReader(file *os.File, path string) (io.Reader, error) {
 		return nil, err
 	}
 	return file, nil
+}
+
+// ParseFile loads all entries into memory; prefer IngestStream for ingest.
+func (p *Parser) ParseFile(deviceID, fileID, filePath string, onProgress func(lines int)) (*model.LogFile, error) {
+	if fileID == "" {
+		fileID = uuid.NewString()
+	}
+	var entries []model.LogEntry
+	stats, err := p.IngestStream(deviceID, fileID, filePath, 10000, IngestStreamHooks{
+		OnBatch: func(batch []model.LogEntry, _ IngestStreamStats) error {
+			entries = append(entries, batch...)
+			return nil
+		},
+		OnProgress: onProgress,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &model.LogFile{
+		ID:       fileID,
+		DeviceID: deviceID,
+		Name:     filepath.Base(filePath),
+		Size:     stats.FileSize,
+		UploadAt: time.Now(),
+		Status:   "parsing",
+		Total:    stats.EntryCount,
+		Entries:  entries,
+	}, nil
 }

@@ -171,49 +171,49 @@ func (s *StorageService) ingestFile(ctx context.Context, deviceID, fileID, path 
 	}
 	fileSize := info.Size()
 	name := filepath.Base(path)
+	estimatedTotal := estimatedLineCount(fileSize)
 
-	s.report(ctx, fileID, name, "parsing", "开始解析文件", 0, 0, 5)
+	if err := s.db.DeleteEntriesByFile(ctx, fileID); err != nil {
+		s.report(ctx, fileID, name, "failed", err.Error(), 0, 0, 0)
+		return err
+	}
 
-	parsed, err := s.parser.ParseFile(deviceID, fileID, path, func(lines int) {
-		progress := parsingProgress(lines, fileSize)
-		msg := fmt.Sprintf("解析中，已读取 %d 行", lines)
-		s.report(ctx, fileID, name, "parsing", msg, lines, 0, progress)
+	s.report(ctx, fileID, name, "parsing", "开始解析入库", 0, estimatedTotal, 5)
+
+	batch := s.cfg.Ingest.BatchSize
+	if batch <= 0 {
+		batch = 500
+	}
+
+	var lastProgress int
+	stats, err := s.parser.IngestStream(deviceID, fileID, path, batch, IngestStreamHooks{
+		OnBatch: func(entries []model.LogEntry, st IngestStreamStats) error {
+			if err := s.db.BatchInsertEntries(ctx, deviceID, fileID, entries); err != nil {
+				return err
+			}
+			progress := ingestProgress(st.LinesRead, fileSize)
+			if progress-lastProgress >= 5 {
+				msg := fmt.Sprintf("入库中 %d 行", st.EntryCount)
+				s.report(ctx, fileID, name, "inserting", msg, st.EntryCount, estimatedTotal, progress)
+				lastProgress = progress
+			}
+			return nil
+		},
+		OnProgress: func(lines int) {
+			progress := ingestProgress(lines, fileSize)
+			if progress-lastProgress >= 5 {
+				msg := fmt.Sprintf("解析入库中，已处理 %d 行", lines)
+				s.report(ctx, fileID, name, "inserting", msg, 0, estimatedTotal, progress)
+				lastProgress = progress
+			}
+		},
 	})
 	if err != nil {
 		s.report(ctx, fileID, name, "failed", err.Error(), 0, 0, 0)
 		return err
 	}
 
-	total := len(parsed.Entries)
-	s.report(ctx, fileID, name, "inserting", fmt.Sprintf("解析完成，共 %d 行，开始入库", total), total, total, 40)
-
-	if err := s.db.DeleteEntriesByFile(ctx, parsed.ID); err != nil {
-		s.report(ctx, fileID, name, "failed", err.Error(), 0, 0, 0)
-		return err
-	}
-
-	batch := s.cfg.Ingest.BatchSize
-	if batch <= 0 {
-		batch = 500
-	}
-	entries := parsed.Entries
-	for i := 0; i < len(entries); i += batch {
-		end := i + batch
-		if end > len(entries) {
-			end = len(entries)
-		}
-		if err := s.db.BatchInsertEntries(ctx, deviceID, parsed.ID, entries[i:end]); err != nil {
-			s.report(ctx, fileID, name, "failed", err.Error(), end, total, 0)
-			return err
-		}
-		progress := 40 + end*60/total
-		if total == 0 {
-			progress = 100
-		}
-		msg := fmt.Sprintf("入库中 %d / %d 行", end, total)
-		s.report(ctx, fileID, name, "inserting", msg, end, total, progress)
-	}
-
+	total := stats.EntryCount
 	s.report(ctx, fileID, name, "ready", fmt.Sprintf("完成，共 %d 行", total), total, total, 100)
 	return nil
 }
@@ -223,32 +223,24 @@ func (s *StorageService) report(ctx context.Context, fileID, name, status, msg s
 	log.Printf("[ingest] file=%s name=%s status=%s progress=%d%% %s", fileID, name, status, progress, msg)
 }
 
-func parsingProgress(lines int, fileSize int64) int {
-	if fileSize <= 0 {
-		if lines >= 100000 {
-			return 35
-		}
-		return min(35, lines/3000)
+func estimatedLineCount(fileSize int64) int {
+	n := int(fileSize / 80)
+	if n < 1 {
+		return 1
 	}
-	estimated := int(fileSize / 80)
-	if estimated < 1 {
-		estimated = 1
+	return n
+}
+
+func ingestProgress(linesRead int, fileSize int64) int {
+	estimated := estimatedLineCount(fileSize)
+	p := linesRead * 95 / estimated
+	if p > 95 {
+		p = 95
 	}
-	p := lines * 35 / estimated
-	if p > 35 {
-		p = 35
-	}
-	if p < 5 && lines > 0 {
+	if p < 5 && linesRead > 0 {
 		p = 5
 	}
 	return p
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func (s *StorageService) StartIngest(deviceID, path string) (*model.LogFile, error) {

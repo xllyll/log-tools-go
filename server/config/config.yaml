@@ -24,7 +24,7 @@ storage:
   cleanup_interval_hours: 24  # 清理任务运行间隔（小时）
 
 ingest:
-  batch_size: 500
+  batch_size: 5000
   worker_count: 4
 
 jira:

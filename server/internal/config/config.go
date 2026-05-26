@@ -60,7 +60,7 @@ func Load(path string) error {
 		return fmt.Errorf("unmarshal config: %w", err)
 	}
 	if cfg.Ingest.BatchSize <= 0 {
-		cfg.Ingest.BatchSize = 500
+		cfg.Ingest.BatchSize = 5000
 	}
 	if cfg.Ingest.WorkerCount <= 0 {
 		cfg.Ingest.WorkerCount = 4

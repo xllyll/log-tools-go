@@ -154,28 +154,28 @@ func (d *Database) BatchInsertEntries(ctx context.Context, deviceID, fileID stri
 	if len(entries) == 0 {
 		return nil
 	}
-	batch := &pgx.Batch{}
-	for _, e := range entries {
-		content := xencoding.SanitizeForDB(e.Content)
-		message := xencoding.SanitizeForDB(e.Message)
-		module := xencoding.SanitizeForDB(e.Module)
-		if message == "" {
-			message = content
-		}
-		batch.Queue(`
-INSERT INTO log_entries (id, file_id, device_id, log_time, content, line_number, level, module, message)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-ON CONFLICT (id) DO NOTHING`,
-			e.ID, fileID, deviceID, e.LogTime, content, e.Line, e.Level, module, message)
+	conn, err := d.pool.Acquire(ctx)
+	if err != nil {
+		return err
 	}
-	br := d.pool.SendBatch(ctx, batch)
-	defer br.Close()
-	for range entries {
-		if _, err := br.Exec(); err != nil {
-			return err
-		}
-	}
-	return nil
+	defer conn.Release()
+
+	_, err = conn.Conn().CopyFrom(
+		ctx,
+		pgx.Identifier{"log_entries"},
+		[]string{"id", "file_id", "device_id", "log_time", "content", "line_number", "level", "module", "message"},
+		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
+			e := entries[i]
+			content := xencoding.SanitizeForDB(e.Content)
+			message := xencoding.SanitizeForDB(e.Message)
+			module := xencoding.SanitizeForDB(e.Module)
+			if message == "" {
+				message = content
+			}
+			return []any{e.ID, fileID, deviceID, e.LogTime, content, e.Line, e.Level, module, message}, nil
+		}),
+	)
+	return err
 }
 
 func (d *Database) DeleteEntriesByFile(ctx context.Context, fileID string) error {
