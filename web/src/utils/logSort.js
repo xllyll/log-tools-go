@@ -15,9 +15,12 @@ export function logRotationIndex(filename) {
   return parseInt(numPart, 10)
 }
 
+const LOG_TAIL_EXT = '(?:log|txt|json)'
+
 /**
- * 解析轮转日志名，如 logcat.log.004.log → 组 logcat.log.log、序号 4；
- * logcat.log.log → 同组、序号 -1（基础文件排最后）。
+ * 解析轮转日志名。同族文件共用 groupKey（不含轮转号与最外层后缀）。
+ * logcat.log.003.txt → { groupKey: 'logcat.log', rotation: 3 }
+ * logcat.log         → { groupKey: 'logcat.log', rotation: -1 }（基础文件排最后）
  * @param {string} filename
  * @returns {{ groupKey: string, rotation: number, full: string }}
  */
@@ -30,13 +33,19 @@ export function parseLogRotationName(filename) {
       break
     }
   }
-  const m = full.match(/^(.+)\.(\d+)\.([^.\\/]+)$/)
-  if (m) {
+  const rot = full.match(new RegExp(`^(.+)\\.(\\d+)\\.${LOG_TAIL_EXT}$`, 'i'))
+  if (rot) {
     return {
-      groupKey: `${m[1]}.${m[3]}`,
-      rotation: parseInt(m[2], 10),
+      groupKey: rot[1],
+      rotation: parseInt(rot[2], 10),
       full,
     }
+  }
+  if (
+    new RegExp(`\\.${LOG_TAIL_EXT}$`, 'i').test(full) &&
+    !new RegExp(`\\.\\d+\\.${LOG_TAIL_EXT}$`, 'i').test(full)
+  ) {
+    return { groupKey: full, rotation: -1, full }
   }
   return { groupKey: full, rotation: -1, full }
 }
