@@ -393,20 +393,22 @@ function onFileChange(_file, list) {
 }
 
 function applyFileListPayload(payload) {
-  if (payload?.items) {
+  if (Array.isArray(payload?.items)) {
     fileItems.value = [...payload.items]
-  } else if (payload?.files) {
-    const folders = payload.folders || []
+  } else if (Array.isArray(payload?.files)) {
+    const folders = Array.isArray(payload.folders) ? payload.folders : []
     fileItems.value = [
       ...folders.map((f) => ({ ...f, entry_type: 'folder', parent_id: f.parent_folder_id })),
       ...payload.files.map((f) => ({ ...f, entry_type: f.entry_type || 'file', parent_id: f.parent_id ?? f.parent_folder_id })),
     ]
-  } else {
-    fileItems.value = (payload || []).map((f) => ({
+  } else if (Array.isArray(payload)) {
+    fileItems.value = payload.map((f) => ({
       ...f,
       entry_type: f.entry_type || 'file',
       parent_id: f.parent_id ?? f.parent_folder_id,
     }))
+  } else {
+    fileItems.value = []
   }
   fileListVersion.value += 1
   syncParseTasks()

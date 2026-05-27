@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"log-tools/server/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
 type UploadHandler struct {
@@ -35,6 +37,51 @@ func dedupeDeleteRoots(ids []string) []string {
 		out = append(out, id)
 	}
 	return out
+}
+
+// filterBatchDeleteRoots keeps only top-level ids when both a folder and its descendants are selected.
+func filterBatchDeleteRoots(ids []string, items []model.LogFile) []string {
+	if len(ids) <= 1 || len(items) == 0 {
+		return ids
+	}
+	parentOf := make(map[string]string, len(items))
+	inBatch := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		inBatch[id] = struct{}{}
+	}
+	for _, it := range items {
+		if it.ParentID != "" {
+			parentOf[it.ID] = it.ParentID
+		}
+	}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if hasSelectedAncestor(id, parentOf, inBatch) {
+			continue
+		}
+		out = append(out, id)
+	}
+	return out
+}
+
+func hasSelectedAncestor(id string, parentOf map[string]string, inBatch map[string]struct{}) bool {
+	for p := parentOf[id]; p != ""; p = parentOf[p] {
+		if _, ok := inBatch[p]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func isDeleteIgnorable(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true
+	}
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "not found") || strings.Contains(s, "no rows")
 }
 
 func (h *UploadHandler) Upload(c *gin.Context) {
@@ -118,11 +165,14 @@ func (h *UploadHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 	ids := dedupeDeleteRoots(req.IDs)
+	if list, err := h.storage.ListFiles(c.Request.Context(), deviceID); err == nil && list != nil {
+		ids = filterBatchDeleteRoots(ids, list.Items)
+	}
 	var failed int
 	var lastErr string
 	for _, id := range ids {
 		if err := h.storage.DeleteFile(c.Request.Context(), deviceID, id); err != nil {
-			if strings.Contains(err.Error(), "not found") {
+			if isDeleteIgnorable(err) {
 				continue
 			}
 			failed++

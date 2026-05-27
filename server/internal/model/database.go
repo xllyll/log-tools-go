@@ -413,6 +413,9 @@ FROM log_files WHERE device_id=$1 ORDER BY entry_type DESC, name`, deviceID)
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	if items == nil {
+		items = []LogFile{}
+	}
 	return &FileListData{Items: items}, nil
 }
 
