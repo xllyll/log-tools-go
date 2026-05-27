@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -39,30 +40,57 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	paths, err := h.storage.ExtractArchive(saved)
+	result, err := h.storage.ExtractArchive(saved, header.Filename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
 		return
 	}
-	if len(paths) == 0 {
-		paths = []string{saved}
+
+	if err := h.storage.EnsureFolderChains(c.Request.Context(), deviceID, result.FolderChains); err != nil {
+		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
+		return
 	}
 
 	var fileIDs []string
-	for _, p := range paths {
-		ext := strings.ToLower(filepath.Ext(p))
-		if ext != ".log" && ext != ".txt" && ext != ".gz" {
+	var lastErr string
+	for _, ent := range result.Files {
+		ext := ent.FileFormat
+		if ext == "" {
+			ext = strings.ToLower(filepath.Ext(ent.OriginalName))
+		}
+		if !model.IsLogExtension(ext) {
+			lastErr = "unsupported extension: " + ent.OriginalName
 			continue
 		}
-		lf, err := h.storage.RegisterUpload(deviceID, p)
+		parentID, err := h.storage.EnsureFolders(c.Request.Context(), deviceID, ent.ArchiveDirParts)
 		if err != nil {
+			lastErr = err.Error()
+			log.Printf("[upload] ensure folders %v: %v", ent.ArchiveDirParts, err)
+			continue
+		}
+		lf, err := h.storage.RegisterUpload(deviceID, service.UploadFileMeta{
+			Path:         ent.DiskPath,
+			OriginalName: ent.OriginalName,
+			FileFormat:   ext,
+			ParentID:     parentID,
+		})
+		if err != nil {
+			lastErr = err.Error()
+			log.Printf("[upload] register %s: %v", ent.OriginalName, err)
 			continue
 		}
 		fileIDs = append(fileIDs, lf.ID)
 	}
 
 	if len(fileIDs) == 0 {
-		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: "no valid log files found"})
+		msg := "no valid log files found"
+		if len(result.Files) == 0 {
+			msg = "压缩包内未解析到日志文件，请确认包含 .log/.txt/.json 或有效的嵌套压缩包"
+		} else if lastErr != "" {
+			msg = "未能登记任何日志文件: " + lastErr
+		}
+		log.Printf("[upload] failed device=%s file=%s entries=%d last_err=%s", deviceID, header.Filename, len(result.Files), lastErr)
+		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: msg})
 		return
 	}
 
@@ -75,12 +103,12 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 
 func (h *UploadHandler) ListFiles(c *gin.Context) {
 	deviceID := GetDeviceID(c)
-	files, err := h.storage.GetFiles(c.Request.Context(), deviceID)
+	data, err := h.storage.ListFiles(c.Request.Context(), deviceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Success: false, Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, model.APIResponse{Success: true, Data: files})
+	c.JSON(http.StatusOK, model.APIResponse{Success: true, Data: data})
 }
 
 func (h *UploadHandler) GetFileStatus(c *gin.Context) {

@@ -68,7 +68,12 @@ func (h *JiraHandler) Import(c *gin.Context) {
 		if err := os.WriteFile(finalPath, data, 0o644); err != nil {
 			continue
 		}
-		lf, err := h.storage.RegisterUpload(deviceID, finalPath)
+		orig := model.OriginalBaseName(att.Filename)
+		lf, err := h.storage.RegisterUpload(deviceID, service.UploadFileMeta{
+			Path:         finalPath,
+			OriginalName: orig,
+			FileFormat:   model.FileFormatFromName(orig),
+		})
 		if err != nil {
 			_ = os.Remove(finalPath)
 			continue

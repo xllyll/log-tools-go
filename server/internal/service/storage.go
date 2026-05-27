@@ -16,7 +16,6 @@ import (
 	"log-tools/server/pkg/job"
 
 	"github.com/google/uuid"
-	"github.com/mholt/archiver/v4"
 )
 
 type StorageService struct {
@@ -35,8 +34,9 @@ func (s *StorageService) ValidateFile(size int64, filename string) error {
 		return fmt.Errorf("file exceeds max size %d", s.cfg.Storage.MaxFileSize)
 	}
 	ext := strings.ToLower(filepath.Ext(filename))
-	for _, allowed := range []string{".log", ".txt", ".zip", ".rar", ".7z", ".gz"} {
-		if ext == allowed {
+	allowed := append([]string{".zip", ".rar", ".7z"}, model.LogExtensions...)
+	for _, a := range allowed {
+		if ext == a {
 			return nil
 		}
 	}
@@ -62,43 +62,21 @@ func (s *StorageService) SaveUpload(src io.Reader, filename string) (string, err
 	return dst, nil
 }
 
-func (s *StorageService) ExtractArchive(path string) ([]string, error) {
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".zip":
-		return s.extractZip(path)
-	case ".rar", ".7z":
-		return s.extractArchiver(path)
-	default:
-		return []string{path}, nil
-	}
+// UploadFileMeta describes a registered upload beyond the on-disk storage name.
+type UploadFileMeta struct {
+	Path           string
+	OriginalName   string
+	FileFormat     string
+	ParentID string
 }
 
-func (s *StorageService) extractZip(zipPath string) ([]string, error) {
-	reader, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return nil, err
+func archiveDirParts(archiveRel string) []string {
+	rel := filepath.ToSlash(archiveRel)
+	dir := filepath.Dir(rel)
+	if dir == "." || dir == "" {
+		return nil
 	}
-	defer reader.Close()
-	dir := filepath.Join(s.cfg.Storage.UploadDir, "extracted_"+time.Now().Format("20060102_150405"))
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, err
-	}
-	var files []string
-	for _, f := range reader.File {
-		if f.FileInfo().IsDir() {
-			continue
-		}
-		e := strings.ToLower(filepath.Ext(f.Name))
-		if e != ".log" && e != ".txt" && e != ".gz" {
-			continue
-		}
-		target := filepath.Join(dir, filepath.Base(f.Name))
-		if err := extractZipEntry(f, target); err == nil {
-			files = append(files, target)
-		}
-	}
-	return files, nil
+	return splitPathSegments(dir)
 }
 
 func extractZipEntry(f *zip.File, target string) error {
@@ -114,54 +92,6 @@ func extractZipEntry(f *zip.File, target string) error {
 	defer out.Close()
 	_, err = io.Copy(out, rc)
 	return err
-}
-
-func (s *StorageService) extractArchiver(path string) ([]string, error) {
-	dir := filepath.Join(s.cfg.Storage.UploadDir, "extracted_"+time.Now().Format("20060102_150405"))
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, err
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	format, _, err := archiver.Identify(context.Background(), path, file)
-	if err != nil {
-		return nil, err
-	}
-	ex, ok := format.(archiver.Extractor)
-	if !ok {
-		return nil, fmt.Errorf("unsupported archive")
-	}
-	_, _ = file.Seek(0, 0)
-	var files []string
-	err = ex.Extract(context.Background(), file, func(ctx context.Context, fi archiver.FileInfo) error {
-		if fi.IsDir() {
-			return nil
-		}
-		e := strings.ToLower(filepath.Ext(fi.Name()))
-		if e != ".log" && e != ".txt" && e != ".gz" {
-			return nil
-		}
-		target := filepath.Join(dir, filepath.Base(fi.Name()))
-		out, err := os.Create(target)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-		r, err := fi.Open()
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-		_, err = io.Copy(out, r)
-		if err == nil {
-			files = append(files, target)
-		}
-		return err
-	})
-	return files, err
 }
 
 func (s *StorageService) ingestFile(ctx context.Context, deviceID, fileID, path string) error {
@@ -244,28 +174,39 @@ func ingestProgress(linesRead int, fileSize int64) int {
 }
 
 // RegisterUpload records an uploaded file without ingesting into the database.
-func (s *StorageService) RegisterUpload(deviceID, path string) (*model.LogFile, error) {
+func (s *StorageService) RegisterUpload(deviceID string, meta UploadFileMeta) (*model.LogFile, error) {
 	ctx := context.Background()
-	info, err := os.Stat(path)
+	info, err := os.Stat(meta.Path)
 	if err != nil {
 		return nil, err
 	}
+	if meta.OriginalName == "" {
+		meta.OriginalName = model.OriginalBaseName(meta.Path)
+	}
+	if meta.FileFormat == "" {
+		meta.FileFormat = model.FileFormatFromName(meta.OriginalName)
+	}
 	fileID := uuid.NewString()
 	f := &model.LogFile{
-		ID:         fileID,
-		DeviceID:   deviceID,
-		Name:       filepath.Base(path),
-		Size:       info.Size(),
-		UploadAt:   time.Now(),
-		Status:     "uploaded",
-		StatusMsg:  "已上传，可预览；点击入库写入数据库",
-		Progress:   0,
-		SourcePath: path,
+		ID:             fileID,
+		DeviceID:       deviceID,
+		Name:           filepath.Base(meta.Path),
+		OriginalName:   meta.OriginalName,
+		FileFormat:     meta.FileFormat,
+		EntryType:      model.EntryTypeFile,
+		ParentID:       meta.ParentID,
+		Size:           info.Size(),
+		UploadAt:       time.Now(),
+		Status:         "uploaded",
+		StatusMsg:      "已上传，可预览；点击入库写入数据库",
+		Progress:       0,
+		SourcePath:     meta.Path,
 	}
 	if err := s.db.SaveLogFile(ctx, f); err != nil {
 		return nil, err
 	}
-	log.Printf("[upload] registered file=%s name=%s device=%s path=%s", fileID, f.Name, deviceID, path)
+	log.Printf("[upload] registered file=%s storage=%s original=%s format=%s folder=%s device=%s",
+		fileID, f.Name, f.OriginalName, f.FileFormat, f.ParentID, deviceID)
 	return f, nil
 }
 
@@ -305,20 +246,39 @@ func (s *StorageService) BeginIngest(ctx context.Context, deviceID, fileID strin
 	return nil
 }
 
+func (s *StorageService) EnsureFolders(ctx context.Context, deviceID string, dirParts []string) (string, error) {
+	return s.db.EnsureFolderChain(ctx, deviceID, normalizeFolderChain(dirParts))
+}
+
+func (s *StorageService) EnsureFolderChains(ctx context.Context, deviceID string, chains [][]string) error {
+	for _, chain := range chains {
+		if _, err := s.EnsureFolders(ctx, deviceID, chain); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *StorageService) GetFiles(ctx context.Context, deviceID string) ([]model.LogFile, error) {
 	return s.db.GetLogFiles(ctx, deviceID)
 }
 
+func (s *StorageService) ListFiles(ctx context.Context, deviceID string) (*model.FileListData, error) {
+	return s.db.ListDeviceFiles(ctx, deviceID)
+}
+
 func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string) error {
-	f, err := s.db.GetLogFile(ctx, deviceID, fileID)
+	item, err := s.db.GetLogItem(ctx, deviceID, fileID)
 	if err != nil {
 		return err
 	}
 	if err := s.db.DeleteLogFile(ctx, deviceID, fileID); err != nil {
 		return err
 	}
-	s.removePhysicalSources(f)
-	log.Printf("[delete] file=%s name=%s device=%s", fileID, f.Name, deviceID)
+	if item.IsFile() {
+		s.removePhysicalSources(item)
+	}
+	log.Printf("[delete] %s=%s name=%s device=%s", item.EntryType, fileID, item.Name, deviceID)
 	return nil
 }
 

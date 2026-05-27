@@ -3,16 +3,16 @@
     <div class="card-title file-panel-title">
       <div class="file-panel-title-left">
         <span>我的文件</span>
-        <el-badge :value="files.length" :max="99" type="primary" />
+        <el-badge :value="fileCount" :max="99" type="primary" />
       </div>
-      <div v-if="files.length" class="file-panel-title-actions">
+      <div v-if="fileCount" class="file-panel-title-actions">
         <el-button
           size="small"
           plain
-          :disabled="!viewableFileIds.length"
+          :disabled="!selectableIds.length"
           @click="toggleSelectAll"
         >
-          {{ allViewableSelected ? '取消全选' : '全选' }}
+          {{ allSelectableSelected ? '取消全选' : '全选' }}
         </el-button>
         <el-button
           type="danger"
@@ -27,57 +27,77 @@
       </div>
     </div>
     <el-scrollbar class="file-list-scroll">
-      <div v-if="!files.length" class="file-empty">暂无文件，请先上传</div>
-      <div
-        v-for="f in files"
-        :key="f.id"
-        :class="['file-item', { active: isSelected(f.id), 'has-order': !!selectOrder(f.id) }]"
-        @click="toggleSelect(f)"
+      <div v-if="!fileCount" class="file-empty">暂无文件，请先上传</div>
+      <el-tree
+        v-else
+        :data="treeData"
+        node-key="id"
+        default-expand-all
+        :expand-on-click-node="false"
+        :props="{ label: 'label', children: 'children' }"
+        class="file-tree"
       >
-        <span v-if="selectOrder(f.id)" class="file-order">{{ selectOrder(f.id) }}</span>
-
-        <div class="file-item-body">
-          <div class="file-row">
-            <el-icon class="file-icon"><Document /></el-icon>
-            <div class="file-meta">
-              <span class="file-name" :title="f.name">{{ f.name }}</span>
-              <span class="file-sub">{{ formatSize(f.size) }} · {{ formatTime(f.upload_at) }}</span>
+        <template #default="{ data }">
+          <div
+            v-if="data.type === 'folder'"
+            :class="['tree-folder-node', 'tree-selectable', { active: isSelected(data.folderId), 'has-order': !!selectOrder(data.folderId) }]"
+            @click="toggleSelectFolder(data)"
+          >
+            <span v-if="selectOrder(data.folderId)" class="file-order">{{ selectOrder(data.folderId) }}</span>
+            <el-icon class="tree-folder-icon"><Folder /></el-icon>
+            <span class="tree-folder-label">{{ data.label }}</span>
+          </div>
+          <div
+            v-else
+            :class="['file-item', 'tree-file-node', { active: isSelected(data.id), 'has-order': !!selectOrder(data.id) }]"
+            @click="toggleSelect(data.file)"
+          >
+            <span v-if="selectOrder(data.id)" class="file-order">{{ selectOrder(data.id) }}</span>
+            <div class="file-item-body">
+              <div class="file-row">
+                <el-icon class="file-icon"><Document /></el-icon>
+                <div class="file-meta">
+                  <span class="file-name" :title="data.label">{{ data.label }}</span>
+                  <span class="file-sub">
+                    {{ formatSize(data.file.size) }} · {{ formatTime(data.file.upload_at) }}
+                  </span>
+                </div>
+              </div>
+              <el-progress
+                v-if="isProcessing(data.file.status)"
+                :percentage="data.file.progress || 0"
+                :stroke-width="3"
+                :show-text="false"
+                class="file-progress"
+              />
+            </div>
+            <div class="file-item-side" @click.stop>
+              <el-tag size="small" :type="statusType(data.file.status)" effect="plain" class="file-status">
+                {{ statusLabel(data.file.status) }}
+              </el-tag>
+              <el-dropdown trigger="click" placement="bottom-end" @command="(cmd) => onMenuCommand(cmd, data.file)">
+                <button type="button" class="file-more-btn" aria-label="更多操作">
+                  <el-icon><MoreFilled /></el-icon>
+                </button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-if="canIngest(data.file)"
+                      command="ingest"
+                      :disabled="ingestingLocalId === data.file.id"
+                    >
+                      {{ data.file.status === 'failed' ? '重新入库' : '入库' }}
+                    </el-dropdown-item>
+                    <el-dropdown-item command="delete" :divided="canIngest(data.file)">
+                      <span class="menu-danger">删除</span>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </div>
-          <el-progress
-            v-if="isProcessing(f.status)"
-            :percentage="f.progress || 0"
-            :stroke-width="3"
-            :show-text="false"
-            class="file-progress"
-          />
-        </div>
-
-        <div class="file-item-side" @click.stop>
-          <el-tag size="small" :type="statusType(f.status)" effect="plain" class="file-status">
-            {{ statusLabel(f.status) }}
-          </el-tag>
-          <el-dropdown trigger="click" placement="bottom-end" @command="(cmd) => onMenuCommand(cmd, f)">
-            <button type="button" class="file-more-btn" aria-label="更多操作">
-              <el-icon><MoreFilled /></el-icon>
-            </button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item
-                  v-if="canIngest(f)"
-                  command="ingest"
-                  :disabled="ingestingLocalId === f.id"
-                >
-                  {{ f.status === 'failed' ? '重新入库' : '入库' }}
-                </el-dropdown-item>
-                <el-dropdown-item command="delete" :divided="canIngest(f)">
-                  <span class="menu-danger">删除</span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </div>
+        </template>
+      </el-tree>
     </el-scrollbar>
   </div>
 </template>
@@ -85,14 +105,22 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, MoreFilled } from '@element-plus/icons-vue'
+import { Document, Folder, MoreFilled } from '@element-plus/icons-vue'
 import { api } from '../api'
 import { canIngest, isProcessing, statusLabel, statusType } from '../utils/fileStatus'
+import { buildFileTree, collectTreeSelectableIds } from '../utils/fileTree'
 
 const props = defineProps({
-  files: { type: Array, default: () => [] },
+  items: { type: Array, default: () => [] },
   selectedIds: { type: Array, default: () => [] },
 })
+
+function isFileItem(item) {
+  return item?.entry_type !== 'folder'
+}
+
+const fileEntries = computed(() => props.items.filter(isFileItem))
+const fileCount = computed(() => fileEntries.value.length)
 
 const emit = defineEmits([
   'update:selectedIds',
@@ -105,12 +133,12 @@ const emit = defineEmits([
 const batchDeleting = ref(false)
 const ingestingLocalId = ref('')
 
-const viewableFileIds = computed(() =>
-  props.files.filter(isViewable).map((f) => f.id),
-)
+const treeData = computed(() => buildFileTree(props.items))
 
-const allViewableSelected = computed(() => {
-  const ids = viewableFileIds.value
+const selectableIds = computed(() => collectTreeSelectableIds(treeData.value, isViewable))
+
+const allSelectableSelected = computed(() => {
+  const ids = selectableIds.value
   return ids.length > 0 && ids.every((id) => props.selectedIds.includes(id))
 })
 
@@ -160,22 +188,34 @@ function toggleSelect(f) {
   setSelection(ids)
 }
 
+function toggleSelectFolder(node) {
+  const id = node.folderId
+  const ids = [...props.selectedIds]
+  const idx = ids.indexOf(id)
+  if (idx >= 0) {
+    ids.splice(idx, 1)
+  } else {
+    ids.push(id)
+  }
+  setSelection(ids)
+}
+
 function toggleSelectAll() {
-  const viewable = props.files.filter(isViewable)
-  if (!viewable.length) {
-    ElMessage.info('没有可选择的文件')
+  const ids = selectableIds.value
+  if (!ids.length) {
+    ElMessage.info('没有可选择的项目')
     return
   }
-  if (allViewableSelected.value) {
-    const viewableSet = new Set(viewableFileIds.value)
-    setSelection(props.selectedIds.filter((id) => !viewableSet.has(id)))
+  if (allSelectableSelected.value) {
+    const set = new Set(ids)
+    setSelection(props.selectedIds.filter((id) => !set.has(id)))
     return
   }
-  const skipped = props.files.length - viewable.length
+  const skipped = fileEntries.value.filter((f) => !isViewable(f)).length
   if (skipped > 0) {
     ElMessage.info(`已跳过 ${skipped} 个入库中的文件`)
   }
-  setSelection(viewable.map((f) => f.id))
+  setSelection([...ids])
 }
 
 function onMenuCommand(cmd, f) {
@@ -203,7 +243,7 @@ async function batchRemove() {
   if (!ids.length) return
   try {
     await ElMessageBox.confirm(
-      `确定删除选中的 ${ids.length} 个文件？关联日志将一并清除。`,
+      `确定删除选中的 ${ids.length} 项？文件夹及其中的文件将一并删除，关联日志将清除。`,
       '批量删除',
       { type: 'warning' },
     )
@@ -215,7 +255,7 @@ async function batchRemove() {
     const { data } = await api.batchDelete(ids)
     if (!data.success) throw new Error(data.error)
     emit('removed', ids)
-    ElMessage.success(`已删除 ${ids.length} 个文件`)
+    ElMessage.success(`已删除 ${ids.length} 项`)
   } catch (e) {
     ElMessage.error(e.response?.data?.error || e.message)
   } finally {
@@ -308,6 +348,66 @@ async function doIngest(f) {
   color: var(--app-text-muted);
 }
 
+.file-tree {
+  background: transparent;
+  --el-tree-node-hover-bg-color: var(--app-accent-soft);
+}
+
+.file-tree :deep(.el-tree-node__content) {
+  height: auto;
+  min-height: 28px;
+  padding: 2px 0;
+  align-items: flex-start;
+}
+
+.tree-folder-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 8px;
+  border-radius: var(--app-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text);
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tree-selectable {
+  cursor: pointer;
+  width: 100%;
+}
+
+.tree-selectable:hover {
+  background: var(--app-accent-soft);
+}
+
+.tree-folder-node.active {
+  background: var(--app-accent-soft);
+  border-color: var(--app-accent);
+}
+
+.tree-folder-node.has-order {
+  padding-top: 10px;
+}
+
+.tree-folder-icon {
+  color: var(--app-accent);
+  font-size: 14px;
+}
+
+.tree-folder-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-file-node {
+  width: 100%;
+  margin: 0;
+}
+
 .file-item {
   position: relative;
   display: flex;
@@ -317,7 +417,6 @@ async function doIngest(f) {
   border-radius: var(--app-radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
-  margin-bottom: 4px;
   transition: background 0.15s, border-color 0.15s;
 }
 

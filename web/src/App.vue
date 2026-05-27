@@ -44,7 +44,7 @@
                 multiple
                 :auto-upload="false"
                 :show-file-list="true"
-                accept=".log,.txt,.zip,.rar,.7z"
+                accept=".log,.txt,.json,.zip,.rar,.7z"
                 :on-change="onFileChange"
                 class="upload-zone"
               >
@@ -66,7 +66,7 @@
               </div>
               <div v-for="task in parseTasks" :key="task.id" class="parse-task">
                 <div class="parse-task-head">
-                  <span class="parse-name">{{ task.name }}</span>
+                  <span class="parse-name">{{ displayFileName(task) }}</span>
                   <el-tag size="small" :type="statusType(task.status)" effect="light">{{ statusLabel(task.status) }}</el-tag>
                 </div>
                 <el-progress
@@ -118,7 +118,7 @@
 
         <div class="file-panel-slot">
           <FileListPanel
-            :files="files"
+            :items="fileItems"
             v-model:selected-ids="selectedFileIds"
             @select-change="onFileSelectChange"
             @removed="afterFilesRemoved"
@@ -129,7 +129,7 @@
       </aside>
 
       <main class="content">
-        <div v-if="!selectedFileIds.length" class="empty-state">
+        <div v-if="!selectedLogFileIds.length" class="empty-state">
           <div class="empty-icon">
             <el-icon :size="48"><DocumentCopy /></el-icon>
           </div>
@@ -241,11 +241,14 @@ import {
 } from './utils/scene'
 import { levelColor } from './utils/logLevel'
 import { isProcessing, statusLabel, statusType } from './utils/fileStatus'
+import { displayFileName } from './utils/fileDisplay'
+import { filterLogFileIds } from './utils/fileTree'
 
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
 const leftTab = ref('upload')
-const files = ref([])
+const fileItems = ref([])
+const logFiles = computed(() => fileItems.value.filter((i) => i.entry_type !== 'folder'))
 const selectedFileIds = ref([])
 const logs = shallowRef([])
 const collapsedFileIds = ref(new Set())
@@ -274,7 +277,11 @@ let sceneMeta = []
 const sceneTreeProps = { value: 'value', label: 'label', children: 'children', disabled: 'disabled' }
 const sceneSelectTree = computed(() => buildSceneSelectTree(sceneConfig.value))
 
-const showFileCollapse = computed(() => selectedFileIds.value.length > 1)
+const selectedLogFileIds = computed(() =>
+  filterLogFileIds(selectedFileIds.value, fileItems.value),
+)
+
+const showFileCollapse = computed(() => selectedLogFileIds.value.length > 1)
 
 const displayLogs = computed(() => {
   const collapsed = collapsedFileIds.value
@@ -297,8 +304,11 @@ const displayLogs = computed(() => {
 const displayLogCount = computed(() => displayLogs.value.filter((r) => !r._fileHeader).length)
 
 const selectedFilesLabel = computed(() => {
-  const names = selectedFileIds.value
-    .map((id) => files.value.find((f) => f.id === id)?.name)
+  const names = selectedLogFileIds.value
+    .map((id) => {
+      const f = logFiles.value.find((x) => x.id === id)
+      return f ? displayFileName(f) : ''
+    })
     .filter(Boolean)
   if (!names.length) return ''
   if (names.length === 1) return names[0]
@@ -322,7 +332,8 @@ function toggleTheme() {
 }
 
 function onFileSelectChange(ids) {
-  if (ids.length) {
+  const logIds = filterLogFileIds(ids, fileItems.value)
+  if (logIds.length) {
     scheduleSearchLogs()
   } else {
     logs.value = []
@@ -341,13 +352,13 @@ function appendParseLog(msg) {
 }
 
 function syncParseTasks() {
-  for (const f of files.value) {
+  for (const f of logFiles.value) {
     const prev = parseTasks.value.find((t) => t.id === f.id)
     if (prev && (prev.status_msg !== f.status_msg || prev.progress !== f.progress || prev.status !== f.status)) {
-      appendParseLog(`${f.name}: ${f.status_msg || statusLabel(f.status)} (${f.progress || 0}%)`)
+      appendParseLog(`${displayFileName(f)}: ${f.status_msg || statusLabel(f.status)} (${f.progress || 0}%)`)
     }
   }
-  parseTasks.value = files.value.filter((f) => isProcessing(f.status))
+  parseTasks.value = logFiles.value.filter((f) => isProcessing(f.status))
 }
 
 function startPolling() {
@@ -355,7 +366,7 @@ function startPolling() {
   pollTimer = setInterval(async () => {
     await loadFiles()
     syncParseTasks()
-    if (!files.value.some((f) => isProcessing(f.status))) stopPolling()
+    if (!logFiles.value.some((f) => isProcessing(f.status))) stopPolling()
   }, 1500)
 }
 
@@ -373,7 +384,22 @@ function onFileChange(_file, list) {
 async function loadFiles() {
   const { data } = await api.listFiles()
   if (data.success) {
-    files.value = data.data || []
+    const payload = data.data
+    if (payload?.items) {
+      fileItems.value = payload.items
+    } else if (payload?.files) {
+      const folders = payload.folders || []
+      fileItems.value = [
+        ...folders.map((f) => ({ ...f, entry_type: 'folder', parent_id: f.parent_folder_id })),
+        ...payload.files.map((f) => ({ ...f, entry_type: f.entry_type || 'file', parent_id: f.parent_id ?? f.parent_folder_id })),
+      ]
+    } else {
+      fileItems.value = (payload || []).map((f) => ({
+        ...f,
+        entry_type: f.entry_type || 'file',
+        parent_id: f.parent_id ?? f.parent_folder_id,
+      }))
+    }
     syncParseTasks()
   }
 }
@@ -425,7 +451,8 @@ function perFileQueryLimit(fileCount) {
 }
 
 async function searchLogs() {
-  if (!selectedFileIds.value.length) return
+  const logIds = selectedLogFileIds.value
+  if (!logIds.length) return
   const seq = ++searchSeq
   loadingLogs.value = true
   logs.value = []
@@ -433,8 +460,8 @@ async function searchLogs() {
     const kws = searchKeywords.value.split('\n').map((s) => s.trim()).filter(Boolean)
     const { keywords: sceneKw, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
     sceneMeta = meta
-    const order = [...selectedFileIds.value]
-    const fileMap = new Map(files.value.map((f) => [f.id, f]))
+    const order = [...logIds]
+    const fileMap = new Map(logFiles.value.map((f) => [f.id, f]))
     const limit = perFileQueryLimit(order.length)
     const baseQuery = {
       keywords: kws,
@@ -459,7 +486,7 @@ async function searchLogs() {
         _fileHeader: true,
         id: `header-${id}`,
         file_id: id,
-        file_name: f?.name || id,
+        file_name: f ? displayFileName(f) : id,
       })
       const batch = decorateEntries(data.data?.entries || [], meta)
       const room = MAX_LOG_ROWS - merged.length
@@ -538,7 +565,7 @@ async function onJiraImported() {
 
 onMounted(async () => {
   await loadFiles()
-  if (files.value.some((f) => isProcessing(f.status))) startPolling()
+  if (logFiles.value.some((f) => isProcessing(f.status))) startPolling()
 })
 
 onUnmounted(() => {

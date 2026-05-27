@@ -23,9 +23,11 @@ export function compareLogRotationNames(a, b) {
   return a.localeCompare(b, 'zh-CN')
 }
 
-/** @param {{ name: string }[]} files */
+/** @param {{ name: string, original_name?: string }[]} files */
 export function sortLogFilesByRotation(files) {
-  return [...files].sort((a, b) => compareLogRotationNames(a.name, b.name))
+  return [...files].sort((a, b) =>
+    compareLogRotationNames(a.original_name || a.name, b.original_name || b.name),
+  )
 }
 
 /** @param {File[]} files */
@@ -33,8 +35,11 @@ export function sortPendingFilesByRotation(files) {
   return [...files].sort((a, b) => compareLogRotationNames(a.name, b.name))
 }
 
-/** @param {string[]} ids @param {{ id: string, name: string }[]} fileList */
+/** @param {string[]} ids @param {{ id: string, name: string, original_name?: string }[]} fileList */
 export function sortFileIdsByRotation(ids, fileList) {
-  const nameOf = (id) => fileList.find((f) => f.id === id)?.name || ''
+  const nameOf = (id) => {
+    const f = fileList.find((x) => x.id === id)
+    return f?.original_name || f?.name || ''
+  }
   return [...ids].sort((a, b) => compareLogRotationNames(nameOf(a), nameOf(b)))
 }

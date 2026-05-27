@@ -16,10 +16,15 @@ type LogEntry struct {
 }
 
 type LogFile struct {
-	ID          string     `json:"id"`
-	DeviceID    string     `json:"device_id"`
-	Name        string     `json:"name"`
-	Size        int64      `json:"size"`
+	ID           string   `json:"id"`
+	DeviceID     string   `json:"device_id"`
+	EntryType    string   `json:"entry_type"` // file | folder
+	Name         string   `json:"name"`       // stored file name on disk (may include dedup timestamp)
+	OriginalName string   `json:"original_name"`
+	FileFormat   string   `json:"file_format"`
+	ParentID     string   `json:"parent_id,omitempty"`
+	FolderPath   []string `json:"folder_path,omitempty"`
+	Size           int64      `json:"size"`
 	UploadAt    time.Time  `json:"upload_at"`
 	Total       int        `json:"total"`
 	ParsedLines int        `json:"parsed_lines"`
@@ -46,6 +51,10 @@ type LogFilter struct {
 
 type LogStats struct {
 	TotalEntries int `json:"total_entries"`
+}
+
+type FileListData struct {
+	Items []LogFile `json:"items"`
 }
 
 type UploadResponse struct {
