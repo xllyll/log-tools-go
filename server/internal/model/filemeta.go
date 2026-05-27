@@ -46,17 +46,65 @@ func NormalizeArchiveEntryName(entryName string) string {
 	return stem + ext
 }
 
-// FlattenedLogOriginalName: 单日志压缩包 → 压缩包文件名 + 内部日志扩展名（不含包内日志主名）。
-// cat01.7z + log20250809.log → cat01.7z.log
-func FlattenedLogOriginalName(archiveEntryName, innerLogName string) string {
-	archive := NormalizeArchiveEntryName(archiveEntryName)
+var archiveExtensions = map[string]bool{".zip": true, ".rar": true, ".7z": true}
+
+var rotationNumberSuffix = regexp.MustCompile(`^\d+$`)
+
+func isArchiveExtension(ext string) bool {
+	return archiveExtensions[strings.ToLower(ext)]
+}
+
+// flattenSuffixFromInner 使用包内日志的真实扩展名（.log / .txt / .json），无扩展名时默认 .log。
+func flattenSuffixFromInner(innerLogName string) string {
 	ext := strings.ToLower(filepath.Ext(innerLogName))
-	lower := strings.ToLower(innerLogName)
-	if ext != ".log" && strings.Contains(lower, ".log") {
-		ext = ".log"
+	if IsLogExtension(ext) {
+		return ext
 	}
 	if ext == "" {
-		ext = ".log"
+		return ".log"
 	}
-	return archive + ext
+	return ext
+}
+
+// archiveStemLooksLikeLogName 判断去掉压缩包后缀后的名称是否已是日志类文件名（含轮转序号）。
+// 例如 logcat.log.003、logcat.log、report.txt.002
+func archiveStemLooksLikeLogName(stem string) bool {
+	lower := strings.ToLower(stem)
+	if IsLogExtension(filepath.Ext(lower)) {
+		return true
+	}
+	lastDot := strings.LastIndex(lower, ".")
+	if lastDot < 0 {
+		return false
+	}
+	if !rotationNumberSuffix.MatchString(lower[lastDot+1:]) {
+		return false
+	}
+	prefix := lower[:lastDot]
+	for _, logExt := range LogExtensions {
+		if strings.HasSuffix(prefix, logExt) {
+			return true
+		}
+	}
+	return false
+}
+
+// FlattenedLogOriginalName: 单日志压缩包展平后的展示名（不含包内日志主名）。
+// cat01.7z + log20250809.log → cat01.7z.log
+// logcat.log.003.zip + logcat.log → logcat.log.003.log
+// logcat.log.003.zip + notes.txt → logcat.log.003.txt
+func FlattenedLogOriginalName(archiveEntryName, innerLogName string) string {
+	archive := NormalizeArchiveEntryName(archiveEntryName)
+	suffix := flattenSuffixFromInner(innerLogName)
+	arcExt := strings.ToLower(filepath.Ext(archive))
+	if isArchiveExtension(arcExt) {
+		stem := strings.TrimSuffix(archive, filepath.Ext(archive))
+		if archiveStemLooksLikeLogName(stem) {
+			if strings.HasSuffix(strings.ToLower(stem), suffix) {
+				return stem
+			}
+			return stem + suffix
+		}
+	}
+	return archive + suffix
 }

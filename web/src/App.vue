@@ -139,19 +139,14 @@
         </div>
 
         <template v-else>
-          <div class="log-toolbar panel-card">
-            <div class="log-toolbar-left">
-              <el-icon><Document /></el-icon>
-              <span class="log-filename" :title="selectedFilesLabel">{{ selectedFilesLabel }}</span>
-            </div>
-            <div class="log-toolbar-right">
-              <el-tag effect="plain" round>{{ displayLogCount }} 条记录</el-tag>
-              <el-button size="small" :loading="loadingLogs" @click="searchLogs">
-                <el-icon><Refresh /></el-icon>
-                刷新
-              </el-button>
-            </div>
-          </div>
+          <LogToolbar
+            :file-ids="selectedLogFileIds"
+            :files="logFiles"
+            :log-count="displayLogCount"
+            :loading="loadingLogs"
+            v-model:sort-mode="logFileSortMode"
+            @refresh="searchLogs"
+          />
 
           <div class="log-viewer panel-card">
             <el-scrollbar height="calc(100vh - var(--app-header-h) - 120px)">
@@ -220,7 +215,6 @@ import {
   Loading,
   Monitor,
   Moon,
-  Refresh,
   Search,
   Sunny,
   Upload,
@@ -229,6 +223,7 @@ import {
 import SceneConfigDialog from './components/SceneConfigDialog.vue'
 import JiraSyncDialog from './components/JiraSyncDialog.vue'
 import FileListPanel from './components/FileListPanel.vue'
+import LogToolbar from './components/LogToolbar.vue'
 import LogContextDrawer from './components/LogContextDrawer.vue'
 import { api } from './api'
 import { getDeviceId } from './utils/device'
@@ -247,6 +242,7 @@ import { isProcessing, statusLabel, statusType } from './utils/fileStatus'
 import { displayFileName } from './utils/fileDisplay'
 import { expandRemovedItemIds, filterLogFileIds } from './utils/fileTree'
 import { highlightKeywords } from './utils/highlight'
+import { orderLogFileIds } from './utils/logSort'
 
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
@@ -282,9 +278,12 @@ let sceneMeta = []
 const sceneTreeProps = { value: 'value', label: 'label', children: 'children', disabled: 'disabled' }
 const sceneSelectTree = computed(() => buildSceneSelectTree(sceneConfig.value))
 
-const selectedLogFileIds = computed(() =>
-  filterLogFileIds(selectedFileIds.value, fileItems.value),
-)
+const logFileSortMode = ref('default')
+
+const selectedLogFileIds = computed(() => {
+  const ids = filterLogFileIds(selectedFileIds.value, fileItems.value)
+  return orderLogFileIds(ids, logFiles.value, logFileSortMode.value)
+})
 
 const showFileCollapse = computed(() => selectedLogFileIds.value.length > 1)
 
@@ -307,18 +306,6 @@ const displayLogs = computed(() => {
 })
 
 const displayLogCount = computed(() => displayLogs.value.filter((r) => !r._fileHeader).length)
-
-const selectedFilesLabel = computed(() => {
-  const names = selectedLogFileIds.value
-    .map((id) => {
-      const f = logFiles.value.find((x) => x.id === id)
-      return f ? displayFileName(f) : ''
-    })
-    .filter(Boolean)
-  if (!names.length) return ''
-  if (names.length === 1) return names[0]
-  return names.join(' → ')
-})
 
 async function afterFilesRemoved(ids) {
   const removed = expandRemovedItemIds(fileItems.value, ids)
@@ -544,6 +531,10 @@ function toggleFileCollapse(fileId) {
   }
   collapsedFileIds.value = next
 }
+
+watch(logFileSortMode, () => {
+  if (selectedLogFileIds.value.length) scheduleSearchLogs()
+})
 
 watch(selectedFileIds, (ids) => {
   const allowed = new Set(ids)
@@ -929,37 +920,6 @@ onUnmounted(() => {
   font-size: 14px;
   color: var(--app-text-muted);
   max-width: 360px;
-}
-
-.log-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0;
-  padding: 12px 16px;
-}
-
-.log-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.log-filename {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--app-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.log-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
 }
 
 .log-viewer {
