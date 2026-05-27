@@ -50,6 +50,8 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 
 		api.GET("/scenes", sceneH.List)
 		api.POST("/scenes", sceneH.Save)
+		api.GET("/scenes/shared", sceneH.GetShared)
+		api.POST("/scenes/shared", sceneH.SaveShared)
 
 		api.GET("/scene-library", sceneLibH.List)
 		api.POST("/scene-library", sceneLibH.Publish)

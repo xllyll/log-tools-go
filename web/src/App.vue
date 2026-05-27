@@ -6,8 +6,8 @@
           <el-icon :size="20"><Document /></el-icon>
         </div>
         <div>
-          <h1>BWIC日志分析</h1>
-          <p>Log Tools · 上传 · 检索 · 场景匹配</p>
+          <h1>FunnyLog</h1>
+          <p>BWlC Log analysis tool</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -86,34 +86,26 @@
             <div class="panel-card">
               <el-form label-position="top" size="default">
                 <el-form-item label="关键词（每行一个，AND）">
-                  <el-input v-model="searchKeywords" type="textarea" :rows="4" placeholder="输入关键词或正则..." />
+                  <el-input v-model="searchKeywords" type="textarea" :rows="2" placeholder="输入关键词或正则..." />
                 </el-form-item>
                 <el-form-item>
                   <el-checkbox v-model="useRegex">启用正则匹配</el-checkbox>
                 </el-form-item>
-                <el-form-item label="场景（OR 组合）">
-                  <el-select
+                <el-form-item label="场景（可以多选）">
+                  <el-tree-select
                     v-model="selectedSceneKeys"
+                    :data="sceneSelectTree"
                     multiple
+                    show-checkbox
+                    check-strictly
                     filterable
                     collapse-tags
                     collapse-tags-tooltip
-                    placeholder="选择场景（按模块分组）"
-                    class="full-width"
-                  >
-                    <el-option-group
-                      v-for="group in sceneSelectGroups"
-                      :key="group.moduleName"
-                      :label="group.moduleName"
-                    >
-                      <el-option
-                        v-for="opt in group.options"
-                        :key="opt.key"
-                        :label="opt.label"
-                        :value="opt.key"
-                      />
-                    </el-option-group>
-                  </el-select>
+                    default-expand-all
+                    placeholder="选择场景（树形按模块）"
+                    class="full-width scene-tree-select"
+                    :props="sceneTreeProps"
+                  />
                 </el-form-item>
                 <el-button type="primary" :loading="loadingLogs" class="full-btn" @click="searchLogs">
                   <el-icon><Search /></el-icon>
@@ -241,7 +233,7 @@ import { api } from './api'
 import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
 import {
-  buildSceneSelectGroups,
+  buildSceneSelectTree,
   collectSceneKeywords,
   decorateEntries,
   loadLocalScene,
@@ -279,7 +271,8 @@ const useRegex = ref(false)
 const contextDrawerRef = ref(null)
 let sceneMeta = []
 
-const sceneSelectGroups = computed(() => buildSceneSelectGroups(sceneConfig.value))
+const sceneTreeProps = { value: 'value', label: 'label', children: 'children', disabled: 'disabled' }
+const sceneSelectTree = computed(() => buildSceneSelectTree(sceneConfig.value))
 
 const showFileCollapse = computed(() => selectedFileIds.value.length > 1)
 
@@ -702,6 +695,10 @@ onUnmounted(() => {
 }
 
 .full-width {
+  width: 100%;
+}
+
+.scene-tree-select {
   width: 100%;
 }
 

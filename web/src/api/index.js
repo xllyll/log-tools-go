@@ -50,6 +50,12 @@ export const api = {
   listScenes() {
     return http.get('/scenes')
   },
+  uploadSharedScene(config) {
+    return http.post('/scenes/shared', { config })
+  },
+  fetchSharedScene() {
+    return http.get('/scenes/shared')
+  },
   listSceneLibrary() {
     return http.get('/scene-library')
   },

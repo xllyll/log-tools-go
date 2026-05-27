@@ -384,6 +384,25 @@ ON CONFLICT (device_id, name) DO UPDATE SET config=EXCLUDED.config, updated_at=N
 	return err
 }
 
+const SharedSceneDeviceID = "__shared__"
+const SharedSceneConfigName = "default"
+
+func (d *Database) SaveSharedSceneConfig(ctx context.Context, raw []byte) error {
+	return d.SaveSceneConfig(ctx, SharedSceneDeviceID, SharedSceneConfigName, raw)
+}
+
+func (d *Database) GetSharedSceneConfig(ctx context.Context) ([]byte, time.Time, error) {
+	var raw []byte
+	var updated time.Time
+	err := d.pool.QueryRow(ctx, `
+SELECT config, updated_at FROM scene_configs WHERE device_id=$1 AND name=$2`,
+		SharedSceneDeviceID, SharedSceneConfigName).Scan(&raw, &updated)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	return raw, updated, nil
+}
+
 func (d *Database) ListSceneConfigs(ctx context.Context, deviceID string) ([]map[string]any, error) {
 	rows, err := d.pool.Query(ctx, `
 SELECT name, config, updated_at FROM scene_configs WHERE device_id=$1 ORDER BY updated_at DESC`, deviceID)

@@ -16,7 +16,7 @@
         <el-icon><Plus /></el-icon>
         添加场景
       </el-button>
-      <el-button size="small" :disabled="!selectedNode" type="danger" plain @click="removeSelected">
+      <el-button size="small" :disabled="!hasSelection" type="danger" plain @click="removeSelected">
         <el-icon><Delete /></el-icon>
         删除选中
       </el-button>
@@ -39,68 +39,71 @@
     </div>
 
     <div v-else class="scene-body">
-      <div class="tree-pane">
-        <div class="pane-title">模块 / 场景</div>
-        <el-tree
-          ref="treeRef"
-          :data="treeData"
-          node-key="id"
-          highlight-current
-          default-expand-all
-          :expand-on-click-node="false"
-          @node-click="onNodeClick"
+      <div class="nav-pane">
+        <div class="pane-title">模块</div>
+        <el-select
+          v-model="selectedModuleIndex"
+          class="module-select"
+          placeholder="选择模块"
+          @change="onModuleChange"
         >
-          <template #default="{ node, data }">
-            <div class="tree-node">
-              <el-icon class="tree-icon">
-                <Folder v-if="data.type === 'module'" />
-                <Document v-else />
-              </el-icon>
-              <span class="tree-label" :title="node.label">{{ node.label }}</span>
-              <el-tag v-if="data.type === 'scene'" size="small" effect="plain" round>
-                {{ data.kwCount }}
-              </el-tag>
-            </div>
-          </template>
-        </el-tree>
+          <el-option
+            v-for="(mod, mi) in draft.modules"
+            :key="mi"
+            :label="mod.name?.trim() || `模块 ${mi + 1}`"
+            :value="mi"
+          />
+        </el-select>
+
+        <div class="scene-list-head">
+          <span class="pane-title scene-list-title">场景</span>
+          <el-tag v-if="currentModule" size="small" effect="plain" round>
+            {{ currentModule.scenes?.length || 0 }}
+          </el-tag>
+        </div>
+        <el-scrollbar class="scene-list-scroll">
+          <div v-if="!currentModule?.scenes?.length" class="scene-list-empty">暂无场景</div>
+          <div
+            v-for="(scene, si) in currentModule?.scenes || []"
+            :key="si"
+            :class="['scene-item', { active: selectedSceneIndex === si }]"
+            @click="selectScene(si)"
+          >
+            <el-icon class="scene-item-icon"><Document /></el-icon>
+            <span class="scene-item-name" :title="scene.name">{{ scene.name || `场景 ${si + 1}` }}</span>
+            <el-tag size="small" effect="plain" round>{{ scene.keywords?.length || 0 }}</el-tag>
+          </div>
+        </el-scrollbar>
       </div>
 
       <div class="detail-pane">
-        <el-empty v-if="!selectedNode" description="请在左侧选择模块或场景" />
+        <el-empty v-if="selectedModuleIndex === null" description="请先添加并选择模块" />
 
-        <!-- 模块编辑 -->
-        <template v-else-if="selectedNode.type === 'module'">
+        <!-- 模块编辑（未选场景时） -->
+        <template v-else-if="selectedSceneIndex === null && currentModule">
           <div class="detail-head">
             <h4>模块设置</h4>
-            <el-tag effect="plain">{{ currentModule?.scenes?.length || 0 }} 个场景</el-tag>
+            <el-tag effect="plain">{{ currentModule.scenes?.length || 0 }} 个场景</el-tag>
           </div>
           <el-form label-position="top" size="default">
             <el-form-item label="模块名称">
-              <el-input
-                v-model="currentModule.name"
-                placeholder="如 DeviceService"
-                @input="syncTreeLabels"
-              />
+              <el-input v-model="currentModule.name" placeholder="如 DeviceService" />
             </el-form-item>
           </el-form>
           <el-alert type="info" :closable="false" show-icon>
-            在此模块下添加场景，或点击左侧树中的场景节点编辑关键词规则。
+            在左侧场景列表中点击场景以编辑关键词，或点击「添加场景」新建。
           </el-alert>
         </template>
 
         <!-- 场景编辑 -->
-        <template v-else-if="selectedNode.type === 'scene' && currentScene">
+        <template v-else-if="selectedSceneIndex !== null && currentScene">
           <div class="detail-head">
             <h4>场景设置</h4>
             <span class="detail-path">{{ currentModule?.name }} / {{ currentScene.name || '未命名' }}</span>
           </div>
           <el-form label-position="top" size="default">
             <el-form-item label="场景名称">
-              <el-input
-                v-model="currentScene.name"
-                placeholder="如 System问题分析"
-                @input="syncTreeLabels"
-              />
+              <el-input v-model="currentScene.name" placeholder="如 System问题分析" />
             </el-form-item>
           </el-form>
 
@@ -160,7 +163,8 @@
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
       <el-button @click="handleSaveLocal">保存到本地</el-button>
-      <el-button :loading="syncing" @click="handleSyncServer">同步到服务器</el-button>
+      <el-button :loading="uploadingServer" @click="handleUploadServer">上传服务器</el-button>
+      <el-button :loading="syncing" @click="handleSyncFromServer">同步到服务器</el-button>
       <el-button type="primary" @click="handleConfirm">确定</el-button>
     </template>
 
@@ -173,7 +177,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Document, Folder, Plus, Upload } from '@element-plus/icons-vue'
+import { Delete, Document, Plus, Upload } from '@element-plus/icons-vue'
 import { api } from '../api'
 import SceneLibraryDialog from './SceneLibraryDialog.vue'
 import {
@@ -197,45 +201,30 @@ const visible = computed({
 })
 
 const draft = ref(cloneSceneConfig(props.config))
-const selectedNode = ref(null)
+const selectedModuleIndex = ref(null)
+const selectedSceneIndex = ref(null)
 const syncing = ref(false)
+const uploadingServer = ref(false)
 const fileInput = ref(null)
-const treeRef = ref(null)
 const libraryVisible = ref(false)
 const libraryRef = ref(null)
 const libraryPublishing = ref(false)
 
-const treeData = computed(() =>
-  (draft.value.modules || []).map((mod, mi) => ({
-    id: `m-${mi}`,
-    label: mod.name || `模块 ${mi + 1}`,
-    type: 'module',
-    moduleIndex: mi,
-    children: (mod.scenes || []).map((scene, si) => ({
-      id: `m-${mi}-s-${si}`,
-      label: scene.name || `场景 ${si + 1}`,
-      type: 'scene',
-      moduleIndex: mi,
-      sceneIndex: si,
-      kwCount: scene.keywords?.length || 0,
-    })),
-  })),
-)
-
 const currentModule = computed(() => {
-  if (!selectedNode.value) return null
-  return draft.value.modules?.[selectedNode.value.moduleIndex] || null
+  if (selectedModuleIndex.value === null) return null
+  return draft.value.modules?.[selectedModuleIndex.value] || null
 })
 
 const currentScene = computed(() => {
-  if (selectedNode.value?.type !== 'scene') return null
-  return currentModule.value?.scenes?.[selectedNode.value.sceneIndex] || null
+  if (selectedSceneIndex.value === null) return null
+  return currentModule.value?.scenes?.[selectedSceneIndex.value] || null
 })
 
-const canAddScene = computed(() => {
-  if (!selectedNode.value) return draft.value.modules?.length > 0
-  return true
-})
+const canAddScene = computed(() => selectedModuleIndex.value !== null)
+
+const hasSelection = computed(
+  () => selectedModuleIndex.value !== null || selectedSceneIndex.value !== null,
+)
 
 watch(
   () => props.config,
@@ -247,14 +236,32 @@ watch(
 
 function onOpen() {
   draft.value = cloneSceneConfig(props.config)
-  selectedNode.value = null
-  nextTick(() => selectFirstNode())
+  resetSelection()
 }
 
 function onLibraryApply(cfg) {
   draft.value = cloneSceneConfig(cfg)
-  selectedNode.value = null
-  nextTick(() => selectFirstNode())
+  resetSelection()
+}
+
+function resetSelection() {
+  selectedModuleIndex.value = null
+  selectedSceneIndex.value = null
+  nextTick(() => selectFirstModule())
+}
+
+function selectFirstModule() {
+  if (!draft.value.modules?.length) return
+  selectedModuleIndex.value = 0
+  selectedSceneIndex.value = null
+}
+
+function onModuleChange() {
+  selectedSceneIndex.value = null
+}
+
+function selectScene(si) {
+  selectedSceneIndex.value = si
 }
 
 async function publishToLibrary() {
@@ -290,70 +297,52 @@ async function publishToLibrary() {
   }
 }
 
-function selectFirstNode() {
-  const first = treeData.value[0]
-  if (!first) return
-  selectedNode.value = { type: 'module', moduleIndex: 0 }
-  nextTick(() => treeRef.value?.setCurrentKey(first.id))
-}
-
-function onNodeClick(data) {
-  selectedNode.value = {
-    type: data.type,
-    moduleIndex: data.moduleIndex,
-    sceneIndex: data.sceneIndex,
-  }
-}
-
-function syncTreeLabels() {
-  // treeData 为 computed，模块/场景名称变更会自动反映
-}
-
 function addModule() {
   if (!draft.value.modules) draft.value.modules = []
   draft.value.modules.push({ name: '新模块', scenes: [] })
-  const mi = draft.value.modules.length - 1
-  selectedNode.value = { type: 'module', moduleIndex: mi }
-  nextTick(() => treeRef.value?.setCurrentKey(`m-${mi}`))
+  selectedModuleIndex.value = draft.value.modules.length - 1
+  selectedSceneIndex.value = null
 }
 
 function addSceneToSelected() {
-  let mi = selectedNode.value?.moduleIndex
-  if (mi === undefined) {
+  if (selectedModuleIndex.value === null) {
     if (!draft.value.modules?.length) {
       ElMessage.warning('请先添加模块')
       return
     }
-    mi = 0
+    selectedModuleIndex.value = 0
   }
-  const mod = draft.value.modules[mi]
+  const mod = draft.value.modules[selectedModuleIndex.value]
   if (!mod.scenes) mod.scenes = []
   mod.scenes.push({ name: '新场景', keywords: [emptyKeyword()] })
-  const si = mod.scenes.length - 1
-  selectedNode.value = { type: 'scene', moduleIndex: mi, sceneIndex: si }
-  nextTick(() => treeRef.value?.setCurrentKey(`m-${mi}-s-${si}`))
+  selectedSceneIndex.value = mod.scenes.length - 1
 }
 
 function removeSelected() {
-  if (!selectedNode.value) return
-  const { type, moduleIndex, sceneIndex } = selectedNode.value
-  if (type === 'module') {
-    ElMessageBox.confirm('确定删除该模块及其所有场景？', '提示', { type: 'warning' })
-      .then(() => {
-        draft.value.modules.splice(moduleIndex, 1)
-        selectedNode.value = null
-        nextTick(() => selectFirstNode())
-      })
-      .catch(() => {})
-  } else {
+  if (selectedModuleIndex.value === null) return
+  if (selectedSceneIndex.value !== null) {
     ElMessageBox.confirm('确定删除该场景？', '提示', { type: 'warning' })
       .then(() => {
-        draft.value.modules[moduleIndex].scenes.splice(sceneIndex, 1)
-        selectedNode.value = { type: 'module', moduleIndex }
-        nextTick(() => treeRef.value?.setCurrentKey(`m-${moduleIndex}`))
+        const mi = selectedModuleIndex.value
+        draft.value.modules[mi].scenes.splice(selectedSceneIndex.value, 1)
+        selectedSceneIndex.value = null
       })
       .catch(() => {})
+    return
   }
+  ElMessageBox.confirm('确定删除该模块及其所有场景？', '提示', { type: 'warning' })
+    .then(() => {
+      const mi = selectedModuleIndex.value
+      draft.value.modules.splice(mi, 1)
+      if (!draft.value.modules.length) {
+        selectedModuleIndex.value = null
+        selectedSceneIndex.value = null
+      } else {
+        selectedModuleIndex.value = Math.min(mi, draft.value.modules.length - 1)
+        selectedSceneIndex.value = null
+      }
+    })
+    .catch(() => {})
 }
 
 function addKeyword(scene) {
@@ -369,8 +358,7 @@ function resetDefault() {
   ElMessageBox.confirm('将覆盖当前编辑内容，是否继续？', '恢复示例', { type: 'warning' })
     .then(() => {
       draft.value = defaultSceneConfig()
-      selectedNode.value = null
-      nextTick(() => selectFirstNode())
+      resetSelection()
     })
     .catch(() => {})
 }
@@ -417,16 +405,47 @@ function handleSaveLocal() {
   ElMessage.success('已保存到本地')
 }
 
-async function handleSyncServer() {
-  const cfg = applyConfig()
-  if (!cfg) return
+async function handleUploadServer() {
+  if (!validate()) return
+  const cfg = cloneSceneConfig(draft.value)
+  try {
+    await ElMessageBox.confirm(
+      '将当前编辑的场景配置上传到服务器，所有用户均可通过「同步到服务器」获取。是否继续？',
+      '上传服务器',
+      { type: 'info', confirmButtonText: '上传', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  uploadingServer.value = true
+  try {
+    const { data } = await api.uploadSharedScene(cfg)
+    if (!data.success) throw new Error(data.error)
+    ElMessage.success('已上传到服务器（全局共享）')
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error(e.response?.data?.error || e.message || '上传失败')
+    }
+  } finally {
+    uploadingServer.value = false
+  }
+}
+
+async function handleSyncFromServer() {
   syncing.value = true
   try {
-    await api.saveScene({ name: 'default', config: cfg })
+    const { data } = await api.fetchSharedScene()
+    if (!data.success) throw new Error(data.error)
+    const remote = data.data?.config
+    if (!remote?.modules) throw new Error('服务器配置格式无效')
+    draft.value = cloneSceneConfig(remote)
+    const cfg = applyConfig()
+    if (!cfg) return
     saveLocalScene(cfg)
-    ElMessage.success('已同步到服务器')
+    resetSelection()
+    ElMessage.success('已从服务器同步，并覆盖当前配置')
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || '同步失败')
+    ElMessage.error(e.response?.data?.error || e.message || '同步失败')
   } finally {
     syncing.value = false
   }
@@ -444,8 +463,7 @@ function onFileImport(e) {
     try {
       draft.value = JSON.parse(reader.result)
       if (!draft.value.modules) throw new Error('invalid')
-      selectedNode.value = null
-      nextTick(() => selectFirstNode())
+      resetSelection()
       ElMessage.success('导入成功')
     } catch {
       ElMessage.error('JSON 格式无效')
@@ -481,55 +499,95 @@ function exportJson() {
   min-height: 440px;
 }
 
-.tree-pane {
+.nav-pane {
   width: 260px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--app-border-light);
   border-radius: 8px;
   padding: 10px;
   background: var(--app-surface-2);
-  overflow-y: auto;
   max-height: 480px;
+  min-height: 440px;
 }
 
 .pane-title {
   font-size: 12px;
   font-weight: 600;
   color: var(--app-text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 0 4px;
 }
 
-.tree-node {
+.module-select {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.scene-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.scene-list-title {
+  margin-bottom: 0;
+}
+
+.scene-list-scroll {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+}
+
+.scene-list-scroll :deep(.el-scrollbar) {
+  height: 100%;
+}
+
+.scene-list-empty {
+  padding: 16px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--app-text-muted);
+}
+
+.scene-item {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 8px 8px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.scene-item:hover {
+  background: var(--app-accent-soft);
+}
+
+.scene-item.active {
+  background: var(--app-accent-soft);
+  border-color: var(--app-accent);
+}
+
+.scene-item-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--app-accent);
+}
+
+.scene-item-name {
   flex: 1;
   min-width: 0;
-  padding-right: 8px;
-}
-
-.tree-icon {
-  flex-shrink: 0;
-  color: var(--app-accent);
-  font-size: 14px;
-}
-
-.tree-label {
-  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-}
-
-.tree-pane :deep(.el-tree-node__content) {
-  height: 34px;
-  border-radius: 6px;
-}
-
-.tree-pane :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: var(--app-accent-soft);
 }
 
 .detail-pane {

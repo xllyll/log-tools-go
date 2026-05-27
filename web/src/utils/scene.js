@@ -8,9 +8,49 @@ export const defaultSceneConfig = () => ({
         {
           name: 'System问题分析',
           keywords: [
-            { keyword: '--------- beginning of main', desc: '系统启动', mode: 'word', color: '#ff3333' },
-            { keyword: '00 09 0a', desc: '系统重启原因', mode: 'word', color: '#33ff33' },
-          ],
+              {
+                  keyword: "--------- beginning of main",
+                  desc: "系统启动",
+                  mode: "word",
+                  color: "#ff3333"
+              },
+              {
+                  keyword: "00 09 0a",
+                  desc: "系统重启原因",
+                  mode: "word",
+                  color: "#0de8d2"
+              },
+              {
+                  keyword: "onLocalAccChanged: false",
+                  desc: "ACC关闭",
+                  mode: "word",
+                  color: "#ffda33"
+              },
+              {
+                  keyword: "onLocalAccChanged: true",
+                  desc: "ACC打开",
+                  mode: "word",
+                  color: "#3396ff"
+              },
+              {
+                  keyword: "BluetoothManagerService: ACTION_QB_POWERON",
+                  desc: "唤醒",
+                  mode: "word",
+                  color: "#030a32"
+              },
+              {
+                  keyword: "BluetoothManagerService: ACTION_QB_POWEROFF",
+                  desc: "休眠",
+                  mode: "word",
+                  color: "#026d02"
+              },
+              {
+                  keyword: "ActivityTaskManager: START u0",
+                  desc: "打开应用",
+                  mode: "word",
+                  color: "#75b5b1"
+              }
+          ]
         },
       ],
     },
@@ -75,6 +115,25 @@ export function buildSceneSelectGroups(config) {
     if (options.length) groups.push({ moduleName, options })
   })
   return groups
+}
+
+/** 搜索侧树形选择：模块为父节点（不可选），场景为叶子 */
+export function buildSceneSelectTree(config) {
+  const tree = []
+  ;(config?.modules || []).forEach((mod, mi) => {
+    const children = (mod.scenes || []).map((scene, si) => ({
+      value: `${mi}:${si}`,
+      label: scene.name?.trim() || `场景 ${si + 1}`,
+    }))
+    if (!children.length) return
+    tree.push({
+      value: `mod:${mi}`,
+      label: mod.name?.trim() || `模块 ${mi + 1}`,
+      disabled: true,
+      children,
+    })
+  })
+  return tree
 }
 
 function pushSceneKeywords(keywords, meta, scene) {
