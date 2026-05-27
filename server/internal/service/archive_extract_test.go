@@ -1,6 +1,10 @@
 package service
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mholt/archiver/v4"
+)
 
 func TestNeedsArchiveFolder(t *testing.T) {
 	if needsArchiveFolder(1, 0) {
@@ -56,6 +60,13 @@ func TestFolderChainInsideArchive(t *testing.T) {
 	got = folderChainInsideArchive([]string{"root.zip"}, "cat01.7z", 1, 0)
 	if len(got) != 1 || got[0] != "root.zip" {
 		t.Fatalf("single log archive should not add self folder, got %v", got)
+	}
+}
+
+func TestArchiverEntryRelPrefersNameInArchive(t *testing.T) {
+	fi := archiver.FileInfo{NameInArchive: `OS_pkg\os\kernel\log.txt`}
+	if got := archiverEntryRel(fi); got != "OS_pkg/os/kernel/log.txt" {
+		t.Fatalf("got %q", got)
 	}
 }
 

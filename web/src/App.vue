@@ -119,6 +119,7 @@
         <div class="file-panel-slot">
           <FileListPanel
             :items="fileItems"
+            :list-version="fileListVersion"
             v-model:selected-ids="selectedFileIds"
             @select-change="onFileSelectChange"
             @removed="afterFilesRemoved"
@@ -158,7 +159,7 @@
                 <div
                   v-for="row in displayLogs"
                   :key="row.id"
-                  v-memo="[row.id, row.scene_desc, row.content, row._fileHeader, isFileCollapsed(row.file_id)]"
+                  v-memo="[row.id, row.scene_desc, row.content, row._fileHeader, isFileCollapsed(row.file_id), searchKeywords, useRegex]"
                   :class="row._fileHeader ? 'log-file-header' : 'log-line'"
                   :style="row._fileHeader ? undefined : logLineStyle(row)"
                   :title="row._fileHeader ? row.file_name : `${row.display || row.content || ''}（双击查看上下文）`"
@@ -242,12 +243,14 @@ import {
 import { levelColor } from './utils/logLevel'
 import { isProcessing, statusLabel, statusType } from './utils/fileStatus'
 import { displayFileName } from './utils/fileDisplay'
-import { filterLogFileIds } from './utils/fileTree'
+import { expandRemovedItemIds, filterLogFileIds } from './utils/fileTree'
+import { highlightKeywords } from './utils/highlight'
 
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
 const leftTab = ref('upload')
 const fileItems = ref([])
+const fileListVersion = ref(0)
 const logFiles = computed(() => fileItems.value.filter((i) => i.entry_type !== 'folder'))
 const selectedFileIds = ref([])
 const logs = shallowRef([])
@@ -316,14 +319,20 @@ const selectedFilesLabel = computed(() => {
 })
 
 async function afterFilesRemoved(ids) {
-  const removed = new Set(ids)
+  const removed = expandRemovedItemIds(fileItems.value, ids)
+  fileItems.value = fileItems.value.filter((item) => !removed.has(item.id))
+  fileListVersion.value += 1
   selectedFileIds.value = selectedFileIds.value.filter((x) => !removed.has(x))
-  if (!selectedFileIds.value.length) {
+  if (!selectedLogFileIds.value.length) {
     logs.value = []
   } else {
     scheduleSearchLogs()
   }
-  await loadFiles()
+  try {
+    await loadFiles()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || e.message || '刷新文件列表失败')
+  }
 }
 
 function toggleTheme() {
@@ -381,27 +390,32 @@ function onFileChange(_file, list) {
   pendingFiles.value = list.map((x) => x.raw).filter(Boolean)
 }
 
+function applyFileListPayload(payload) {
+  if (payload?.items) {
+    fileItems.value = [...payload.items]
+  } else if (payload?.files) {
+    const folders = payload.folders || []
+    fileItems.value = [
+      ...folders.map((f) => ({ ...f, entry_type: 'folder', parent_id: f.parent_folder_id })),
+      ...payload.files.map((f) => ({ ...f, entry_type: f.entry_type || 'file', parent_id: f.parent_id ?? f.parent_folder_id })),
+    ]
+  } else {
+    fileItems.value = (payload || []).map((f) => ({
+      ...f,
+      entry_type: f.entry_type || 'file',
+      parent_id: f.parent_id ?? f.parent_folder_id,
+    }))
+  }
+  fileListVersion.value += 1
+  syncParseTasks()
+}
+
 async function loadFiles() {
   const { data } = await api.listFiles()
-  if (data.success) {
-    const payload = data.data
-    if (payload?.items) {
-      fileItems.value = payload.items
-    } else if (payload?.files) {
-      const folders = payload.folders || []
-      fileItems.value = [
-        ...folders.map((f) => ({ ...f, entry_type: 'folder', parent_id: f.parent_folder_id })),
-        ...payload.files.map((f) => ({ ...f, entry_type: f.entry_type || 'file', parent_id: f.parent_id ?? f.parent_folder_id })),
-      ]
-    } else {
-      fileItems.value = (payload || []).map((f) => ({
-        ...f,
-        entry_type: f.entry_type || 'file',
-        parent_id: f.parent_id ?? f.parent_folder_id,
-      }))
-    }
-    syncParseTasks()
+  if (!data?.success) {
+    throw new Error(data?.error || '加载文件列表失败')
   }
+  applyFileListPayload(data.data)
 }
 
 async function doUpload() {
@@ -542,8 +556,16 @@ watch(selectedFileIds, (ids) => {
   }
 })
 
+const activeSearchKeywords = computed(() =>
+  searchKeywords.value
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean),
+)
+
 function highlightLine(row) {
-  return (row.content || row.message || row.display || '').replace(/</g, '&lt;')
+  const text = row.content || row.message || row.display || ''
+  return highlightKeywords(text, activeSearchKeywords.value, useRegex.value)
 }
 
 function logLineStyle(row) {
@@ -981,6 +1003,14 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.log-text :deep(mark.kw-highlight) {
+  background: var(--app-kw-highlight-bg);
+  color: var(--app-kw-highlight-color);
+  padding: 0 1px;
+  border-radius: 2px;
+  font-weight: 600;
 }
 
 .log-body.has-scene-desc {

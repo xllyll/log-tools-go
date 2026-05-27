@@ -24,7 +24,8 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 	}
 	defer os.RemoveAll(tmpDir)
 
-	if err := extractArchiveToDir(archivePath, tmpDir); err != nil {
+	memberPaths, err := extractArchiveToDir(archivePath, tmpDir)
+	if err != nil {
 		return nil, err
 	}
 
@@ -35,16 +36,19 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 
 	logN, arcN := len(logPaths), len(archivePaths)
 
-	walkParts := collectWalkPathParts(tmpDir)
+	pathPartsList := memberPaths
+	if len(pathPartsList) == 0 {
+		pathPartsList = collectWalkPathParts(tmpDir)
+	}
 	hasSubpath := false
-	for _, p := range walkParts {
+	for _, p := range pathPartsList {
 		if len(p) > 0 {
 			hasSubpath = true
 			break
 		}
 	}
 	bindInner := archiveBindContainer(logN+arcN, hasSubpath)
-	folderChains := collectFolderChains(parentFolders, containerName, bindInner, walkParts)
+	folderChains := collectFolderChains(parentFolders, containerName, bindInner, pathPartsList)
 
 	if arcN == 0 && logN == 1 {
 		rel := toSlashRel(tmpDir, logPaths[0])
@@ -64,17 +68,13 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 		return &model.ArchiveExtractResult{Files: files, FolderChains: mergeFolderChains(folderChains, collectFolderChains(parentFolders, containerName, true, [][]string{relDir}))}, nil
 	}
 
-	targetFolders := folderChainInsideArchive(parentFolders, archiveName, logN, arcN)
-	if len(targetFolders) == 0 && needsArchiveFolder(logN, arcN) && containerName != "" {
-		targetFolders = []string{normalizeFolderPart(containerName)}
-	}
-
 	var out []model.ExtractedFile
 	for _, logPath := range logPaths {
 		rel := toSlashRel(tmpDir, logPath)
-		inner := append(append([]string{}, targetFolders...), archiveDirParts(rel)...)
+		relDir := archiveDirParts(rel)
+		folderBinding := folderChainForLogInArchive(parentFolders, containerName, archiveName, bindInner, relDir)
 		base := filepath.Base(logPath)
-		target, err := diskTarget(extractRoot, inner, base)
+		target, err := diskTarget(extractRoot, folderBinding, base)
 		if err != nil {
 			continue
 		}
@@ -85,21 +85,21 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 			DiskPath:        target,
 			OriginalName:    base,
 			FileFormat:      strings.ToLower(filepath.Ext(base)),
-			ArchiveDirParts: normalizeFolderChain(inner),
+			ArchiveDirParts: normalizeFolderChain(folderBinding),
 		})
 	}
 	for _, arcPath := range archivePaths {
 		base := filepath.Base(arcPath)
 		rel := toSlashRel(tmpDir, arcPath)
-		parent := append(append([]string{}, targetFolders...), archiveDirParts(rel)...)
-		chunk, err := s.expandArchiveFromDisk(arcPath, base, parent, extractRoot, "")
+		relDir := archiveDirParts(rel)
+		parentForNested := folderChainForNestedArchive(parentFolders, containerName, bindInner, relDir)
+		chunk, err := s.expandArchiveFromDisk(arcPath, base, parentForNested, extractRoot, "")
 		if err != nil {
 			continue
 		}
 		out = append(out, chunk.Files...)
 		folderChains = mergeFolderChains(folderChains, chunk.FolderChains)
 	}
-	folderChains = mergeFolderChains(folderChains, collectFolderChains(parentFolders, containerName, bindInner, walkParts))
 	return &model.ArchiveExtractResult{Files: out, FolderChains: folderChains}, nil
 }
 
@@ -179,12 +179,25 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-func extractArchiveToDir(archivePath, destDir string) error {
+func extractArchiveToDir(archivePath, destDir string) ([][]string, error) {
 	ext := strings.ToLower(filepath.Ext(archivePath))
 	if ext == ".zip" {
-		return unzipToDir(archivePath, destDir)
+		if err := unzipToDir(archivePath, destDir); err != nil {
+			return nil, err
+		}
+		return collectWalkPathParts(destDir), nil
 	}
 	return extractArchiverToDir(archivePath, destDir)
+}
+
+// archiverEntryRel 压缩包内完整相对路径（RAR/7z 必须用 NameInArchive，Name() 往往只是文件名）。
+func archiverEntryRel(fi archiver.FileInfo) string {
+	name := strings.TrimSpace(fi.NameInArchive)
+	if name == "" {
+		name = strings.TrimSpace(fi.Name())
+	}
+	name = filepath.ToSlash(name)
+	return strings.TrimPrefix(name, "./")
 }
 
 func unzipToDir(zipPath, destDir string) error {
@@ -211,29 +224,37 @@ func unzipToDir(zipPath, destDir string) error {
 	return nil
 }
 
-func extractArchiverToDir(archivePath, destDir string) error {
+func extractArchiverToDir(archivePath, destDir string) ([][]string, error) {
 	file, err := os.Open(archivePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 	format, _, err := archiver.Identify(context.Background(), archivePath, file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	ex, ok := format.(archiver.Extractor)
 	if !ok {
-		return fmt.Errorf("unsupported archive format: %s", filepath.Ext(archivePath))
+		return nil, fmt.Errorf("unsupported archive format: %s", filepath.Ext(archivePath))
 	}
 	_, _ = file.Seek(0, 0)
-	return ex.Extract(context.Background(), file, func(_ context.Context, fi archiver.FileInfo) error {
+	var pathPartsList [][]string
+	err = ex.Extract(context.Background(), file, func(_ context.Context, fi archiver.FileInfo) error {
+		rel := archiverEntryRel(fi)
+		if isArchiveNoisePath(rel) {
+			return nil
+		}
 		if fi.IsDir() {
+			rel = strings.TrimSuffix(rel, "/")
+			if parts := splitPathSegments(rel); len(parts) > 0 {
+				pathPartsList = append(pathPartsList, parts)
+			}
 			return nil
 		}
-		if isArchiveNoisePath(fi.Name()) {
-			return nil
+		if parts := archiveDirParts(rel); len(parts) > 0 {
+			pathPartsList = append(pathPartsList, parts)
 		}
-		rel := filepath.ToSlash(fi.Name())
 		target := filepath.Join(destDir, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return err
@@ -252,4 +273,8 @@ func extractArchiverToDir(archivePath, destDir string) error {
 		out.Close()
 		return copyErr
 	})
+	if err != nil {
+		return nil, err
+	}
+	return pathPartsList, nil
 }

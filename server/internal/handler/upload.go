@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"log-tools/server/internal/model"
@@ -58,56 +57,15 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	result, err := h.storage.ExtractArchive(saved, header.Filename)
+	fileIDs, err := h.storage.ImportSavedFile(c.Request.Context(), deviceID, saved, header.Filename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	if err := h.storage.EnsureFolderChains(c.Request.Context(), deviceID, result.FolderChains); err != nil {
-		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
-		return
-	}
-
-	var fileIDs []string
-	var lastErr string
-	for _, ent := range result.Files {
-		ext := ent.FileFormat
-		if ext == "" {
-			ext = strings.ToLower(filepath.Ext(ent.OriginalName))
-		}
-		if !model.IsLogExtension(ext) {
-			lastErr = "unsupported extension: " + ent.OriginalName
-			continue
-		}
-		parentID, err := h.storage.EnsureFolders(c.Request.Context(), deviceID, ent.ArchiveDirParts)
-		if err != nil {
-			lastErr = err.Error()
-			log.Printf("[upload] ensure folders %v: %v", ent.ArchiveDirParts, err)
-			continue
-		}
-		lf, err := h.storage.RegisterUpload(deviceID, service.UploadFileMeta{
-			Path:         ent.DiskPath,
-			OriginalName: ent.OriginalName,
-			FileFormat:   ext,
-			ParentID:     parentID,
-		})
-		if err != nil {
-			lastErr = err.Error()
-			log.Printf("[upload] register %s: %v", ent.OriginalName, err)
-			continue
-		}
-		fileIDs = append(fileIDs, lf.ID)
-	}
-
 	if len(fileIDs) == 0 {
-		msg := "no valid log files found"
-		if len(result.Files) == 0 {
-			msg = "压缩包内未解析到日志文件，请确认包含 .log/.txt/.json 或有效的嵌套压缩包"
-		} else if lastErr != "" {
-			msg = "未能登记任何日志文件: " + lastErr
-		}
-		log.Printf("[upload] failed device=%s file=%s entries=%d last_err=%s", deviceID, header.Filename, len(result.Files), lastErr)
+		msg := "压缩包内未解析到日志文件，请确认包含 .log/.txt/.json 或有效的嵌套压缩包"
+		log.Printf("[upload] failed device=%s file=%s", deviceID, header.Filename)
 		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: msg})
 		return
 	}

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -56,37 +57,57 @@ func (h *JiraHandler) Import(c *gin.Context) {
 		return
 	}
 
+	dir := h.cfg.Storage.UploadDir
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
 	var fileIDs []string
+	var lastErr string
 	for _, att := range req.Attachments {
 		data, err := h.client.DownloadAttachment(att.ContentURL, att.ID)
 		if err != nil {
+			lastErr = err.Error()
+			log.Printf("[jira] download %s: %v", att.Filename, err)
 			continue
 		}
-		dir := h.cfg.Storage.UploadDir
-		_ = os.MkdirAll(dir, 0o755)
-		finalPath := filepath.Join(dir, "jira_"+att.Filename)
+		if err := h.storage.ValidateFile(int64(len(data)), att.Filename); err != nil {
+			lastErr = err.Error()
+			log.Printf("[jira] skip %s: %v", att.Filename, err)
+			continue
+		}
+		finalPath := filepath.Join(dir, "jira_"+filepath.Base(att.Filename))
 		if err := os.WriteFile(finalPath, data, 0o644); err != nil {
+			lastErr = err.Error()
 			continue
 		}
-		orig := model.OriginalBaseName(att.Filename)
-		lf, err := h.storage.RegisterUpload(deviceID, service.UploadFileMeta{
-			Path:         finalPath,
-			OriginalName: orig,
-			FileFormat:   model.FileFormatFromName(orig),
-		})
+		ids, err := h.storage.ImportSavedFile(ctx, deviceID, finalPath, att.Filename)
 		if err != nil {
+			lastErr = err.Error()
 			_ = os.Remove(finalPath)
+			log.Printf("[jira] import %s: %v", att.Filename, err)
 			continue
 		}
-		fileIDs = append(fileIDs, lf.ID)
+		if len(ids) == 0 {
+			lastErr = "压缩包内未解析到可导入的日志文件"
+			log.Printf("[jira] no logs from %s", att.Filename)
+			continue
+		}
+		fileIDs = append(fileIDs, ids...)
 	}
 	if len(fileIDs) == 0 {
-		c.JSON(http.StatusBadGateway, model.UploadResponse{Success: false, Error: "未能导入任何附件"})
+		msg := "未能导入任何附件"
+		if lastErr != "" {
+			msg = msg + ": " + lastErr
+		}
+		c.JSON(http.StatusBadGateway, model.UploadResponse{Success: false, Error: msg})
 		return
 	}
 	c.JSON(http.StatusOK, model.UploadResponse{
 		Success: true,
-		Message: "jira 附件已上传",
+		Message: "jira 附件已导入",
 		FileIDs: fileIDs,
 	})
 }

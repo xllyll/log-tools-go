@@ -24,14 +24,6 @@
       <el-button size="small" @click="resetDefault">恢复示例</el-button>
       <el-button size="small" @click="importJson">导入 JSON</el-button>
       <el-button size="small" @click="exportJson">导出 JSON</el-button>
-      <el-divider direction="vertical" />
-      <el-button size="small" type="primary" plain :loading="libraryPublishing" @click="publishToLibrary">
-        <el-icon><Upload /></el-icon>
-        上传到场景库
-      </el-button>
-      <el-button size="small" type="success" plain @click="libraryVisible = true">
-        场景库
-      </el-button>
     </div>
 
     <div v-if="!draft.modules?.length" class="scene-empty">

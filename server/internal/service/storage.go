@@ -210,6 +210,44 @@ func (s *StorageService) RegisterUpload(deviceID string, meta UploadFileMeta) (*
 	return f, nil
 }
 
+// ImportSavedFile 解析已落盘文件（压缩包会解压）并登记日志；返回登记成功的 file id 列表。
+func (s *StorageService) ImportSavedFile(ctx context.Context, deviceID, diskPath, originalName string) ([]string, error) {
+	result, err := s.ExtractArchive(diskPath, originalName)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.EnsureFolderChains(ctx, deviceID, result.FolderChains); err != nil {
+		return nil, err
+	}
+	var fileIDs []string
+	for _, ent := range result.Files {
+		ext := ent.FileFormat
+		if ext == "" {
+			ext = strings.ToLower(filepath.Ext(ent.OriginalName))
+		}
+		if !model.IsLogExtension(ext) {
+			continue
+		}
+		parentID, err := s.EnsureFolders(ctx, deviceID, ent.ArchiveDirParts)
+		if err != nil {
+			log.Printf("[import] ensure folders %v: %v", ent.ArchiveDirParts, err)
+			continue
+		}
+		lf, err := s.RegisterUpload(deviceID, UploadFileMeta{
+			Path:         ent.DiskPath,
+			OriginalName: ent.OriginalName,
+			FileFormat:   ext,
+			ParentID:     parentID,
+		})
+		if err != nil {
+			log.Printf("[import] register %s: %v", ent.OriginalName, err)
+			continue
+		}
+		fileIDs = append(fileIDs, lf.ID)
+	}
+	return fileIDs, nil
+}
+
 func (s *StorageService) usesDatabase(f *model.LogFile) bool {
 	return f.Status == "ready"
 }

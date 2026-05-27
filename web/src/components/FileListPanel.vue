@@ -30,6 +30,7 @@
       <div v-if="!fileCount" class="file-empty">暂无文件，请先上传</div>
       <el-tree
         v-else
+        :key="treeKey"
         :data="treeData"
         node-key="id"
         default-expand-all
@@ -48,7 +49,7 @@
           </div>
           <div
             v-else
-            :class="['file-item', 'tree-file-node', { active: isSelected(data.id), 'has-order': !!fileSelectOrderNum(data.id) }]"
+            :class="['file-item', 'tree-file-node', { active: isSelected(data.id) }]"
             @click="toggleSelect(data.file)"
           >
             <span v-if="fileSelectOrderNum(data.id)" class="file-order">{{ fileSelectOrderNum(data.id) }}</span>
@@ -62,18 +63,8 @@
                   </span>
                 </div>
               </div>
-              <el-progress
-                v-if="isProcessing(data.file.status)"
-                :percentage="data.file.progress || 0"
-                :stroke-width="3"
-                :show-text="false"
-                class="file-progress"
-              />
             </div>
             <div class="file-item-side" @click.stop>
-              <el-tag size="small" :type="statusType(data.file.status)" effect="plain" class="file-status">
-                {{ statusLabel(data.file.status) }}
-              </el-tag>
               <el-dropdown trigger="click" placement="bottom-end" @command="(cmd) => onMenuCommand(cmd, data.file)">
                 <button type="button" class="file-more-btn" aria-label="更多操作">
                   <el-icon><MoreFilled /></el-icon>
@@ -106,13 +97,16 @@ import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Folder, MoreFilled } from '@element-plus/icons-vue'
 import { api } from '../api'
-import { canIngest, isProcessing, statusLabel, statusType } from '../utils/fileStatus'
+import { canIngest, isProcessing } from '../utils/fileStatus'
 import { buildFileTree, collectTreeSelectableIds } from '../utils/fileTree'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
   selectedIds: { type: Array, default: () => [] },
+  listVersion: { type: Number, default: 0 },
 })
+
+const treeKey = computed(() => `tree-${props.listVersion}-${props.items.length}`)
 
 function isFileItem(item) {
   return item?.entry_type !== 'folder'
@@ -241,7 +235,9 @@ async function removeOne(id) {
     return
   }
   try {
-    await api.deleteFile(id)
+    const { data } = await api.deleteFile(id)
+    if (!data?.success) throw new Error(data?.error || '删除失败')
+    setSelection(props.selectedIds.filter((x) => x !== id))
     emit('removed', [id])
     ElMessage.success('已删除')
   } catch (e) {
@@ -264,9 +260,10 @@ async function batchRemove() {
   batchDeleting.value = true
   try {
     const { data } = await api.batchDelete(ids)
-    if (!data.success) throw new Error(data.error)
+    if (!data?.success) throw new Error(data?.error || '删除失败')
+    setSelection([])
     emit('removed', ids)
-    ElMessage.success(`已删除 ${ids.length} 项`)
+    ElMessage.success(data.message || `已删除 ${ids.length} 项`)
   } catch (e) {
     ElMessage.error(e.response?.data?.error || e.message)
   } finally {
@@ -436,15 +433,12 @@ async function doIngest(f) {
   border-color: var(--app-accent);
 }
 
-.file-item.has-order .file-item-body {
-  padding-top: 10px;
-}
-
 .file-order {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  z-index: 1;
+  top: 2px;
+  left: 2px;
+  z-index: 2;
+  pointer-events: none;
   width: 13px;
   height: 13px;
   border-radius: 3px;
@@ -500,22 +494,11 @@ async function doIngest(f) {
   white-space: nowrap;
 }
 
-.file-progress {
-  margin-top: 4px;
-}
-
 .file-item-side {
   flex-shrink: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
   padding-top: 1px;
-}
-
-.file-status {
-  transform: scale(0.92);
-  transform-origin: top right;
 }
 
 .file-more-btn {

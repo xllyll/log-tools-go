@@ -10,7 +10,7 @@
     </el-form>
 
     <el-alert type="info" :closable="false" show-icon class="tip">
-      Jira 连接信息由服务端配置，此处只需填写 Issue Key。
+      Jira 连接信息由服务端配置，此处只需填写 Issue Key。选中 .zip / .7z / .rar 压缩包时会自动解压并导入其中的 .log / .txt / .json。
     </el-alert>
 
     <el-empty v-if="!files.length && !loading" description="输入 Issue Key 后拉取日志附件" />

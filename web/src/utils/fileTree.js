@@ -92,6 +92,24 @@ export function collectTreeSelectableIds(nodes, isViewable) {
   return ids
 }
 
+/** 删除文件夹时一并剔除其所有子项（与后端级联删除一致，用于列表即时刷新）。 */
+export function expandRemovedItemIds(items, deletedIds) {
+  const removed = new Set(deletedIds || [])
+  if (!removed.size) return removed
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const item of items || []) {
+      if (!item?.id || removed.has(item.id)) continue
+      if (item.parent_id && removed.has(item.parent_id)) {
+        removed.add(item.id)
+        changed = true
+      }
+    }
+  }
+  return removed
+}
+
 /** Keep only log file ids (exclude folders) for preview/query. */
 export function filterLogFileIds(selectedIds, items) {
   const fileIds = new Set((items || []).filter((i) => i.entry_type !== 'folder').map((i) => i.id))
