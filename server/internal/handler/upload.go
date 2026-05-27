@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -18,6 +19,23 @@ type UploadHandler struct {
 
 func NewUploadHandler(storage *service.StorageService) *UploadHandler {
 	return &UploadHandler{storage: storage}
+}
+
+func dedupeDeleteRoots(ids []string) []string {
+	seen := make(map[string]struct{}, len(ids))
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
 }
 
 func (h *UploadHandler) Upload(c *gin.Context) {
@@ -141,10 +159,28 @@ func (h *UploadHandler) BatchDelete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Success: false, Error: err.Error()})
 		return
 	}
-	for _, id := range req.IDs {
-		_ = h.storage.DeleteFile(c.Request.Context(), deviceID, id)
+	ids := dedupeDeleteRoots(req.IDs)
+	var failed int
+	var lastErr string
+	for _, id := range ids {
+		if err := h.storage.DeleteFile(c.Request.Context(), deviceID, id); err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				continue
+			}
+			failed++
+			lastErr = err.Error()
+			log.Printf("[delete] batch item %s: %v", id, err)
+		}
 	}
-	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: "batch deleted"})
+	if failed > 0 && failed == len(ids) {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Success: false, Error: lastErr})
+		return
+	}
+	msg := "batch deleted"
+	if failed > 0 {
+		msg = fmt.Sprintf("partial delete: %d failed", failed)
+	}
+	c.JSON(http.StatusOK, model.APIResponse{Success: true, Message: msg})
 }
 
 func (h *UploadHandler) IngestFile(c *gin.Context) {

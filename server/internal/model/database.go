@@ -159,15 +159,13 @@ WHERE (parent_id IS NULL OR parent_id = '') AND parent_folder_id IS NOT NULL AND
 		_, _ = d.pool.Exec(ctx, `ALTER TABLE log_files DROP COLUMN IF EXISTS parent_folder_id`)
 	}
 
+	// 始终重建自引用外键，确保 ON DELETE CASCADE（旧库可能仍是 NO ACTION 导致删文件夹失败）
 	_, _ = d.pool.Exec(ctx, `ALTER TABLE log_files DROP CONSTRAINT IF EXISTS log_files_parent_id_fkey`)
 	_, err := d.pool.Exec(ctx, `
 ALTER TABLE log_files
 ADD CONSTRAINT log_files_parent_id_fkey
 FOREIGN KEY (parent_id) REFERENCES log_files(id) ON DELETE CASCADE`)
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		return err
-	}
-	return nil
+	return err
 }
 
 const logFileSelectCols = `id, device_id, COALESCE(entry_type,'file'), name, COALESCE(original_name,''), COALESCE(file_format,''),
@@ -442,6 +440,81 @@ FROM log_files WHERE id=$1 AND device_id=$2 AND entry_type='file'`, fileID, devi
 
 func (d *Database) DeleteLogFile(ctx context.Context, deviceID, fileID string) error {
 	tag, err := d.pool.Exec(ctx, `DELETE FROM log_files WHERE id=$1 AND device_id=$2`, fileID, deviceID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("file not found")
+	}
+	return nil
+}
+
+// ListSubtreeFiles returns all file entries (not folders) under rootID (inclusive if root is file).
+func (d *Database) ListSubtreeFiles(ctx context.Context, deviceID, rootID string) ([]LogFile, error) {
+	rows, err := d.pool.Query(ctx, `
+WITH RECURSIVE subtree AS (
+  SELECT id, entry_type FROM log_files WHERE id = $1 AND device_id = $2
+  UNION ALL
+  SELECT f.id, f.entry_type FROM log_files f
+  INNER JOIN subtree s ON f.parent_id = s.id
+  WHERE f.device_id = $2
+)
+SELECT `+logFileSelectCols+`
+FROM log_files
+WHERE device_id = $2 AND entry_type = 'file' AND id IN (SELECT id FROM subtree)`, rootID, deviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var files []LogFile
+	for rows.Next() {
+		f, err := scanLogFile(rows)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, f)
+	}
+	return files, rows.Err()
+}
+
+// DeleteLogItemSubtree deletes a file/folder and all descendants (application-level,不依赖外键级联).
+func (d *Database) DeleteLogItemSubtree(ctx context.Context, deviceID, rootID string) error {
+	var n int
+	err := d.pool.QueryRow(ctx, `SELECT COUNT(*) FROM log_files WHERE id=$1 AND device_id=$2`, rootID, deviceID).Scan(&n)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("file not found")
+	}
+	return d.deleteSubtreeRecursive(ctx, deviceID, rootID)
+}
+
+func (d *Database) deleteSubtreeRecursive(ctx context.Context, deviceID, id string) error {
+	rows, err := d.pool.Query(ctx, `
+SELECT id FROM log_files WHERE parent_id = $1 AND device_id = $2`, id, deviceID)
+	if err != nil {
+		return err
+	}
+	var childIDs []string
+	for rows.Next() {
+		var cid string
+		if err := rows.Scan(&cid); err != nil {
+			rows.Close()
+			return err
+		}
+		childIDs = append(childIDs, cid)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, cid := range childIDs {
+		if err := d.deleteSubtreeRecursive(ctx, deviceID, cid); err != nil {
+			return err
+		}
+	}
+	tag, err := d.pool.Exec(ctx, `DELETE FROM log_files WHERE id=$1 AND device_id=$2`, id, deviceID)
 	if err != nil {
 		return err
 	}

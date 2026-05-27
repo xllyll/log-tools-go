@@ -272,13 +272,18 @@ func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string
 	if err != nil {
 		return err
 	}
-	if err := s.db.DeleteLogFile(ctx, deviceID, fileID); err != nil {
+	files, err := s.db.ListSubtreeFiles(ctx, deviceID, fileID)
+	if err != nil {
 		return err
 	}
-	if item.IsFile() {
-		s.removePhysicalSources(item)
+	for i := range files {
+		s.removePhysicalSources(&files[i])
 	}
-	log.Printf("[delete] %s=%s name=%s device=%s", item.EntryType, fileID, item.Name, deviceID)
+	if err := s.db.DeleteLogItemSubtree(ctx, deviceID, fileID); err != nil {
+		return err
+	}
+	log.Printf("[delete] %s=%s name=%s device=%s descendants_files=%d",
+		item.EntryType, fileID, item.Name, deviceID, len(files))
 	return nil
 }
 

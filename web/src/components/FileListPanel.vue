@@ -40,19 +40,18 @@
         <template #default="{ data }">
           <div
             v-if="data.type === 'folder'"
-            :class="['tree-folder-node', 'tree-selectable', { active: isSelected(data.folderId), 'has-order': !!selectOrder(data.folderId) }]"
+            :class="['tree-folder-node', 'tree-selectable', { active: isSelected(data.folderId) }]"
             @click="toggleSelectFolder(data)"
           >
-            <span v-if="selectOrder(data.folderId)" class="file-order">{{ selectOrder(data.folderId) }}</span>
             <el-icon class="tree-folder-icon"><Folder /></el-icon>
             <span class="tree-folder-label">{{ data.label }}</span>
           </div>
           <div
             v-else
-            :class="['file-item', 'tree-file-node', { active: isSelected(data.id), 'has-order': !!selectOrder(data.id) }]"
+            :class="['file-item', 'tree-file-node', { active: isSelected(data.id), 'has-order': !!fileSelectOrderNum(data.id) }]"
             @click="toggleSelect(data.file)"
           >
-            <span v-if="selectOrder(data.id)" class="file-order">{{ selectOrder(data.id) }}</span>
+            <span v-if="fileSelectOrderNum(data.id)" class="file-order">{{ fileSelectOrderNum(data.id) }}</span>
             <div class="file-item-body">
               <div class="file-row">
                 <el-icon class="file-icon"><Document /></el-icon>
@@ -146,9 +145,21 @@ function isSelected(id) {
   return props.selectedIds.includes(id)
 }
 
-function selectOrder(id) {
-  const i = props.selectedIds.indexOf(id)
-  return i >= 0 ? i + 1 : 0
+const fileIdSet = computed(() => new Set(fileEntries.value.map((f) => f.id)))
+
+const fileSelectOrder = computed(() => {
+  const order = new Map()
+  let n = 0
+  for (const id of props.selectedIds) {
+    if (!fileIdSet.value.has(id)) continue
+    n += 1
+    order.set(id, n)
+  }
+  return order
+})
+
+function fileSelectOrderNum(id) {
+  return fileSelectOrder.value.get(id) || 0
 }
 
 function formatSize(bytes) {
@@ -386,10 +397,6 @@ async function doIngest(f) {
 .tree-folder-node.active {
   background: var(--app-accent-soft);
   border-color: var(--app-accent);
-}
-
-.tree-folder-node.has-order {
-  padding-top: 10px;
 }
 
 .tree-folder-icon {
