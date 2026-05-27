@@ -154,10 +154,7 @@
 
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
-      <el-button @click="handleSaveLocal">保存到本地</el-button>
-      <el-button :loading="uploadingServer" @click="handleUploadServer">上传服务器</el-button>
-      <el-button :loading="syncing" @click="handleSyncFromServer">同步到服务器</el-button>
-      <el-button type="primary" @click="handleConfirm">确定</el-button>
+      <el-button type="primary" :loading="confirming" @click="handleConfirm">确定</el-button>
     </template>
 
     <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="onFileImport" />
@@ -195,8 +192,7 @@ const visible = computed({
 const draft = ref(cloneSceneConfig(props.config))
 const selectedModuleIndex = ref(null)
 const selectedSceneIndex = ref(null)
-const syncing = ref(false)
-const uploadingServer = ref(false)
+const confirming = ref(false)
 const fileInput = ref(null)
 const libraryVisible = ref(false)
 const libraryRef = ref(null)
@@ -384,62 +380,20 @@ function applyConfig() {
   return cfg
 }
 
-function handleConfirm() {
-  if (!applyConfig()) return
-  visible.value = false
-  ElMessage.success('场景配置已应用')
-}
-
-function handleSaveLocal() {
+async function handleConfirm() {
   const cfg = applyConfig()
   if (!cfg) return
-  saveLocalScene(cfg)
-  ElMessage.success('已保存到本地')
-}
-
-async function handleUploadServer() {
-  if (!validate()) return
-  const cfg = cloneSceneConfig(draft.value)
+  confirming.value = true
   try {
-    await ElMessageBox.confirm(
-      '将当前编辑的场景配置上传到服务器，所有用户均可通过「同步到服务器」获取。是否继续？',
-      '上传服务器',
-      { type: 'info', confirmButtonText: '上传', cancelButtonText: '取消' },
-    )
-  } catch {
-    return
-  }
-  uploadingServer.value = true
-  try {
+    saveLocalScene(cfg)
     const { data } = await api.uploadSharedScene(cfg)
     if (!data.success) throw new Error(data.error)
-    ElMessage.success('已上传到服务器（全局共享）')
+    //visible.value = false
+    ElMessage.success('已保存到本地并上传服务器')
   } catch (e) {
-    if (e !== 'cancel' && e !== 'close') {
-      ElMessage.error(e.response?.data?.error || e.message || '上传失败')
-    }
+    ElMessage.error(e.response?.data?.error || e.message || '保存失败')
   } finally {
-    uploadingServer.value = false
-  }
-}
-
-async function handleSyncFromServer() {
-  syncing.value = true
-  try {
-    const { data } = await api.fetchSharedScene()
-    if (!data.success) throw new Error(data.error)
-    const remote = data.data?.config
-    if (!remote?.modules) throw new Error('服务器配置格式无效')
-    draft.value = cloneSceneConfig(remote)
-    const cfg = applyConfig()
-    if (!cfg) return
-    saveLocalScene(cfg)
-    resetSelection()
-    ElMessage.success('已从服务器同步，并覆盖当前配置')
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || e.message || '同步失败')
-  } finally {
-    syncing.value = false
+    confirming.value = false
   }
 }
 

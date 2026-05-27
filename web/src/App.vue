@@ -235,9 +235,11 @@ import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
 import {
   buildSceneSelectTree,
+  cloneSceneConfig,
   collectSceneKeywords,
   decorateEntries,
-  loadLocalScene,
+  defaultSceneConfig,
+  saveLocalScene,
   sceneDescStyle,
 } from './utils/scene'
 import { levelColor } from './utils/logLevel'
@@ -267,7 +269,7 @@ const parseTasks = ref([])
 const parseLogs = ref([])
 let pollTimer = null
 
-const sceneConfig = ref(loadLocalScene())
+const sceneConfig = ref(defaultSceneConfig())
 const sceneDialogVisible = ref(false)
 const jiraDialogVisible = ref(false)
 const selectedSceneKeys = ref([])
@@ -585,7 +587,23 @@ async function onJiraImported() {
   await loadFiles()
 }
 
+async function initSceneConfig() {
+  try {
+    const { data } = await api.fetchSharedScene()
+    if (data?.success && data.data?.config?.modules?.length) {
+      sceneConfig.value = cloneSceneConfig(data.data.config)
+      saveLocalScene(sceneConfig.value)
+      return
+    }
+  } catch {
+    /* 无服务器配置时使用默认 */
+  }
+  sceneConfig.value = defaultSceneConfig()
+  saveLocalScene(sceneConfig.value)
+}
+
 onMounted(async () => {
+  await initSceneConfig()
   await loadFiles()
   if (logFiles.value.some((f) => isProcessing(f.status))) startPolling()
 })
