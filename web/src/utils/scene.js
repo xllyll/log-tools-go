@@ -73,7 +73,18 @@ export function cloneSceneConfig(config) {
   return JSON.parse(JSON.stringify(config || defaultSceneConfig()))
 }
 
-/** 将场景库配置合并到本地（按模块名、场景名去重） */
+function mergeSceneKeywords(targetScene, incomingScene) {
+  if (!incomingScene?.keywords?.length) return
+  if (!targetScene.keywords) targetScene.keywords = []
+  const seen = new Set(targetScene.keywords.map((k) => k.keyword).filter(Boolean))
+  for (const kw of incomingScene.keywords) {
+    if (!kw?.keyword || seen.has(kw.keyword)) continue
+    targetScene.keywords.push(JSON.parse(JSON.stringify(kw)))
+    seen.add(kw.keyword)
+  }
+}
+
+/** 将远程配置合并到本地：同模块/场景名则追加关键词，否则新增模块或场景 */
 export function mergeSceneConfig(local, remote) {
   const out = cloneSceneConfig(local?.modules?.length ? local : defaultSceneConfig())
   if (!remote?.modules?.length) return out
@@ -85,9 +96,12 @@ export function mergeSceneConfig(local, remote) {
     }
     if (!targetMod.scenes) targetMod.scenes = []
     for (const scene of mod.scenes || []) {
-      if (!targetMod.scenes.some((s) => s.name === scene.name)) {
+      const existing = targetMod.scenes.find((s) => s.name === scene.name)
+      if (!existing) {
         targetMod.scenes.push(JSON.parse(JSON.stringify(scene)))
+        continue
       }
+      mergeSceneKeywords(existing, scene)
     }
   }
   return out

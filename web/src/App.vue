@@ -142,7 +142,9 @@
           <LogToolbar
             :file-ids="selectedLogFileIds"
             :files="logFiles"
-            :log-count="displayLogCount"
+            :rows="displayLogs"
+            :matched-total="logMatchedTotal"
+            :truncated="logResultTruncated"
             :loading="loadingLogs"
             v-model:sort-mode="logFileSortMode"
             @refresh="searchLogs"
@@ -305,7 +307,8 @@ const displayLogs = computed(() => {
   return out
 })
 
-const displayLogCount = computed(() => displayLogs.value.filter((r) => !r._fileHeader).length)
+const logMatchedTotal = ref(0)
+const logResultTruncated = ref(false)
 
 async function afterFilesRemoved(ids) {
   const removed = expandRemovedItemIds(fileItems.value, ids)
@@ -314,6 +317,8 @@ async function afterFilesRemoved(ids) {
   selectedFileIds.value = selectedFileIds.value.filter((x) => !removed.has(x))
   if (!selectedLogFileIds.value.length) {
     logs.value = []
+    logMatchedTotal.value = 0
+    logResultTruncated.value = false
   } else {
     scheduleSearchLogs()
   }
@@ -335,6 +340,8 @@ function onFileSelectChange(ids) {
     scheduleSearchLogs()
   } else {
     logs.value = []
+    logMatchedTotal.value = 0
+    logResultTruncated.value = false
   }
 }
 
@@ -461,6 +468,8 @@ async function searchLogs() {
   const seq = ++searchSeq
   loadingLogs.value = true
   logs.value = []
+  logMatchedTotal.value = 0
+  logResultTruncated.value = false
   try {
     const kws = searchKeywords.value.split('\n').map((s) => s.trim()).filter(Boolean)
     const { keywords: sceneKw, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
@@ -482,10 +491,13 @@ async function searchLogs() {
 
     const merged = []
     let truncated = false
+    let matchedTotal = 0
     for (let i = 0; i < order.length; i++) {
       const id = order[i]
       const { data } = responses[i]
       if (!data.success) throw new Error(data.error)
+      const batch = decorateEntries(data.data?.entries || [], meta)
+      matchedTotal += batch.length
       const f = fileMap.get(id)
       merged.push({
         _fileHeader: true,
@@ -493,7 +505,6 @@ async function searchLogs() {
         file_id: id,
         file_name: f ? displayFileName(f) : id,
       })
-      const batch = decorateEntries(data.data?.entries || [], meta)
       const room = MAX_LOG_ROWS - merged.length
       if (batch.length >= room) {
         merged.push(...batch.slice(0, room))
@@ -507,6 +518,8 @@ async function searchLogs() {
     await nextTick()
     if (seq !== searchSeq) return
     logs.value = merged
+    logMatchedTotal.value = matchedTotal
+    logResultTruncated.value = truncated
     if (truncated) {
       ElMessage.warning(`已选 ${order.length} 个文件，仅展示前 ${MAX_LOG_ROWS} 行，请加关键词缩小范围`)
     }

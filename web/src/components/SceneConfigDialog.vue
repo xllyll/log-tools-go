@@ -173,6 +173,7 @@ import {
   cloneSceneConfig,
   defaultSceneConfig,
   emptyKeyword,
+  mergeSceneConfig,
   saveLocalScene,
   sceneDescStyle,
 } from '../utils/scene'
@@ -401,18 +402,24 @@ function importJson() {
   fileInput.value?.click()
 }
 
+function parseImportedSceneConfig(raw) {
+  const data = typeof raw === 'string' ? JSON.parse(raw) : raw
+  if (data?.modules?.length) return data
+  throw new Error('invalid')
+}
+
 function onFileImport(e) {
   const file = e.target.files?.[0]
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
     try {
-      draft.value = JSON.parse(reader.result)
-      if (!draft.value.modules) throw new Error('invalid')
+      const incoming = parseImportedSceneConfig(reader.result)
+      draft.value = mergeSceneConfig(draft.value, incoming)
       resetSelection()
-      ElMessage.success('导入成功')
+      ElMessage.success('已合并到当前配置（未覆盖已有模块/场景）')
     } catch {
-      ElMessage.error('JSON 格式无效')
+      ElMessage.error('JSON 格式无效，需包含 modules 字段')
     }
     e.target.value = ''
   }

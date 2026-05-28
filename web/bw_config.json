@@ -1,0 +1,1941 @@
+{
+  "modules": [
+    {
+      "name": "hicar",
+      "scenes": [
+        {
+          "name": "手机连接失败",
+          "keywords": [
+            {
+              "keyword": ":On device found",
+              "desc": "【I:蓝牙扫描】nearby发现设备",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "Bth-gatt-GattService: onScanResultInternal()",
+              "desc": "【I:蓝牙扫描】扫描到BLE广播",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "nearby report callback onAppear",
+              "desc": "【I:蓝牙扫描】上报发现设备给nearby",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "nearby  : NearbyProviderSocketListener:onConnectRequest",
+              "desc": "【I:nearby连接流程】收到车机回连请求",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "nearby  : NearbyService:usb attached",
+              "desc": "【I:有线连接】收到USB插入消息",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "nearby  : DetectProtocolParse:setMagicString magicString:hwnearby",
+              "desc": "【I:有线连接】解析车机部分信息",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "nearby  : NearbyService:Send broadcast to settings to cancel usb mtp dialog",
+              "desc": "【I:有线连接】取消原生弹框",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "nearby  : DeviceManager:reportDeviceInfo report deivce information to iConnect",
+              "desc": "【I:有线连接】nearby上报车机USB插入消息给iConnect",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "nearby  : DeviceManager:reportDeviceInfo mScanResult callbackType:106",
+              "desc": "【I:有线连接】iConnect回调USB接入",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "iconnect:IconnectSdkImpl: event:101",
+              "desc": "【I:iconnect流程】发现设备，正在测距",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "iconnect:IconnectSdkImpl: event:102",
+              "desc": "【I:iconnect流程】距离足够，可以开始连接",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "iconnect:IconnectSdkImpl: event:106",
+              "desc": "【I:iconnect流程】收到有线连接事件",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "iconnectDialog:DeviceDialogViewBuilder: begin to create DialogView",
+              "desc": "【I:iconnect流程】弹出发现弹窗",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "iconnectDialog:DeviceDialogViewBuilder: user click click_button,button text is :",
+              "desc": "【I:iconnect流程】用户点击【连接】\\【取消】按钮",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": ",connectType:2,",
+              "desc": "【I:连接类型】蓝牙连接",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": ",connectType:6,",
+              "desc": "【I:连接类型】有线连接",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "phone discover car",
+              "desc": "【I:连接类型】正向连接",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "CarConnectService onBind,car connect phone",
+              "desc": "【I:连接类型】回连",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "DeepLinkDiscoverDialog onCreate",
+              "desc": "【I:连接类型】扫码连接",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "ConnectionManager -connect::new device:",
+              "desc": "【I:连接类型】首次连接",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "ConnectionManager -connect::trust peer device:",
+              "desc": "【I:连接类型】非首次连接",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "NearbyConnectControl auto connect switch",
+              "desc": "【I:连接类型】设备是否自动连接",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "nearby  : NearbyServiceJar:createInstance start null",
+              "desc": "【I:nearby流程】nearby初始化",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect::openNearbySocket channelType:2",
+              "desc": "【I:nearby流程】nearby发起Rfcomm蓝牙连接",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect::openNearbySocket channelType:6",
+              "desc": "【I:nearby流程】nearby发起有线连接",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "nearby  : NearbyServiceJar:client onServiceConnected  || service android.os.BinderProxy",
+              "desc": "【I:nearby流程】HiCar绑定nearby服务",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "nearby  : NearbyServiceJar:client onAuthServiceConnected  || service android.os.BinderProxy",
+              "desc": "【I:nearby流程】HiCar绑定nearby认证服务",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "NearbyServiceJar:openNearbySocket with channel",
+              "desc": "【I:nearby流程】打开nearby socket通道",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "NearbyController:openNearbySocket: businessType:InstantMessage channel:2 id:19",
+              "desc": "【I:nearby流程】HiCar连接nearby socket",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "NearbyController:openNearbySocket: businessType:Data channel:3 id:20",
+              "desc": "【I:nearby流程】dmsdp连接nearby socket",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "nearby  : BcApi.Receiver:onReceive: android.bluetooth.device.action.ACL_CONNECTED",
+              "desc": "【I:nearby蓝牙连接】收到蓝牙连接上广播",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect:on Create Success.",
+              "desc": "【I:nearby流程】nearby socket建立成功",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "nearby  : BcApi:connect socket ERROR:",
+              "desc": "【E:nearby蓝牙连接】蓝牙socket连接异常",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect::nearby server is died",
+              "desc": "【E:nearby流程】nearby binder异常",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "NearbyConnectControl  onConnectRequest get socket error!",
+              "desc": "【E:nearby流程】nearby socket创建异常",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "NearbyConnectControl  create connect fail, nearbySocket is null",
+              "desc": "【E:nearby流程】nearby创建连接失败，socket为空",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "NearbyConnectControl  create connect fail, code:",
+              "desc": "【E:nearby流程】nearby连接失败",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect:onConnectRequest device is reject",
+              "desc": "【E:nearby流程】nearby连接被对端拒绝",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "NearbyConnectControl retry times:",
+              "desc": "【E:nearby流程】nearby连接重试次数，>3次则连接失败",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "BluetoothSocket: Connect refused",
+              "desc": "【E:nearby蓝牙连接】蓝牙被限制连接，短时间内连续多次发起连接会出现",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect::socket disconnect",
+              "desc": "【W:nearby流程】nearby socket断连（正常连接成功也会有此打印）",
+              "mode": "word",
+              "color": "#d97706"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 4000",
+              "desc": "【E:nearby蓝牙连接错误码】ERROR_CLIENT_CONNECT_FAILED 蓝牙连接失败",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 4001",
+              "desc": "【E:nearby蓝牙连接错误码】ERROR_MESSAGE_NOT_SUPPORTED 不支持",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 4002",
+              "desc": "【E:nearby蓝牙连接错误码】ERROR_MESSAGE_SAME_BID_BTAG 重复下发同一连接事件",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 4003",
+              "desc": "【E:nearby蓝牙连接错误码】ERROR_MESSAGE_OPEN_NEARBY_SOCKET_TIMEOUT 蓝牙连接超时（可能车机侧无响应）",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 4004",
+              "desc": "【E:nearby蓝牙连接错误码】ERROR_MESSAGE_REMOTE_REJECTED 对端拒绝，需车机侧分析",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2000",
+              "desc": "【E:nearby错误码】ERROR_NOT_SUPPORTED 不支持",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2001",
+              "desc": "【E:nearby错误码】ERROR_CONTROL_CHANNEL_CONNECT_FAILED 控制通道连接失败",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2002",
+              "desc": "【E:nearby错误码】ERROR_CONTROL_CHANNEL_DATA_EXCEPTION 控制通道数据异常",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2003",
+              "desc": "【E:nearby错误码】ERROR_NO_AVAILABLE_DATA_CHANNEL 无可用数据通道",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2004",
+              "desc": "【E:nearby错误码】ERROR_DEVICE_CONNECT_FAILED 连接失败（可能车机侧状态机不对）",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2005",
+              "desc": "【E:nearby错误码】ERROR_DATA_SEND_FAILED 发送数据失败",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2006",
+              "desc": "【E:nearby错误码】ERROR_REJECT 被对端拒绝，请车机侧msdp优先分析",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2007",
+              "desc": "【E:nearby错误码】ERROR_SAME_BID_BTAG 重复下发同一连接事件，请手机侧msdp优先分析",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2008",
+              "desc": "【E:nearby错误码】ERROR_TIMEOUT 连接超时（可能死在BR通道协商阶段，或者p2p连接阶段）",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2009",
+              "desc": "【E:nearby错误码】ERROR_PEER_DEVICE_BUSY 对端设备繁忙（可能通道被占用或车机侧状态机不对）",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:errorCode = 2010",
+              "desc": "【E:nearby错误码】ERROR_LOCAL_DEVICE_BUSY 本端设备繁忙（可能通道被占用或手机侧状态机不对）",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:IdleState-CMD_CONNECT_DEVICE",
+              "desc": "【I:有线连接】开始连接",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:set usb function: ncm",
+              "desc": "【I:有线连接】设置ncm网卡",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:interfaceLinkStateChanged: ncm0, isUp is: ",
+              "desc": "【I:有线连接】ncm0网卡：true:已启用 false:未启用",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:start DHCP server",
+              "desc": "【I:有线连接】开启DHCP服务",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:addressUpdated: ncm0, ip is:*.*.*.*",
+              "desc": "【I:有线连接】ncm网卡IP地址更新",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:start NSD discover service",
+              "desc": "【I:有线连接】启动NSD服务",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:Nsd resolved, name is com.huawei.nearby.usb.nsd",
+              "desc": "【I:有线连接】发现目标NSD服务",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:DhcpUpState-CMD_START_SOCKET_CLIENT",
+              "desc": "【I:有线连接】开始连接客户端socket",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:DhcpUpState-CMD_CLIENT_SOCKET_CONNECTED",
+              "desc": "【I:有线连接】客户端socket已连接",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:socket connect fail",
+              "desc": "【E:有线连接】有线连接失败",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "ConnectionManager connectDevice show pin dialog",
+              "desc": "【I:HiCar连接流程】弹出PIN码弹窗",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "DeviceDialogViewBuilder -connect:user click dialog",
+              "desc": "【I:HiCar连接流程】用户点击了【left_button_text】(取消)\\【right_button_text】(确认)按钮",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "CarConnectAuthHandler handleMessage: msg.what=4",
+              "desc": "【I:HiChain认证】开始认证",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "CarAuthenManager -connect:bindController is ret: 80000006",
+              "desc": "【I:HiChain认证】HiChain绑定设备",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect:send data size:",
+              "desc": "【I:HiChain认证】发送数据到车机",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "NearbyConnectControl -connect:receive data size:",
+              "desc": "【I:HiChain认证】接收车机数据",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "ConnectionManager -connect:: auth success",
+              "desc": "【I:HiChain认证】认证成功",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "ConnectionManager show connecting dialog",
+              "desc": "【I:HiCar连接流程】显示连接中弹窗",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "HwDeviceAuth: HichainDevAuthTask:invoke onTaskHalted with ReturnCode = ",
+              "desc": "【W:HiChain认证】认证失败，后面会接错误码。接0表示成功",
+              "mode": "word",
+              "color": "#d97706"
+            },
+            {
+              "keyword": "HwDeviceAuth: HichainDevAuthTask:invoke onTaskHalted with ReturnCode = 0x00000001",
+              "desc": "【E:HiChain认证】操作失败/不通过",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "CarAuthenManager -connect:onOperationFinished operationCode:BIND,result:",
+              "desc": "【W:HiChain认证】认证失败，后面会接错误码。接0表示成功",
+              "mode": "word",
+              "color": "#ea580c"
+            },
+            {
+              "keyword": "CarAuthenManager -connect:onOperationFinished operationCode:BIND,result:f000005",
+              "desc": "【E:HiChain认证】未知消息",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "CarAuthenManager -connect:onOperationFinished operationCode:BIND,result:f000011",
+              "desc": "【E:HiChain认证】PAKE验证KCFData失败（一般是PIN码不一致造成）",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "ConnectionManager -connect::auth fail,is discovery:",
+              "desc": "【E:HiChain认证】认证失败",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "ConnectionManager  auth fail count >= 3",
+              "desc": "【E:HiChain认证】认证失败次数>=3次",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "ConnectionManager  auth result param is null",
+              "desc": "【E:HiChain认证】认证结果参数为空",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "ConnectionManager -connect::connect timeout!!! oper:car authentication connect",
+              "desc": "【E:HiChain认证】认证通道连接超时",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "ConnectionManager -connect::connect timeout!!! oper:car authentication data",
+              "desc": "【E:HiChain认证】认证数据获取超时",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "DMSDPSDK: DMSDPServiceJar:connectDevice start.",
+              "desc": "【I:dmsdp连接流程】dmsdp服务启动",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "DmsdpConnectControl -connect::connect dmsdp device:true",
+              "desc": "【I:dmsdp连接流程】dmsdp服务启动成功",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "DmsdpConnectControl -connect::connect dmsdp device:false",
+              "desc": "【E:dmsdp异常】dmsdp服务启动失败",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "NearbyChannelMsgHandler:handle open nearby socket with p2p channel",
+              "desc": "【I:dmsdp连接流程】dmsdp打开WIFI P2P socket",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "NearbyChannelMsgHandler:create p2p nearby socket success",
+              "desc": "【I:dmsdp连接流程】dmsdp打开WIFI P2P socket成功",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "NearbyChannelMsgHandler:handle open nearby socket with usb channel",
+              "desc": "【I:dmsdp连接流程】dmsdp打开USB socket",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "NearbyChannelMsgHandler:create usb nearby socket success",
+              "desc": "【I:dmsdp连接流程】dmsdp打开USB socket成功",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "DmsdpConnectControl -connect::create device high speed channel success",
+              "desc": "【I:dmsdp连接流程】dmsdp建立高速通道成功",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "nearby  : WIFIUnit:current AP state is: 11",
+              "desc": "【I:热点状态】热点未开启",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "nearby  : WIFIUnit:waitingForWifiApOpened timeout",
+              "desc": "【E:热点状态】等待热点打开超时",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:control channel(2), start negotiation.",
+              "desc": "【I:P2P连接】开始协商AP信道",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:send command CMD_DATA_CHANNEL_NEGOTIATION_RESULT success",
+              "desc": "【I:P2P连接】协商AP信道成功",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "nearby  : P2pChannelSM:EnabledState-CMD_GET_GC_MAC_REQ",
+              "desc": "【I:P2P连接】获取车机GC MAC用于校验",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "nearby  : P2pChannelSM:NegotiatingState-CMD_RECEIVE_GC_INFO",
+              "desc": "【I:P2P连接】获取车机GC信息用于校验",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "nearby  : WifiApi:mIsP2pConnected: false",
+              "desc": "【I:P2P连接】本端P2P未连接",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "wpa_supplicant: P2P: Using random MAC address",
+              "desc": "【I:P2P连接】使用随机MAC连接P2P，后面会接手机WIFI MAC。出现此日志表示已连接上P2P",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "nearby  : P2pChannelSM:onReceive: android.net.wifi.p2p.CONNECT_STATE_CHANGE",
+              "desc": "【I:P2P连接】P2P连接成功",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "nearby  : WifiApi:mIsP2pConnected: true",
+              "desc": "【I:P2P连接】本端P2P已连接",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "nearby  : P2pChannelSM:NegotiatingState-CMD_P2P_NETWORK_CONNECTED",
+              "desc": "【I:P2P连接】上报P2P已连接",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "nearby  : P2pChannelSM:NegotiatingState-CMD_CLIENT_SOCKET_CONNECTED",
+              "desc": "【I:P2P连接】socket连接",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "ResourceManager:state: IDLE_STATE, event: CMD_OPEN_NEARBY_SOCKET",
+              "desc": "【I:P2P连接】通道状态为空闲，可以连接",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:state: BUILDING_DATA_CHANNEL_STATE, event: CMD_DEVICE_CONNECTED",
+              "desc": "【I:P2P连接】设备已连接上",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "nearby  : ConnectChannelBase:startChannelManagerProtocol",
+              "desc": "【I:P2P连接】开始CCMP协商",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "nearby  : ChannelManagerProtocol:===> send broadcastConnectEvent channelId : 3",
+              "desc": "【I:P2P连接】CCMP协商完成",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:onDataReceived: CMD_SOCKET_CREATE_RESP",
+              "desc": "【I:P2P连接】高速通道创建成功",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:state: DATA_CHANNEL_CONNECTED_STATE, event: CMD_CREATE_DATA_SOCKET_RESP",
+              "desc": "【I:P2P连接】接收到socket通道请求回复",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "nearby  : CreateSocketListenerTransport:Thread send msg.Create socketClient success",
+              "desc": "【I:P2P连接】回调socket创建成功",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "WifiApi:p2pConnect failure",
+              "desc": "【E:P2P连接】P2P连接失败",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "Notifying assoc reject to hidl control: 5201",
+              "desc": "【E:P2P连接】手机未收到auth RSP报文，导致P2P连接超时",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": ", event: CMD_DEVICE_CONNECT_FAILED, device:",
+              "desc": "【E:P2P连接】设备数据通道连接失败",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "No suitable network found",
+              "desc": "【E:P2P连接】找不到合适的网络，可能是车机不支持手机所要协商的信道",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": ", event: CMD_OPEN_NEARBY_SOCKET_TIMEOUT, device:",
+              "desc": "【E:P2P连接】数据通道socket打开超时",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "nearby  : ChannelManagerProtocol:CCMP check time out",
+              "desc": "【E:P2P连接】P2P连接阶段，CCMP校验超时",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:channelInfo is null",
+              "desc": "【E:P2P连接】通道信息为空",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:connect failed. remove listener:",
+              "desc": "【E:P2P连接】通道连接失败，移除监听",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:same bId and btag",
+              "desc": "【E:P2P连接】相同的业务Id或业务",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:channel negotiation failed. result: 2",
+              "desc": "【E:P2P连接】协商失败 对端繁忙",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "nearby  : ResourceManager:rejectRespProcess result: 2",
+              "desc": "【E:P2P连接】对端回复拒绝 对端繁忙",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "nearby  : DCNegotiation:channelSelect result: 2",
+              "desc": "【E:P2P连接】协商结果 繁忙",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "wpa_supplicant: P2P: GO indicated that the P2P Group session is ending",
+              "desc": "【E:P2P连接】P2P断开连接，对端断开",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "CMD_CONNECT_P2P_TIMEOUT",
+              "desc": "【E:P2P连接】P2P连接超时",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "CMD_GO_CREATING_TIMEOUT",
+              "desc": "【E:P2P连接】P2P群组创建超时",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "ConnectionManager -connect::connect timeout!!! oper:car virtualization",
+              "desc": "【E:dmsdp异常】设备虚拟化超时",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "nearby  : BluetoothNearbySocket:internalNearbySocket.close()",
+              "desc": "【I:nearby蓝牙连接】P2P数据通道连接上后，断开蓝牙socket节省开销",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "DMSDP   : AirSharingUtil:initAirSharing...",
+              "desc": "【I:hisight连接流程】dmsdp通知hisight建立投屏",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "DmsdpConnectControl -connect:car service change:4,type:201",
+              "desc": "【I:hisight连接流程】dmsdp连接设备成功，上报该事件给HiCar",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "create VirtualDisplay VirtualDisplay",
+              "desc": "【I:hisight连接流程】hisight建立虚拟屏幕",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "DmsdpConnectControl display service pause",
+              "desc": "【I:hisight连接流程】暂停播放(一次连接流程的首次播放前也会有此打印)",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "DmsdpConnectControl display service resume",
+              "desc": "【I:hisight连接流程】恢复播放(一次连接流程的首次播放前也会有此打印)",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "HiCar:CarService :",
+              "desc": "【I:连接成功】若后面接onBind，则表示连接成功；若后面接onUnbind，则表示断开连接；若连接后立马断连，请转至【异常断连】分析。",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "CarService -connect::start show hicar",
+              "desc": "【I:连接成功】开始加载HiCar页面",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "CarService -connect::hiCar show finish",
+              "desc": "【I:连接成功】HiCar页面显示完成",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "LOGLIMIT: process com.huawei.iconnect drop",
+              "desc": "【I:日志丢失】iconnect日志丢失",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "LOGLIMIT: process com.huawei.hicar drop",
+              "desc": "【I:日志丢失】HiCar日志丢失",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "LOGLIMIT: process com.huawei.nearby drop",
+              "desc": "【I:日志丢失】nearby日志丢失",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "LOGLIMIT: process com.huawei.dmsdp drop",
+              "desc": "【I:日志丢失】dmsdp日志丢失",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "ActivityManager: Process com.huawei.hicar",
+              "desc": "【I:进程被杀】后面接",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "ActivityManager: Killing",
+              "desc": "【I:进程被杀】后面会接进程包名。",
+              "mode": "word",
+              "color": "#0284c7"
+            }
+          ]
+        },
+        {
+          "name": "手机异常断连",
+          "keywords": [
+            {
+              "keyword": "HiCar:CarService :",
+              "desc": "【I:连接成功】若后面接onBind，则表示连接成功；若后面接onUnbind，则表示断开连接；在onBind之后，onUnbind之前，最先断开的模块即为问题模块。注意，一个模块断连会导致其它模块也断连，所以可以检索到很多断连模块，要找到最先断连的模块。",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "WifiBI : sharelinkRemoveGroup:",
+              "desc": "【E:nearby断连】若后面接com.huawei.nearby，则表示nearby主动断开P2P；否则为其它应用主动断开P2P。",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "nearby  : P2pChannelSM:NegotiatingState-CMD_CONNECT_P2P_TIMEOUT",
+              "desc": "【E:nearby断连】上报连接P2P超时",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:interfaceLinkStateChanged: ncm0, isUp is:",
+              "desc": "【I:nearby断连】USB连接状态变更，true:连接上 false:断开",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:disconnectDevice",
+              "desc": "【I:nearby断连】USB断开连接，用户主动断连",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:handleUsbDisconnection",
+              "desc": "【I:nearby断连】USB通道处理断开连接",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "nearby  : UsbNcmChannel:send disconnected event",
+              "desc": "【I:nearby断连】发送USB断开连接事件",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "DMSDP   : NotifyState state=106",
+              "desc": "【E:dmsdp断连】dmsdp异常断连",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "DMSDP   : DoUdpKeepAlive detect loss and receive ka",
+              "desc": "【E:dmsdp断连】保活异常(心跳异常)",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "<F-LOGERR>Keep alive timeout",
+              "desc": "【E:dmsdp断连】保活异常(心跳异常)",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "An error occurred during receive in",
+              "desc": "【E:dmsdp断连】读取错误，一般网络异常时出现",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "Connection reset by peer",
+              "desc": "【E:dmsdp断连】读取错误，一般网络异常时出现",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "DMSDP   : OnNetNotify An error occurred in session",
+              "desc": "【E:dmsdp断连】会话异常",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "DMSDPSDK: DMSDPServiceJar:disconnectDevice start",
+              "desc": "【E:dmsdp断连】开始断开设备",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "DMSDP   : PROXY_Controller:disconnectDevice",
+              "desc": "【E:dmsdp断连】断开设备",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "DMSDP   : VirCameraStatListener:receive device disconnect event",
+              "desc": "【E:dmsdp断连】上报设备断开事件",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "DMSDP   : PROXY_DisplayManager:projection device is already disconnected",
+              "desc": "【E:dmsdp断连】已经断开设备",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "DMSDP   : WifiP2pBroadcastReceiver:p2p disconnect",
+              "desc": "【E:dmsdp断连】收到P2P断开广播",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "DMSDP   : AirSharingUtil:deInitAirSharing…",
+              "desc": "【E:dmsdp断连】注销AirSharing",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "DMSDP   : DataListenerReceiverProxy:binderDied",
+              "desc": "【E:dmsdp断连】binder死亡",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "Too many Binders",
+              "desc": "【W:dmsdp断连】后面接dmsdp进程，同一时间内dmsdp调用了多次binder",
+              "mode": "word",
+              "color": "#f59e0b"
+            },
+            {
+              "keyword": "HiSight-HiSightSession0: [ HiSightSession.java: 1]onChannelErrorSocketChannel",
+              "desc": "【E:hisight断连】socket信道错误",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "HiSight-39969-SM: [ StateMachine.java: 1]handleMessage: what = MSG_DISCONNECT",
+              "desc": "【E:hisight断连】接收到断连消息",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "HiSight-RTSP-Ctl: [ RtspController.java: 1]On peer gone, disconnect flag is true",
+              "desc": "【E:hisight断连】收到对端断开连接消息",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "Hisight-SocketChannel-RTSP: [ TcpConnection.java: 20]ERROR : receive IOException : java.net.SocketException: Socket closed",
+              "desc": "【E:hisight断连】socket异常关闭",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "HiSightDisplay disconnect",
+              "desc": "【I:hisight断连】播放断开",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "HiSight-M-SenderQueue: put in Frame with IpppMode, current SenderQueueSize is",
+              "desc": "【W:WIFI P2P断连】后面会接hisight积压帧数，若数字很大，则代表P2P网络拥堵。",
+              "mode": "word",
+              "color": "#b45309"
+            },
+            {
+              "keyword": "NOTICE : Bad rtt time : time=",
+              "desc": "【E:WIFI P2P断连】hisight检测到网络延迟，后面会接毫秒",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "notifyP2pNetworkWeak in, eventId is 3400, eventType is NETWORK_WEAK",
+              "desc": "【E:WIFI P2P断连】hisight检测到P2P网络差",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "CTRL-EVENT-DISCONNECTED",
+              "desc": "【E:WIFI P2P断连】P2P断连",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "receive illegal length ",
+              "desc": "【E:对端问题】对端返回了非法长度的数据，后面一般会接0、-4",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "Receive sink teardown request",
+              "desc": "【E:对端问题】手机收到车机主动断开消息（不一定是用户主动断开）",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "QCA_DISCONNECT_REASON_BEACON_MISS_FAILURE",
+              "desc": "【E:对端问题】对端心跳帧没有回复",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "REASON_CLASS3_FRAME_FROM_NON_ASSOC_STA",
+              "desc": "【E:对端问题】对端主动断开P2P",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "OnNetNotify An error occurred in session",
+              "desc": "【E:对端问题】对端P2P拒绝了连接",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "Failed to send VTP!",
+              "desc": "【E:对端问题】无法发送VTP到对端",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "ConnectNotificationManager receive notification disconnect action",
+              "desc": "【W:主动断开】手机用户主动断开事件",
+              "mode": "word",
+              "color": "#b45309"
+            },
+            {
+              "keyword": "send data to car,type=518",
+              "desc": "【W:主动断开】手机用户主动断开，发送断开事件告知车机",
+              "mode": "word",
+              "color": "#d97706"
+            },
+            {
+              "keyword": "LOGLIMIT: process com.huawei.hicar drop",
+              "desc": "【I:日志丢失】HiCar日志丢失",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "LOGLIMIT: process com.huawei.nearby drop",
+              "desc": "【I:日志丢失】nearby日志丢失",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "LOGLIMIT: process com.huawei.dmsdp drop",
+              "desc": "【I:日志丢失】dmsdp日志丢失",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "ActivityManager: Killing",
+              "desc": "【I:进程被杀】后面会接进程包名。",
+              "mode": "word",
+              "color": "#0d9488"
+            }
+          ]
+        },
+        {
+          "name": "车机连接失败",
+          "keywords": [
+            {
+              "keyword": "NearbyServiceJar:createInstance start null",
+              "desc": "【I:nearby初始化流程】nearby创建实例",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "BcApi:Socket BEGIN accept serverSocket=ServerSocket: Type: TYPE_RFCOMM Channel: -1",
+              "desc": "【I:nearby初始化流程】nearby注册监听蓝牙连接请求(bluetooth server socket accept)",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "BleDevice:handleBtStateChanged: STATE_ON",
+              "desc": "【I:nearby初始化流程】蓝牙状态变更为启用",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "NearbyServiceJar:client onServiceConnected  || service android.os.BinderProxy",
+              "desc": "【I:nearby初始化流程】nearby服务启动",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "NearbyController:registerSocketListener: businessType:Data id:19",
+              "desc": "【I:nearby初始化流程】HiCar注册蓝牙连接监听",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "NearbyController:registerSocketListener: businessType:Data id:20",
+              "desc": "【I:nearby初始化流程】dmsdp注册WIFI连接监听",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "HiCarAdapter:start ble adv",
+              "desc": "【I:连接类型】正向连接，发BLE广播开始连接",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "start reconnect",
+              "desc": "【I:连接类型】开始回连",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "DeviceInfoHandler:getDeviceInfo",
+              "desc": "【I:连接类型】有线连接，获取手机设备信息",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "DeviceManager:publishDevice, TypeChannel: 2",
+              "desc": "【I:连接类型】正向连接，开始广播车机设备",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "DeviceManager:publishDevice, TypeChannel: 6",
+              "desc": "【I:连接类型】有线连接，开始发现USB设备",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "DeviceManager:unpublishDevice, TypeChannel: 2",
+              "desc": "【I:连接类型】正向连接，停止广播车机设备，连接上后会调",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "DeviceManager:unpublishDevice, TypeChannel: 6",
+              "desc": "【I:连接类型】有线连接，停止发现USB设备，连接上后会调",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "BleAdvertiser:starting advertise com.huawei.nearby.ble.advstack.DiscoverAdvertiser",
+              "desc": "【I:nearby连接流程】nearby发起BLE广播",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "CarInfoHandler:send car info success",
+              "desc": "【I:nearby连接流程】有线连接，发送车机设备信息",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "reject directly",
+              "desc": "【W:nearby连接流程】仍在上次连接上的状态，拒绝连接",
+              "mode": "word",
+              "color": "#ca8a04"
+            },
+            {
+              "keyword": "DmsdpAdapter:start adv",
+              "desc": "【I:dmsdp连接流程】dmsdp开始广播",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "DMSDPController:send key event. code:2000 action:0",
+              "desc": "【I:dmsdp连接流程】dmsdp发送广播事件",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "DMSDPListenerTransport:onDeviceChange. state:106",
+              "desc": "【I:dmsdp连接流程】dmsdp收到回应",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "DmsdpAdapter:stop ble adv",
+              "desc": "【I:dmsdp连接流程】dmsdp停止广播",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "CarAuthentication:generate pin code",
+              "desc": "【I:hichain认证流程】获取PIN码",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "BcChannel:onConnectionStateChange device=",
+              "desc": "【I:nearby连接流程】有设备接收到了BLE广播，nearby收到了GATT连接请求",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "SocketListenerTransport:TYPE_CONNECT_REQUEST Listener.onConnectRequest",
+              "desc": "【I:nearby流程】nearby收到连接请求",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "SocketListenerTransport:accept.. timeOut = 5000",
+              "desc": "【I:nearby流程】nearby询问是否接受请求，超时时间为5秒",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "ChannelCreateRequestStub:accept invoked",
+              "desc": "【I:nearby流程】nearby接受请求",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "BluetoothNearbySocket:BluetoothNearbySocket construct businessId = 19",
+              "desc": "【I:nearby流程】nearby将数据通道传给HiCar",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "operType:1",
+              "desc": "【I:nearby流程】nearby握手",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "has pin :",
+              "desc": "【I:连接类型】是否有PIN码，true:首次连接有PIN码,false:非首次连接无PIN码",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "is usb connection :",
+              "desc": "【I:nearby连接流程】有设备接收到了BLE广播，nearby收到了GATT连接请求",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "SocketListenerTransport:TYPE_CONNECT_REQUEST Listener.onConnectRequest",
+              "desc": "【I:nearby流程】nearby收到连接请求",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "SocketListenerTransport:accept.. timeOut = 5000",
+              "desc": "【I:nearby流程】nearby询问是否接受请求，超时时间为5秒",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "ChannelCreateRequestStub:accept invoked",
+              "desc": "【I:nearby流程】nearby接受请求",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "BluetoothNearbySocket:BluetoothNearbySocket construct businessId = 19",
+              "desc": "【I:nearby流程】nearby将数据通道传给HiCar",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "operType:1",
+              "desc": "【I:nearby流程】nearby握手",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "has pin :",
+              "desc": "【I:连接类型】是否有PIN码，true:首次连接有PIN码,false:非首次连接无PIN码",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "is usb connection :",
+              "desc": "【I:连接类型】是否是USB连接，true:有线连接,false:无线连接",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "UsbScanManager:Start usb discovery",
+              "desc": "【I:有线连接】开始USB插入\\拔出广播监听",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "UsbScanManager:Stop hicar usb discovery",
+              "desc": "【I:有线连接】停止USB插入\\拔出广播监听，连接上后会调",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "UsbScanManager:mBroadcastReceiver onReceive, action: android.hardware.usb.action.USB_DEVICE_ATTACHED",
+              "desc": "【I:有线连接】接收到USB插入广播",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "UsbScanManager:mBroadcastReceiver onReceive, action: android.hardware.usb.action.USB_DEVICE_DETACHED",
+              "desc": "【I:有线连接】接收到USB拔出广播",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "UsbScanManager:init endpoint success",
+              "desc": "【I:有线连接】通过USB发送车机设备信息成功",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "UsbNcmChannel:interfaceAdded: wwan0",
+              "desc": "【I:有线连接】出现wwan0网卡",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "UsbNcmChannel:NcmLoadedState-CMD_SET_STATIC_IP",
+              "desc": "【I:有线连接】配置静态IP",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "UsbNcmChannel:config static ip, iface is wwan0",
+              "desc": "【I:有线连接】静态IP配置成功",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "UsbNcmChannel:DhcpUpState-CMD_START_SOCKET_SERVER",
+              "desc": "【I:有线连接】启动socket服务",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "UsbNcmChannel:DhcpUpState-CMD_REGISTER_NSD_SERVER",
+              "desc": "【I:有线连接】注册NSD服务",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "UsbNcmChannel:DhcpUpState-CMD_SERVER_SOCKET_ACCEPTED",
+              "desc": "【I:有线连接】socket连接成功",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "operType:3",
+              "desc": "【I:nearby流程】nearby认证开始",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "saveServiceResult=2",
+              "desc": "【I:nearby流程】nearby认证中",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "saveServiceResult=0",
+              "desc": "【I:nearby流程】nearby认证完成",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "saveServiceResult=1",
+              "desc": "【E:nearby流程】nearby认证失败",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "NearbyController:openNearbySocket: businessType:InstantMessage channel:2 id:19",
+              "desc": "【I:nearby流程】nearby开始回连",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "NearbyConnectControl on Create Success.",
+              "desc": "【I:nearby流程】nearby回连创建成功",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "CarAuthentication:authentication success.",
+              "desc": "【I:hichain认证流程】认证成功",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "WIFIUnit:current AP state is:",
+              "desc": "【I:P2P连接】WIFI\\热点状态 10:关闭中,11:已关闭,12:打开中,13:已打开,14:打开或关闭失败",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "ResourceManager:onDataReceived: CMD_DATA_CHANNEL_NEGOTIATION_REQ",
+              "desc": "【I:P2P连接】nearby的BREDR通道收到了来自手机的P2P协商请求",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "ResourceManager:state: IDLE_STATE, event: CMD_REMOTE_NEGOTIATION_DATA_CHANNEL_REQ",
+              "desc": "【I:P2P连接】通道状态为空闲，可以连接",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "P2pChannelSM:create p2p group freq:",
+              "desc": "【I:P2P连接】开始创建热点host ap",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "P2pChannelSM:NegotiatingState-CMD_GET_GC_MAC",
+              "desc": "【I:P2P连接】获取手机GC MAC用于校验",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "P2pChannelSM:NegotiatingState-CMD_GET_GC_MAC_RESP",
+              "desc": "【I:P2P连接】获取到手机GC MAC用于",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "P2pChannelSM:NegotiatingState-CMD_SEND_GC_INFO",
+              "desc": "【I:P2P连接】向手机发送车机GC信息，包括ap信息、车机为手机分配的IP、server socket端口",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "P2pChannelSM:onReceive: android.net.wifi.WIFI_AP_STA_JOIN",
+              "desc": "【I:P2P连接】开始建立TCPsocket",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "P2pChannelSM:run: accept one socket .",
+              "desc": "【I:P2P连接】有设备接入",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "ConnectChannelBase:startChannelManagerProtocol",
+              "desc": "【I:P2P连接】开始CCMP协商",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "ResourceManager:state: DATA_CHANNEL_CONNECTED_STATE, event: CMD_DEVICE_CONNECTED",
+              "desc": "【I:P2P连接】控制通道建立成功",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "ResourceManager:onDataReceived: CMD_SOCKET_CREATE_REQ",
+              "desc": "【I:P2P连接】收到数据通道建立请求",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "ResourceManager:state: DATA_CHANNEL_CONNECTED_STATE, event: CMD_CREATE_DATA_SOCKET_REQ",
+              "desc": "【I:P2P连接】创建数据通道成功",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "SocketListenerTransport:accept.. timeOut = 5000",
+              "desc": "【I:P2P连接】询问是否接受",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "LocalSocketCreateRequest:bId(20), bTag(DMSDP) accept:",
+              "desc": "【I:P2P连接】接受请求，同意本次连接",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "TCPNS:getInputStream",
+              "desc": "【I:P2P连接】获取数据通道输入流",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "TCPNS:getOutputStream",
+              "desc": "【I:P2P连接】获取数据通道输出流",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "DeviceManager:unPublishDevice",
+              "desc": "【I:nearby流程】P2P数据通道连接上后，停止BLE广播节省开销",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "BluetoothNearbySocket:close.",
+              "desc": "【I:nearby流程】P2P数据通道连接上后，断开蓝牙socket节省开销",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "ResourceManager:state: DATA_CHANNEL_CONNECTED_STATE, event: CMD_CREATE_DATA_SOCKET_ACCEPT",
+              "desc": "【I:P2P连接】回复socket连接请求",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "P2pChannelSM:NegotiatingState-CMD_SERVER_SOCKET_ACCEPTED",
+              "desc": "【I:P2P连接】P2P连接成功",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "return EMPTY_IP_STR",
+              "desc": "【W:P2P连接】获取不到IP地址",
+              "mode": "word",
+              "color": "#ca8a04"
+            },
+            {
+              "keyword": "WifiApi:eth0 is not up so we ignore it",
+              "desc": "【E:P2P连接】eth0网卡未启用",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "CCMP check time out",
+              "desc": "【E:P2P连接】通道协商失败，可能是未获取到车机IP。需要dump日志。",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "newSocket connect fail: failed to connect to",
+              "desc": "【E:P2P连接】创建socket失败。需要dump日志。",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "Hardware does not support configured channel",
+              "desc": "【E:P2P连接】手机协商了车机不支持的信道",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "CMD_CONNECT_P2P_TIMEOUT",
+              "desc": "【E:P2P连接】P2P连接失败。需要dump日志。",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "WIFI_AP_STA_LEAVE",
+              "desc": "【E:P2P连接】热点断开",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "P2pChannelSM:send connection failed event",
+              "desc": "【E:P2P连接】nearby发送连接失败事件",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "detect loss",
+              "desc": "【E:P2P连接】保活异常(心跳异常)",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "onDeviceChange. state:101",
+              "desc": "【I:dmsdp连接】dmsdp连接成功",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "AirSharingClientUtil:connectDevice",
+              "desc": "【I:hisight连接】hisight开始连接",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "AirSharingClientUtil:onEvent event:4003",
+              "desc": "【I:hisight连接】hisight连接成功",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "AirSharingClientUtil:setHiSightSurface",
+              "desc": "【I:hisight连接】hisight设置投屏区域",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "setSurface thread, prepareVideoDecoder failed",
+              "desc": "【E:hisight连接】hisight设置投屏区域失败",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "AirSharingClientUtil:play",
+              "desc": "【I:hisight连接】hisight请求播放",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "AirSharingClientUtil:onEvent event:4008",
+              "desc": "【I:hisight连接】hisight进入播放状态",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "DmsdpAdapter:onDeviceServiceChange event:207",
+              "desc": "【I:hisight连接】dmsdp收到开始传视频帧事件",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "HiSight send teardown and close peer",
+              "desc": "【I:hisight连接】hisight收到车机端主动断连事件",
+              "mode": "word",
+              "color": "#059669"
+            }
+          ]
+        },
+        {
+          "name": "车机异常断连",
+          "keywords": [
+            {
+              "keyword": "NotifyState state=106",
+              "desc": "【W:dmsdp断连】dmsdp断连",
+              "mode": "word",
+              "color": "#b45309"
+            },
+            {
+              "keyword": "DoUdpKeepAlive detect loss",
+              "desc": "【E:dmsdp断连】保活异常(心跳异常)",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "WifiApi:eth0 is not up so we ignore it",
+              "desc": "【E:P2P断连】保活异常(心跳异常)",
+              "mode": "word",
+              "color": "#be123c"
+            }
+          ]
+        },
+        {
+          "name": "融合桌面手机端",
+          "keywords": [
+            {
+              "keyword": "onDataReceive sensor data exception",
+              "desc": "【E:接收指令异常】接收528指令异常",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "mHagIntegrationDeviceBean is null, can not converged launcher",
+              "desc": "【E:HAG异常】Hag为空",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "deviceBeanList is null, can not converged launcher",
+              "desc": "【E:HAG异常】IntegrationDeviceBean为空",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "is not integration mode",
+              "desc": "【E:车机不兼容】车机不支持融合桌面",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "invalid status or action",
+              "desc": "【E:action无效】车机发送了无效的action",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "onDataReceive: type is 528",
+              "desc": "【I:接收请求】接收到528请求",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "send all app to sdk because sdk no data",
+              "desc": "【I:发送数据】车机没有数据，发送所有数据到车机",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "send all app to sdk",
+              "desc": "【I:发送数据】发送所有数据到车机",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "update app and sdk cache",
+              "desc": "【I:发送数据】发送增量数据到车机",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "doReceiptAction:",
+              "desc": "【I:回执】回执action",
+              "mode": "word",
+              "color": "#4f46e5"
+            },
+            {
+              "keyword": "request type is:",
+              "desc": "【I:应用类型】车机请求的应用类型",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "AppTransMgrImpl : no need to send data",
+              "desc": "【E:发送异常】不发生任何应用数据给车机",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "sendDataToCar: appInfoBeans is",
+              "desc": "【I:应用数量】手机发送的应用个数",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "CarAppStartMgr : not support",
+              "desc": "【E:车机不兼容】车机不支持融合桌面",
+              "mode": "word",
+              "color": "#e11d48"
+            },
+            {
+              "keyword": "invalid data struct",
+              "desc": "【E:指令错误】车机发送的打卡应用指令数据格式错误",
+              "mode": "word",
+              "color": "#b91c1c"
+            },
+            {
+              "keyword": "request start app is:",
+              "desc": "【I:打开应用】车机打开应用的包名",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "directly feedback",
+              "desc": "【I:打开应用】应用已经存在task中，直接打开",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": " open result: ",
+              "desc": "【I:打开应用】打开应用结果",
+              "mode": "word",
+              "color": "#4f46e5"
+            }
+          ]
+        },
+        {
+          "name": "融合桌面车机端",
+          "keywords": [
+            {
+              "keyword": "AppTransManager: init",
+              "desc": "【I:初始化】初始化",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "register appInfoChange listener",
+              "desc": "【I:注册】注册AppInfoChangeListener",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "unRegister appInfoChange listener",
+              "desc": "【I:注销】注销AppInfoChangeListener",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "notifyAllAppInfoData appInfoBeans is nul",
+              "desc": "【E:异常】appinfo为空",
+              "mode": "word",
+              "color": "#dc2626"
+            },
+            {
+              "keyword": "AppInfoDataExecutorProxy: sendCarData dataType",
+              "desc": "【I:请求指令】HMI请求融合桌面数据",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "handleInterceptRequest",
+              "desc": "【I:请求指令】SDK拦截528请求",
+              "mode": "word",
+              "color": "#0d9488"
+            },
+            {
+              "keyword": "current dmsdp device is null",
+              "desc": "【E:设备为空】CurrentLinkDevice为空",
+              "mode": "word",
+              "color": "#ef4444"
+            },
+            {
+              "keyword": "handleInterceptRequest failed",
+              "desc": "【E:异常】拦截528请求处理异常",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "executeInterceptRequest",
+              "desc": "【I:528】执行528请求处理",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "replyRequestResult requestCode :",
+              "desc": "【I:528】requestCode通知手机SDK端本地是否有数据。 0--有数据，-57无数据",
+              "mode": "word",
+              "color": "#2563eb"
+            },
+            {
+              "keyword": "notifyAllAppInfoData listener size :",
+              "desc": "【I:528】回调所有AppInfo数据给HMI， size为0代表车机没有注册AppInfoChangeListener",
+              "mode": "word",
+              "color": "#0891b2"
+            },
+            {
+              "keyword": "handleAppInfoJsonData",
+              "desc": "【I:528】收到手机发送AppInfo数据",
+              "mode": "word",
+              "color": "#059669"
+            },
+            {
+              "keyword": "executeHandleData",
+              "desc": "【I:528】处理AppInfo数据",
+              "mode": "word",
+              "color": "#7c3aed"
+            },
+            {
+              "keyword": "parseRequestAppResp apps size not equal totalNum",
+              "desc": "【E:528】AppInfo数据总个数与total number不相等",
+              "mode": "word",
+              "color": "#c2410c"
+            },
+            {
+              "keyword": "parseAppDataChange apps size not equal totalNum",
+              "desc": "【E:528】AppInfo数据总个数与total number不相等",
+              "mode": "word",
+              "color": "#be123c"
+            },
+            {
+              "keyword": "parseRequestAppResp size",
+              "desc": "【I:528】处理完成的appinfo数据总个数",
+              "mode": "word",
+              "color": "#0284c7"
+            },
+            {
+              "keyword": "parseAppDataChange size",
+              "desc": "【I:528】处理完成的appinfo数据总个数",
+              "mode": "word",
+              "color": "#10b981"
+            },
+            {
+              "keyword": "receiptResult action :",
+              "desc": "【I:528】处理完数据后给手机发送回执",
+              "mode": "word",
+              "color": "#2563eb"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
