@@ -33,10 +33,67 @@
       </div>
     </header>
 
-    <div class="workspace">
-      <aside class="sidebar">
-        <el-tabs v-model="leftTab" class="sidebar-tabs" stretch>
-          <el-tab-pane label="上传" name="upload">
+    <div class="workspace" :class="{ 'is-sidebar-hidden': !sidebarVisible }">
+      <aside class="sidebar" :class="{ 'is-collapsed': !sidebarVisible }">
+        <div v-if="sidebarVisible" class="sidebar-head">
+          <span class="sidebar-head-title">文件与搜索</span>
+          <el-tooltip content="收起侧栏" placement="bottom">
+            <button
+              type="button"
+              class="sidebar-icon-btn"
+              aria-label="收起侧栏"
+              @click="toggleSidebar"
+            >
+              <el-icon><Fold /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
+
+        <div v-show="sidebarVisible" class="sidebar-body">
+        <div class="sidebar-nav-row">
+          <nav class="sidebar-nav" role="tablist" aria-label="侧栏功能">
+            <button
+              type="button"
+              role="tab"
+              :aria-selected="leftTab === 'upload'"
+              :class="['sidebar-nav-btn', { 'is-active': leftTab === 'upload' }]"
+              @click="leftTab = 'upload'"
+            >
+              <el-icon><Upload /></el-icon>
+              <span>上传</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              :aria-selected="leftTab === 'search'"
+              :class="['sidebar-nav-btn', { 'is-active': leftTab === 'search' }]"
+              @click="leftTab = 'search'"
+            >
+              <el-icon><Search /></el-icon>
+              <span>搜索</span>
+            </button>
+          </nav>
+          <el-tooltip
+            :content="toolsPanelVisible ? '收起上传/搜索区域' : '展开上传/搜索区域'"
+            placement="bottom"
+          >
+            <button
+              type="button"
+              class="sidebar-icon-btn sidebar-tools-toggle"
+              :aria-expanded="toolsPanelVisible"
+              :aria-label="toolsPanelVisible ? '收起上传/搜索区域' : '展开上传/搜索区域'"
+              @click="toggleToolsPanel"
+            >
+              <el-icon>
+                <ArrowUp v-if="toolsPanelVisible" />
+                <ArrowDown v-else />
+              </el-icon>
+            </button>
+          </el-tooltip>
+        </div>
+
+        <div v-show="toolsPanelVisible" class="sidebar-tools">
+          <div v-show="leftTab === 'upload'" class="sidebar-pane">
             <div class="panel-card upload-card">
               <el-upload
                 ref="uploadRef"
@@ -80,32 +137,54 @@
                 <div v-for="(line, idx) in parseLogs" :key="idx" class="parse-log-line">{{ line }}</div>
               </el-scrollbar>
             </div>
-          </el-tab-pane>
+          </div>
 
-          <el-tab-pane label="搜索" name="search">
-            <div class="panel-card">
+          <div v-show="leftTab === 'search'" class="sidebar-pane">
+            <div class="panel-card search-card">
               <el-form label-position="top" size="default">
-                <el-form-item label="关键词（每行一个，AND）">
+                <el-form-item>
+                  <template #label>
+                    <div class="search-kw-label-row">
+                      <span>关键词（每行一个，AND）</span>
+                      <el-checkbox v-model="useRegex" class="search-regex-check">启用正则匹配</el-checkbox>
+                    </div>
+                  </template>
                   <el-input v-model="searchKeywords" type="textarea" :rows="2" placeholder="输入关键词或正则..." />
                 </el-form-item>
-                <el-form-item>
-                  <el-checkbox v-model="useRegex">启用正则匹配</el-checkbox>
-                </el-form-item>
-                <el-form-item label="场景（可以多选）">
-                  <el-tree-select
-                    v-model="selectedSceneKeys"
-                    :data="sceneSelectTree"
-                    multiple
-                    show-checkbox
-                    check-strictly
-                    filterable
-                    collapse-tags
-                    collapse-tags-tooltip
-                    default-expand-all
-                    placeholder="选择场景（树形按模块）"
-                    class="full-width scene-tree-select"
-                    :props="sceneTreeProps"
-                  />
+                <el-form-item label="模块 / 场景" class="scene-picker-form-item">
+                  <div class="scene-picker-row">
+                    <el-select
+                      v-model="activeModuleIndex"
+                      filterable
+                      clearable
+                      placeholder="模块"
+                      class="scene-picker-module"
+                    >
+                      <el-option
+                        v-for="opt in moduleSelectOptions"
+                        :key="opt.value"
+                        :label="opt.label"
+                        :value="opt.value"
+                      />
+                    </el-select>
+                    <el-select
+                      v-model="currentModuleSceneKeys"
+                      multiple
+                      filterable
+                      collapse-tags
+                      collapse-tags-tooltip
+                      :disabled="activeModuleIndex == null"
+                      :placeholder="activeModuleIndex != null ? '场景（可多选，可跨模块）' : '先选模块'"
+                      class="scene-picker-scenes"
+                    >
+                      <el-option
+                        v-for="opt in currentModuleSceneOptions"
+                        :key="opt.value"
+                        :label="opt.label"
+                        :value="opt.value"
+                      />
+                    </el-select>
+                  </div>
                 </el-form-item>
                 <el-button type="primary" :loading="loadingLogs" class="full-btn" @click="searchLogs">
                   <el-icon><Search /></el-icon>
@@ -113,8 +192,8 @@
                 </el-button>
               </el-form>
             </div>
-          </el-tab-pane>
-        </el-tabs>
+          </div>
+        </div>
 
         <div class="file-panel-slot">
           <FileListPanel
@@ -127,9 +206,24 @@
             @need-poll="startPolling"
           />
         </div>
+        </div>
       </aside>
 
       <main class="content">
+        <el-tooltip
+          v-if="!sidebarVisible && !selectedLogFileIds.length"
+          content="展开侧栏"
+          placement="right"
+        >
+          <button
+            type="button"
+            class="sidebar-icon-btn sidebar-restore-btn sidebar-restore-btn--solo"
+            aria-label="展开侧栏"
+            @click="toggleSidebar"
+          >
+            <el-icon><Expand /></el-icon>
+          </button>
+        </el-tooltip>
         <div v-if="!selectedLogFileIds.length" class="empty-state">
           <div class="empty-icon">
             <el-icon :size="48"><DocumentCopy /></el-icon>
@@ -139,16 +233,29 @@
         </div>
 
         <template v-else>
-          <LogToolbar
-            :file-ids="selectedLogFileIds"
-            :files="logFiles"
-            :rows="displayLogs"
-            :matched-total="logMatchedTotal"
-            :truncated="logResultTruncated"
-            :loading="loadingLogs"
-            v-model:sort-mode="logFileSortMode"
-            @refresh="searchLogs"
-          />
+          <div class="log-toolbar-row">
+            <el-tooltip v-if="!sidebarVisible" content="展开侧栏" placement="right">
+              <button
+                type="button"
+                class="sidebar-icon-btn sidebar-restore-btn"
+                aria-label="展开侧栏"
+                @click="toggleSidebar"
+              >
+                <el-icon><Expand /></el-icon>
+              </button>
+            </el-tooltip>
+            <LogToolbar
+              class="log-toolbar-in-row"
+              :file-ids="selectedLogFileIds"
+              :files="logFiles"
+              :rows="displayLogs"
+              :matched-total="logMatchedTotal"
+              :truncated="logResultTruncated"
+              :loading="loadingLogs"
+              v-model:sort-mode="logFileSortMode"
+              @refresh="searchLogs"
+            />
+          </div>
 
           <div class="log-viewer panel-card">
             <el-scrollbar height="calc(100vh - var(--app-header-h) - 120px)">
@@ -210,8 +317,11 @@ import { ElMessage } from 'element-plus'
 import {
   ArrowDown,
   ArrowRight,
+  ArrowUp,
   Collection,
   Document,
+  Expand,
+  Fold,
   DocumentCopy,
   Link,
   Loading,
@@ -231,11 +341,13 @@ import { api } from './api'
 import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
 import {
-  buildSceneSelectTree,
+  buildModuleSelectOptions,
+  buildSceneSelectOptionsForModule,
   cloneSceneConfig,
   collectSceneKeywords,
   decorateEntries,
   defaultSceneConfig,
+  pruneSceneKeys,
   saveLocalScene,
   sceneDescStyle,
 } from './utils/scene'
@@ -246,8 +358,29 @@ import { expandRemovedItemIds, filterLogFileIds } from './utils/fileTree'
 import { highlightKeywords } from './utils/highlight'
 import { orderLogFileIds } from './utils/logSort'
 
+const SIDEBAR_VISIBLE_KEY = 'log_tools_sidebar_visible'
+const TOOLS_PANEL_VISIBLE_KEY = 'log_tools_tools_panel_visible'
+
+function readSidebarVisible() {
+  try {
+    return localStorage.getItem(SIDEBAR_VISIBLE_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+function readToolsPanelVisible() {
+  try {
+    return localStorage.getItem(TOOLS_PANEL_VISIBLE_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
+const sidebarVisible = ref(readSidebarVisible())
+const toolsPanelVisible = ref(readToolsPanelVisible())
 const leftTab = ref('upload')
 const fileItems = ref([])
 const fileListVersion = ref(0)
@@ -270,6 +403,7 @@ let pollTimer = null
 const sceneConfig = ref(defaultSceneConfig())
 const sceneDialogVisible = ref(false)
 const jiraDialogVisible = ref(false)
+const activeModuleIndex = ref(null)
 const selectedSceneKeys = ref([])
 const searchKeywords = ref('')
 const useRegex = ref(false)
@@ -277,8 +411,40 @@ const useRegex = ref(false)
 const contextDrawerRef = ref(null)
 let sceneMeta = []
 
-const sceneTreeProps = { value: 'value', label: 'label', children: 'children', disabled: 'disabled' }
-const sceneSelectTree = computed(() => buildSceneSelectTree(sceneConfig.value))
+const moduleSelectOptions = computed(() => buildModuleSelectOptions(sceneConfig.value))
+
+const currentModuleSceneOptions = computed(() =>
+  buildSceneSelectOptionsForModule(sceneConfig.value, activeModuleIndex.value),
+)
+
+/** 第二个下拉只编辑当前模块；selectedSceneKeys 保留其它模块已选场景 */
+const currentModuleSceneKeys = computed({
+  get() {
+    const mi = activeModuleIndex.value
+    if (mi == null) return []
+    const prefix = `${mi}:`
+    return selectedSceneKeys.value.filter((k) => k.startsWith(prefix))
+  },
+  set(keysForModule) {
+    const mi = activeModuleIndex.value
+    if (mi == null) return
+    const prefix = `${mi}:`
+    const other = selectedSceneKeys.value.filter((k) => !k.startsWith(prefix))
+    selectedSceneKeys.value = [...other, ...keysForModule]
+  },
+})
+
+watch(
+  sceneConfig,
+  (cfg) => {
+    selectedSceneKeys.value = pruneSceneKeys(cfg, selectedSceneKeys.value)
+    const validMods = new Set(buildModuleSelectOptions(cfg).map((o) => o.value))
+    if (activeModuleIndex.value != null && !validMods.has(activeModuleIndex.value)) {
+      activeModuleIndex.value = null
+    }
+  },
+  { deep: true },
+)
 
 const logFileSortMode = ref('default')
 
@@ -332,6 +498,24 @@ async function afterFilesRemoved(ids) {
 function toggleTheme() {
   isDark.value = !isDark.value
   applyTheme(isDark.value ? 'dark' : 'light')
+}
+
+function toggleSidebar() {
+  sidebarVisible.value = !sidebarVisible.value
+  try {
+    localStorage.setItem(SIDEBAR_VISIBLE_KEY, sidebarVisible.value ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
+}
+
+function toggleToolsPanel() {
+  toolsPanelVisible.value = !toolsPanelVisible.value
+  try {
+    localStorage.setItem(TOOLS_PANEL_VISIBLE_KEY, toolsPanelVisible.value ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
 }
 
 function onFileSelectChange(ids) {
@@ -710,21 +894,177 @@ onUnmounted(() => {
   padding: 12px;
   gap: 12px;
   overflow: hidden;
+  transition: width 0.22s ease, padding 0.22s ease, border-color 0.22s ease;
 }
 
-.sidebar-tabs {
+.sidebar.is-collapsed {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border-right-color: transparent;
+  overflow: hidden;
+}
+
+.sidebar-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--app-border-light);
+}
+
+.sidebar-head-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  white-space: nowrap;
+}
+
+.sidebar-icon-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius);
+  background: var(--app-bg);
+  color: var(--app-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sidebar-icon-btn:hover {
+  color: var(--app-accent);
+  border-color: var(--app-accent);
+  background: var(--app-accent-soft);
+}
+
+.sidebar-icon-btn .el-icon {
+  font-size: 18px;
+}
+
+.sidebar-head .sidebar-icon-btn {
+  margin-left: auto;
+}
+
+.sidebar-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.sidebar-nav-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius);
+}
+
+.sidebar-tools-toggle {
+  align-self: stretch;
+  width: 38px;
+  height: auto;
+}
+
+.sidebar-tools-toggle .el-icon {
+  font-size: 16px;
+}
+
+.sidebar-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sidebar-nav-btn .el-icon {
+  font-size: 15px;
+}
+
+.sidebar-nav-btn:hover {
+  color: var(--app-text);
+  background: var(--app-surface);
+}
+
+.sidebar-nav-btn.is-active {
+  background: var(--app-surface);
+  color: var(--app-accent);
+  font-weight: 600;
+  box-shadow: var(--app-shadow);
+}
+
+.sidebar-tools {
   flex: 0 1 auto;
   min-height: 0;
-  max-height: calc(100vh - var(--app-header-h) - 220px);
+  max-height: min(42vh, 360px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-.sidebar-tabs :deep(.el-tabs__content) {
+.sidebar-pane {
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 2px;
+}
+
+.sidebar-pane .panel-card:last-child {
+  margin-bottom: 0;
+}
+
+.sidebar-restore-btn--solo {
+  align-self: flex-start;
+  margin-bottom: 4px;
+}
+
+.log-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.log-toolbar-row .sidebar-restore-btn {
+  flex-shrink: 0;
+}
+
+.log-toolbar-row .log-toolbar-in-row {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .file-panel-slot {
@@ -733,10 +1073,6 @@ onUnmounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-.sidebar-tabs :deep(.el-tabs__header) {
-  margin-bottom: 12px;
 }
 
 .panel-card {
@@ -771,8 +1107,51 @@ onUnmounted(() => {
   width: 100%;
 }
 
-.scene-tree-select {
+.search-card :deep(.el-form-item__label) {
+  display: flex;
   width: 100%;
+  padding-right: 0;
+}
+
+.search-kw-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.search-regex-check {
+  height: auto;
+  margin-right: 0;
+}
+
+.search-regex-check :deep(.el-checkbox__label) {
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--app-text-secondary);
+}
+
+.scene-picker-form-item :deep(.el-form-item__content) {
+  flex: 1;
+  min-width: 0;
+}
+
+.scene-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.scene-picker-module {
+  flex: 0 0 36%;
+  min-width: 0;
+}
+
+.scene-picker-scenes {
+  flex: 1;
+  min-width: 0;
 }
 
 .upload-zone :deep(.el-upload-dragger) {

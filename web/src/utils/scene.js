@@ -131,6 +131,34 @@ export function buildSceneSelectGroups(config) {
   return groups
 }
 
+/** 搜索侧：模块下拉选项 */
+export function buildModuleSelectOptions(config) {
+  return (config?.modules || []).map((mod, mi) => ({
+    value: mi,
+    label: mod.name?.trim() || `模块 ${mi + 1}`,
+  }))
+}
+
+/** 搜索侧：当前模块下的场景选项（第二个下拉） */
+export function buildSceneSelectOptionsForModule(config, moduleIndex) {
+  const mi = moduleIndex
+  if (!Number.isInteger(mi) || mi < 0 || mi >= (config?.modules?.length || 0)) return []
+  const mod = config.modules[mi]
+  return (mod.scenes || []).map((scene, si) => ({
+    value: `${mi}:${si}`,
+    label: scene.name?.trim() || `场景 ${si + 1}`,
+  }))
+}
+
+/** 去掉配置中已不存在的场景 key */
+export function pruneSceneKeys(config, keys) {
+  const allowed = new Set()
+  for (const g of buildSceneSelectGroups(config)) {
+    for (const o of g.options) allowed.add(o.key)
+  }
+  return (keys || []).filter((k) => allowed.has(k))
+}
+
 /** 搜索侧树形选择：模块为父节点（不可选），场景为叶子 */
 export function buildSceneSelectTree(config) {
   const tree = []
