@@ -13,6 +13,8 @@
   --app-log-bg: #fafafa;
   --app-log-hover: #f0f7ff;
   --app-log-gutter: #c0c4cc;
+  --app-log-level-info: #3a3a3a;
+  --app-log-level-debug: #6e6e6e;
   --app-radius: 10px;
   --app-radius-sm: 6px;
   --app-header-h: 56px;
@@ -39,6 +41,8 @@ html.dark {
   --app-log-bg: #0d1117;
   --app-log-hover: #21262d;
   --app-log-gutter: #6e7681;
+  --app-log-level-info: #e6edf3;
+  --app-log-level-debug: #8b949e;
   --app-scene-tag-color: #79c0ff;
   --app-scene-tag-bg: rgba(88, 166, 255, 0.2);
   --app-kw-highlight-bg: rgba(210, 153, 34, 0.55);

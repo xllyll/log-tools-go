@@ -1,8 +1,8 @@
 /** 日志级别颜色（浅色/深色模式通用） */
 const LEVEL_COLORS = {
   VERBOSE: '#8b949e',
-  DEBUG: '#58a6ff',
-  INFO: 'var(--app-text-secondary)',
+  DEBUG: 'var(--app-log-level-debug)',
+  INFO: 'var(--app-log-level-info)',
   WARN: '#d29922',
   ERROR: '#f85149',
   FATAL: '#da3633',

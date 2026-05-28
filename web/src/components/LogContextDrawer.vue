@@ -219,7 +219,7 @@ defineExpose({ openFromRow })
   font-size: 12px;
   line-height: 1.45;
   cursor: default;
-  border-left: 2px solid var(--level-color, var(--app-text-secondary));
+  border-left: 2px solid var(--level-color, var(--app-log-level-info));
   max-width: 100%;
 }
 
@@ -245,7 +245,7 @@ defineExpose({ openFromRow })
 
 .log-text {
   width: 100%;
-  color: var(--level-color, var(--app-text-secondary));
+  color: var(--level-color, var(--app-log-level-info));
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;

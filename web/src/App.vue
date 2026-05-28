@@ -1333,7 +1333,7 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 1.45;
   cursor: pointer;
-  border-left: 2px solid var(--level-color, var(--app-text-secondary));
+  border-left: 2px solid var(--level-color, var(--app-log-level-info));
   transition: background 0.1s;
   overflow: hidden;
   max-width: 100%;
@@ -1370,7 +1370,7 @@ onUnmounted(() => {
 
 .log-text {
   min-width: 0;
-  color: var(--level-color, var(--app-text-secondary));
+  color: var(--level-color, var(--app-log-level-info));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
