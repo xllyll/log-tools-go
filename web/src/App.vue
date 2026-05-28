@@ -263,7 +263,7 @@
                 <div
                   v-for="row in displayLogs"
                   :key="row.id"
-                  v-memo="[row.id, row.scene_desc, row.content, row._fileHeader, isFileCollapsed(row.file_id), searchKeywords, useRegex]"
+                  v-memo="[row.id, row.level, row.scene_desc, row.content, row._fileHeader, isFileCollapsed(row.file_id), searchKeywords, useRegex]"
                   :class="row._fileHeader ? 'log-file-header' : 'log-line'"
                   :style="row._fileHeader ? undefined : logLineStyle(row)"
                   :title="row._fileHeader ? row.file_name : `${row.display || row.content || ''}（双击查看上下文）`"
@@ -763,7 +763,6 @@ function highlightLine(row) {
 function logLineStyle(row) {
   const lc = levelColor(row.level)
   return {
-    '--line-color': row.color || 'inherit',
     '--level-color': lc,
     borderLeftColor: lc,
   }
@@ -1334,7 +1333,7 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 1.45;
   cursor: pointer;
-  border-left: 2px solid var(--level-color, #3fb950);
+  border-left: 2px solid var(--level-color, var(--app-text-secondary));
   transition: background 0.1s;
   overflow: hidden;
   max-width: 100%;
@@ -1371,7 +1370,7 @@ onUnmounted(() => {
 
 .log-text {
   min-width: 0;
-  color: var(--line-color, var(--app-text-secondary));
+  color: var(--level-color, var(--app-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

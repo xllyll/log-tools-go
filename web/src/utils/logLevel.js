@@ -2,7 +2,7 @@
 const LEVEL_COLORS = {
   VERBOSE: '#8b949e',
   DEBUG: '#58a6ff',
-  INFO: '#3fb950',
+  INFO: 'var(--app-text-secondary)',
   WARN: '#d29922',
   ERROR: '#f85149',
   FATAL: '#da3633',

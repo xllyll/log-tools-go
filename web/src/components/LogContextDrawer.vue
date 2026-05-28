@@ -82,7 +82,6 @@ const drawerTitle = computed(() => {
 function logLineStyle(row) {
   const lc = levelColor(row.level)
   return {
-    '--line-color': row.color || 'inherit',
     '--level-color': lc,
     borderLeftColor: lc,
   }
@@ -220,7 +219,7 @@ defineExpose({ openFromRow })
   font-size: 12px;
   line-height: 1.45;
   cursor: default;
-  border-left: 2px solid var(--level-color, #3fb950);
+  border-left: 2px solid var(--level-color, var(--app-text-secondary));
   max-width: 100%;
 }
 
@@ -246,7 +245,7 @@ defineExpose({ openFromRow })
 
 .log-text {
   width: 100%;
-  color: var(--line-color, var(--app-text-secondary));
+  color: var(--level-color, var(--app-text-secondary));
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -267,7 +266,6 @@ defineExpose({ openFromRow })
 }
 
 .ctx-origin .log-text {
-  color: var(--app-accent) !important;
   font-weight: 600;
 }
 
