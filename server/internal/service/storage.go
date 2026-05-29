@@ -314,8 +314,24 @@ func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string
 	if err != nil {
 		return err
 	}
+	uploadDir := s.cfg.Storage.UploadDir
+	pathSeen := make(map[string]struct{})
+	var sourcePaths []string
 	for i := range files {
-		s.removePhysicalSources(&files[i])
+		for _, p := range s.collectPhysicalPaths(&files[i]) {
+			if _, ok := pathSeen[p]; ok {
+				continue
+			}
+			pathSeen[p] = struct{}{}
+			sourcePaths = append(sourcePaths, p)
+		}
+	}
+	for _, p := range sourcePaths {
+		removePhysicalFilePath(p, uploadDir)
+	}
+	if item.EntryType == model.EntryTypeFolder {
+		folderSegs, _ := s.db.ResolveFolderPath(ctx, fileID)
+		removePhysicalFolderDirs(uploadDir, folderSegs, sourcePaths)
 	}
 	if err := s.db.DeleteLogItemSubtree(ctx, deviceID, fileID); err != nil {
 		return err
@@ -325,8 +341,9 @@ func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string
 	return nil
 }
 
-func (s *StorageService) removePhysicalSources(f *model.LogFile) {
+func (s *StorageService) collectPhysicalPaths(f *model.LogFile) []string {
 	seen := make(map[string]struct{})
+	var out []string
 	add := func(p string) {
 		if p == "" {
 			return
@@ -339,11 +356,19 @@ func (s *StorageService) removePhysicalSources(f *model.LogFile) {
 			return
 		}
 		seen[abs] = struct{}{}
-		removePhysicalFile(abs)
+		out = append(out, abs)
 	}
 	add(f.SourcePath)
 	if p, err := s.findPathByName(f.Name); err == nil {
 		add(p)
+	}
+	return out
+}
+
+func (s *StorageService) removePhysicalSources(f *model.LogFile) {
+	uploadDir := s.cfg.Storage.UploadDir
+	for _, p := range s.collectPhysicalPaths(f) {
+		removePhysicalFilePath(p, uploadDir)
 	}
 }
 

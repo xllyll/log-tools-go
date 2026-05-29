@@ -3,6 +3,7 @@ package service
 import (
 	"archive/zip"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,24 @@ func (s *StorageService) ExtractArchive(path, uploadOriginalName string) (*model
 		return nil, err
 	}
 	containerName := model.OriginalBaseName(uploadOriginalName)
-	return s.processArchiveAtPath(path, nil, extractRoot, containerName)
+	result, err := s.processArchiveAtPath(path, nil, extractRoot, containerName)
+	if err != nil {
+		return nil, err
+	}
+	removeUploadedArchive(path)
+	return result, nil
+}
+
+// removeUploadedArchive 解压完成后删除 uploads 下的原始压缩包，避免重复占盘
+func removeUploadedArchive(path string) {
+	if path == "" {
+		return
+	}
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		log.Printf("[extract] remove uploaded archive %s: %v", path, err)
+		return
+	}
+	log.Printf("[extract] removed uploaded archive %s", filepath.Base(path))
 }
 
 func (s *StorageService) processArchiveAtPath(archivePath string, parentFolders []string, extractRoot string, containerName string) (*model.ArchiveExtractResult, error) {

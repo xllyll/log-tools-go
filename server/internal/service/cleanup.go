@@ -77,18 +77,7 @@ func (s *StorageService) purgeExpired(ctx context.Context) (int, error) {
 }
 
 func removePhysicalFile(path string) {
-	if path == "" {
-		return
-	}
-	if err := os.Remove(path); err == nil {
-		return
-	}
-	if strings.Contains(path, "extracted_") {
-		dir := filepath.Dir(path)
-		if strings.Contains(filepath.Base(dir), "extracted_") {
-			_ = os.RemoveAll(dir)
-		}
-	}
+	removePhysicalFilePath(path, "")
 }
 
 func (s *StorageService) purgeStaleUploadDir(cutoff time.Time, activePaths map[string]struct{}) {
