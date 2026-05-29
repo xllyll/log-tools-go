@@ -48,8 +48,9 @@ import { LOG_FILE_SORT_OPTIONS } from '../utils/logSort'
 const props = defineProps({
   fileIds: { type: Array, default: () => [] },
   files: { type: Array, default: () => [] },
-  /** 与日志列表 v-for 相同的数据源 */
+  /** 与日志列表 v-for 相同的数据源（可选，计数优先用 loadedCount） */
   rows: { type: Array, default: () => [] },
+  loadedCount: { type: Number, default: -1 },
   hasMore: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   sortMode: { type: String, default: 'default' },
@@ -61,7 +62,10 @@ const emit = defineEmits(['refresh', 'update:sortMode', 'update:lineFold'])
 
 const showSort = computed(() => props.fileIds.length > 1)
 
-const lineCount = computed(() => props.rows.filter((r) => !r._fileHeader).length)
+const lineCount = computed(() => {
+  if (props.loadedCount >= 0) return props.loadedCount
+  return props.rows.filter((r) => !r._fileHeader && !r._fileLoadMore).length
+})
 
 const countLabel = computed(() => {
   const n = lineCount.value

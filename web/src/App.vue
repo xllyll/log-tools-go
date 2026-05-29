@@ -249,6 +249,7 @@
               :file-ids="selectedLogFileIds"
               :files="logFiles"
               :rows="displayLogs"
+              :loaded-count="loadedLogCount"
               :has-more="hasMoreLogs"
               :loading="loadingLogs"
               v-model:sort-mode="logFileSortMode"
@@ -511,6 +512,10 @@ const displayLogs = computed(() => {
 
 const hasMoreLogs = computed(() =>
   Object.values(fileLogData.value).some((b) => b?.hasMore),
+)
+
+const loadedLogCount = computed(() =>
+  Object.values(fileLogData.value).reduce((n, b) => n + (b?.entries?.length ?? 0), 0),
 )
 
 function rowClass(row) {
