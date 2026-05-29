@@ -27,20 +27,8 @@ func lineMatchesFilter(content string, filter model.LogFilter) bool {
 			return false
 		}
 	}
-	if len(filter.SceneKeywords) > 0 {
-		matched := false
-		for _, kw := range filter.SceneKeywords {
-			if kw == "" {
-				continue
-			}
-			if strings.Contains(strings.ToLower(content), strings.ToLower(kw)) {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
+	if len(filter.SceneKeywords) > 0 && !model.SceneKeywordMatches(content, filter.SceneKeywords) {
+		return false
 	}
 	return true
 }

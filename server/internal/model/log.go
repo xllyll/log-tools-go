@@ -35,12 +35,19 @@ type LogFile struct {
 	Entries     []LogEntry `json:"-"`
 }
 
+// SceneKeywordFilter 场景查询关键字（与场景配置一致）
+type SceneKeywordFilter struct {
+	Keyword       string `json:"keyword"`
+	Mode          int    `json:"mode"`           // 0 关键字 1 正则
+	CaseSensitive int    `json:"case_sensitive"` // 0 不区分 1 区分，默认 0
+}
+
 type LogFilter struct {
 	DeviceID      string
 	FileID        string
 	FileIDs       []string
 	Keywords      []string
-	SceneKeywords []string
+	SceneKeywords []SceneKeywordFilter
 	UseRegex      bool
 	Limit         int
 	Offset        int
@@ -86,10 +93,11 @@ type SceneGroup struct {
 }
 
 type SceneKeyword struct {
-	Keyword string `json:"keyword"`
-	Desc    string `json:"desc"`
-	Mode    string `json:"mode"` // word | regex
-	Color   string `json:"color"`
+	Keyword       string `json:"keyword"`
+	Desc          string `json:"desc"`
+	Mode          int    `json:"mode"`           // 0 关键字 1 正则
+	CaseSensitive int    `json:"case_sensitive"` // 0 不区分 1 区分
+	Color         string `json:"color"`
 }
 
 type JiraConfig struct {

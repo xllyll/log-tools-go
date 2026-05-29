@@ -86,8 +86,8 @@ func (h *SceneHandlerDB) GetShared(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Success: false, Error: err.Error()})
 		return
 	}
-	var cfg model.SceneConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil {
+	cfg, err := model.ParseSceneConfigJSON(raw)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Success: false, Error: "invalid shared config"})
 		return
 	}

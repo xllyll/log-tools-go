@@ -118,11 +118,19 @@
                 <el-input v-model="row.desc" placeholder="展示说明" />
               </template>
             </el-table-column>
-            <el-table-column label="模式" width="110">
+            <el-table-column label="模式" width="100">
               <template #default="{ row }">
                 <el-select v-model="row.mode">
-                  <el-option label="关键词" value="word" />
-                  <el-option label="正则" value="regex" />
+                  <el-option label="关键字" :value="0" />
+                  <el-option label="正则" :value="1" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="大小写" width="100">
+              <template #default="{ row }">
+                <el-select v-model="row.case_sensitive">
+                  <el-option label="不区分" :value="0" />
+                  <el-option label="区分" :value="1" />
                 </el-select>
               </template>
             </el-table-column>

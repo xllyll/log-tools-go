@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -19,13 +20,44 @@ func NewLogHandler(storage *service.StorageService) *LogHandler {
 }
 
 type logQueryReq struct {
-	FileID         string   `json:"file_id"`
-	FileIDs        []string `json:"file_ids"`
-	Keywords       []string `json:"keywords"`
-	SceneKeywords  []string `json:"scene_keywords"`
-	UseRegex       bool     `json:"use_regex"`
-	Limit          int      `json:"limit"`
-	Offset         int      `json:"offset"`
+	FileID        string          `json:"file_id"`
+	FileIDs       []string        `json:"file_ids"`
+	Keywords      []string        `json:"keywords"`
+	SceneKeywords json.RawMessage `json:"scene_keywords"`
+	UseRegex      bool            `json:"use_regex"`
+	Limit         int             `json:"limit"`
+	Offset        int             `json:"offset"`
+}
+
+func parseSceneKeywordFilters(raw json.RawMessage) []model.SceneKeywordFilter {
+	if len(raw) == 0 {
+		return nil
+	}
+	var legacy []string
+	if json.Unmarshal(raw, &legacy) == nil && len(legacy) > 0 {
+		out := make([]model.SceneKeywordFilter, 0, len(legacy))
+		for _, s := range legacy {
+			if s != "" {
+				sk := model.SceneKeywordFilter{Keyword: s, Mode: model.SceneKwModeWord, CaseSensitive: model.SceneKwCaseIgnore}
+				model.NormalizeSceneKeywordFilter(&sk)
+				out = append(out, sk)
+			}
+		}
+		return out
+	}
+	var arr []json.RawMessage
+	if json.Unmarshal(raw, &arr) != nil {
+		return nil
+	}
+	out := make([]model.SceneKeywordFilter, 0, len(arr))
+	for _, item := range arr {
+		sk := model.ParseSceneKeywordFilterJSON(item)
+		if sk.Keyword == "" {
+			continue
+		}
+		out = append(out, sk)
+	}
+	return out
 }
 
 func (h *LogHandler) Query(c *gin.Context) {
@@ -47,7 +79,7 @@ func (h *LogHandler) Query(c *gin.Context) {
 		FileID:        req.FileID,
 		FileIDs:       req.FileIDs,
 		Keywords:      req.Keywords,
-		SceneKeywords: req.SceneKeywords,
+		SceneKeywords: parseSceneKeywordFilters(req.SceneKeywords),
 		UseRegex:      req.UseRegex,
 		Limit:         req.Limit,
 		Offset:        req.Offset,

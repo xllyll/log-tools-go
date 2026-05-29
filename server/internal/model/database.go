@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -589,13 +590,40 @@ FROM log_entries WHERE device_id=$`)
 
 	if len(filter.SceneKeywords) > 0 {
 		b.WriteString(" AND (")
-		for i, kw := range filter.SceneKeywords {
-			if i > 0 {
-				b.WriteString(" OR ")
+		first := true
+		for _, sk := range filter.SceneKeywords {
+			if sk.Keyword == "" {
+				continue
 			}
-			fmt.Fprintf(&b, "content ILIKE $%d", argN)
-			args = append(args, "%"+kw+"%")
+			if sk.Mode == SceneKwModeRegex {
+				if _, err := regexp.Compile(sk.Keyword); err != nil {
+					continue
+				}
+				if !first {
+					b.WriteString(" OR ")
+				}
+				if sk.CaseSensitive == SceneKwCaseSensitive {
+					fmt.Fprintf(&b, "content ~ $%d", argN)
+				} else {
+					fmt.Fprintf(&b, "content ~* $%d", argN)
+				}
+				args = append(args, sk.Keyword)
+			} else {
+				if !first {
+					b.WriteString(" OR ")
+				}
+				if sk.CaseSensitive == SceneKwCaseSensitive {
+					fmt.Fprintf(&b, "content LIKE $%d", argN)
+				} else {
+					fmt.Fprintf(&b, "content ILIKE $%d", argN)
+				}
+				args = append(args, "%"+sk.Keyword+"%")
+			}
+			first = false
 			argN++
+		}
+		if first {
+			b.WriteString("FALSE")
 		}
 		b.WriteString(")")
 	}
@@ -789,7 +817,8 @@ FROM scene_library WHERE id=$1`, id).
 	if err != nil {
 		return nil, err
 	}
-	if err := json.Unmarshal(raw, &item.Config); err != nil {
+	item.Config, err = ParseSceneConfigJSON(raw)
+	if err != nil {
 		return nil, err
 	}
 	return &item, nil

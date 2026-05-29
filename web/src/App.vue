@@ -355,7 +355,7 @@ import { levelColor } from './utils/logLevel'
 import { isProcessing, statusLabel, statusType } from './utils/fileStatus'
 import { displayFileName } from './utils/fileDisplay'
 import { expandRemovedItemIds, filterLogFileIds } from './utils/fileTree'
-import { highlightKeywords } from './utils/highlight'
+import { highlightLogLine } from './utils/highlight'
 import { orderLogFileIds } from './utils/logSort'
 
 const SIDEBAR_VISIBLE_KEY = 'log_tools_sidebar_visible'
@@ -656,14 +656,14 @@ async function searchLogs() {
   logResultTruncated.value = false
   try {
     const kws = searchKeywords.value.split('\n').map((s) => s.trim()).filter(Boolean)
-    const { keywords: sceneKw, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
+    const { specs: sceneSpecs, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
     sceneMeta = meta
     const order = [...logIds]
     const fileMap = new Map(logFiles.value.map((f) => [f.id, f]))
     const limit = perFileQueryLimit(order.length)
     const baseQuery = {
       keywords: kws,
-      scene_keywords: sceneKw,
+      scene_keywords: sceneSpecs,
       use_regex: useRegex.value,
       limit,
     }
@@ -757,7 +757,8 @@ const activeSearchKeywords = computed(() =>
 
 function highlightLine(row) {
   const text = row.content || row.message || row.display || ''
-  return highlightKeywords(text, activeSearchKeywords.value, useRegex.value)
+  const sceneKw = row.scene_desc ? row.scene_match_keywords || [] : []
+  return highlightLogLine(text, activeSearchKeywords.value, useRegex.value, sceneKw)
 }
 
 function logLineStyle(row) {
@@ -1376,12 +1377,20 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+.log-text :deep(strong.scene-kw-bold) {
+  font-weight: 700;
+}
+
 .log-text :deep(mark.kw-highlight) {
   background: var(--app-kw-highlight-bg);
   color: var(--app-kw-highlight-color);
   padding: 0 1px;
   border-radius: 2px;
   font-weight: 600;
+}
+
+.log-text :deep(mark.kw-highlight strong.scene-kw-bold) {
+  font-weight: 700;
 }
 
 .log-body.has-scene-desc {

@@ -1,5 +1,59 @@
 const LOCAL_KEY = 'log_tools_scene_config'
 
+/** 0 关键字 1 正则 */
+export const KW_MODE_WORD = 0
+export const KW_MODE_REGEX = 1
+/** 0 不区分大小写 1 区分 */
+export const KW_CASE_IGNORE = 0
+export const KW_CASE_SENSITIVE = 1
+
+export function normalizeKeywordMode(mode) {
+  if (mode === 1 || mode === '1' || mode === 'regex') return KW_MODE_REGEX
+  return KW_MODE_WORD
+}
+
+export function normalizeCaseSensitive(v) {
+  if (v === 1 || v === '1' || v === true) return KW_CASE_SENSITIVE
+  return KW_CASE_IGNORE
+}
+
+export function normalizeSceneKeyword(kw) {
+  if (!kw) return kw
+  kw.mode = normalizeKeywordMode(kw.mode)
+  kw.case_sensitive = normalizeCaseSensitive(kw.case_sensitive ?? kw.caseSensitive)
+  delete kw.caseSensitive
+  return kw
+}
+
+export function normalizeSceneConfig(config) {
+  if (!config?.modules) return config
+  for (const mod of config.modules) {
+    for (const scene of mod.scenes || []) {
+      for (const kw of scene.keywords || []) {
+        normalizeSceneKeyword(kw)
+      }
+    }
+  }
+  return config
+}
+
+/** 判断日志行是否命中该场景关键字规则 */
+export function keywordMatchesContent(content, rule) {
+  const keyword = rule?.keyword
+  if (!keyword) return false
+  const regex = normalizeKeywordMode(rule.mode) === KW_MODE_REGEX
+  const cs = normalizeCaseSensitive(rule.case_sensitive) === KW_CASE_SENSITIVE
+  if (regex) {
+    try {
+      return new RegExp(keyword, cs ? '' : 'i').test(content)
+    } catch {
+      return false
+    }
+  }
+  if (cs) return content.includes(keyword)
+  return content.toLowerCase().includes(keyword.toLowerCase())
+}
+
 export const defaultSceneConfig = () => ({
   modules: [
     {
@@ -11,43 +65,50 @@ export const defaultSceneConfig = () => ({
               {
                   keyword: "--------- beginning of main",
                   desc: "系统启动",
-                  mode: "word",
+                  mode: 0,
+                  case_sensitive: 0,
                   color: "#ff3333"
               },
               {
                   keyword: "00 09 0a",
                   desc: "系统重启原因",
-                  mode: "word",
+                  mode: 0,
+                  case_sensitive: 0,
                   color: "#0de8d2"
               },
               {
                   keyword: "onLocalAccChanged: false",
                   desc: "ACC关闭",
-                  mode: "word",
+                  mode: 0,
+                  case_sensitive: 0,
                   color: "#ffda33"
               },
               {
                   keyword: "onLocalAccChanged: true",
                   desc: "ACC打开",
-                  mode: "word",
+                  mode: 0,
+                  case_sensitive: 0,
                   color: "#3396ff"
               },
               {
                   keyword: "BluetoothManagerService: ACTION_QB_POWERON",
                   desc: "唤醒",
-                  mode: "word",
+                  mode: 0,
+                  case_sensitive: 0,
                   color: "#030a32"
               },
               {
                   keyword: "BluetoothManagerService: ACTION_QB_POWEROFF",
                   desc: "休眠",
-                  mode: "word",
+                  mode: 0,
+                  case_sensitive: 0,
                   color: "#026d02"
               },
               {
                   keyword: "ActivityTaskManager: START u0",
                   desc: "打开应用",
-                  mode: "word",
+                  mode: 0,
+                  case_sensitive: 0,
                   color: "#75b5b1"
               }
           ]
@@ -60,7 +121,7 @@ export const defaultSceneConfig = () => ({
 export function loadLocalScene() {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) return normalizeSceneConfig(JSON.parse(raw))
   } catch (_) {}
   return defaultSceneConfig()
 }
@@ -70,7 +131,7 @@ export function saveLocalScene(config) {
 }
 
 export function cloneSceneConfig(config) {
-  return JSON.parse(JSON.stringify(config || defaultSceneConfig()))
+  return normalizeSceneConfig(JSON.parse(JSON.stringify(config || defaultSceneConfig())))
 }
 
 function mergeSceneKeywords(targetScene, incomingScene) {
@@ -79,7 +140,7 @@ function mergeSceneKeywords(targetScene, incomingScene) {
   const seen = new Set(targetScene.keywords.map((k) => k.keyword).filter(Boolean))
   for (const kw of incomingScene.keywords) {
     if (!kw?.keyword || seen.has(kw.keyword)) continue
-    targetScene.keywords.push(JSON.parse(JSON.stringify(kw)))
+    targetScene.keywords.push(normalizeSceneKeyword(JSON.parse(JSON.stringify(kw))))
     seen.add(kw.keyword)
   }
 }
@@ -104,7 +165,7 @@ export function mergeSceneConfig(local, remote) {
       mergeSceneKeywords(existing, scene)
     }
   }
-  return out
+  return normalizeSceneConfig(out)
 }
 
 export function shortDeviceLabel(deviceId) {
@@ -113,7 +174,7 @@ export function shortDeviceLabel(deviceId) {
 }
 
 export function emptyKeyword() {
-  return { keyword: '', desc: '', mode: 'word', color: '#409eff' }
+  return { keyword: '', desc: '', mode: KW_MODE_WORD, case_sensitive: KW_CASE_IGNORE, color: '#409eff' }
 }
 
 /** 搜索侧下拉：模块分组，仅场景可选 */
@@ -178,19 +239,25 @@ export function buildSceneSelectTree(config) {
   return tree
 }
 
-function pushSceneKeywords(keywords, meta, scene) {
+function pushSceneKeywords(specs, meta, scene) {
   for (const kw of scene.keywords || []) {
     if (!kw.keyword) continue
-    keywords.push(kw.keyword)
-    meta.push({ keyword: kw.keyword, desc: kw.desc, color: kw.color, mode: kw.mode || 'word' })
+    normalizeSceneKeyword(kw)
+    const item = {
+      keyword: kw.keyword,
+      mode: kw.mode,
+      case_sensitive: kw.case_sensitive,
+    }
+    specs.push({ ...item })
+    meta.push({ ...item, desc: kw.desc, color: kw.color })
   }
 }
 
-/** 从已选场景收集 keywords（selected 为 mi:si 或兼容旧版场景名） */
+/** 从已选场景收集查询规格（selected 为 mi:si 或兼容旧版场景名） */
 export function collectSceneKeywords(config, selected) {
-  const keywords = []
+  const specs = []
   const meta = []
-  if (!config?.modules?.length || !selected?.length) return { keywords, meta }
+  if (!config?.modules?.length || !selected?.length) return { specs, meta }
 
   const selectedSet = new Set(selected)
   const usedKeys = new Set()
@@ -201,7 +268,7 @@ export function collectSceneKeywords(config, selected) {
       const scene = config.modules[mi]?.scenes?.[si]
       if (!scene || usedKeys.has(item)) continue
       usedKeys.add(item)
-      pushSceneKeywords(keywords, meta, scene)
+      pushSceneKeywords(specs, meta, scene)
     }
   }
 
@@ -213,11 +280,11 @@ export function collectSceneKeywords(config, selected) {
       const key = `${mi}:${si}`
       if (usedKeys.has(key)) return
       usedKeys.add(key)
-      pushSceneKeywords(keywords, meta, scene)
+      pushSceneKeywords(specs, meta, scene)
     })
   })
 
-  return { keywords, meta }
+  return { specs, meta }
 }
 
 /** 场景 desc 标签样式：文字用关键词配置色，背景/圆角由 .scene-desc 统一 */
@@ -226,28 +293,39 @@ export function sceneDescStyle(color) {
   return { color }
 }
 
+function sceneKeywordHits(content, meta) {
+  const hits = []
+  for (const m of meta) {
+    if (!m.keyword) continue
+    if (keywordMatchesContent(content, m)) {
+      hits.push({
+        keyword: m.keyword,
+        mode: normalizeKeywordMode(m.mode),
+        case_sensitive: normalizeCaseSensitive(m.case_sensitive),
+        desc: m.desc,
+        color: m.color,
+      })
+    }
+  }
+  return hits
+}
+
 /** 前端为匹配行附加 desc 与颜色 */
 export function decorateEntries(entries, meta) {
   if (!meta.length) return entries
   return entries.map((e) => {
     const content = e.content || e.message || ''
-    let sceneDesc = ''
-    let color = e.color || ''
-    for (const m of meta) {
-      const hit =
-        m.mode === 'regex'
-          ? new RegExp(m.keyword, 'i').test(content)
-          : content.includes(m.keyword)
-      if (hit) {
-        sceneDesc = m.desc
-        color = m.color || color
-        break
-      }
-    }
+    const matched = sceneKeywordHits(content, meta)
+    const first = matched[0]
     return {
       ...e,
-      color,
-      scene_desc: sceneDesc,
+      color: first?.color || e.color || '',
+      scene_desc: first?.desc || '',
+      scene_match_keywords: matched.map(({ keyword, mode, case_sensitive }) => ({
+        keyword,
+        mode,
+        case_sensitive,
+      })),
       display: content,
     }
   })
