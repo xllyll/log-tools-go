@@ -13,7 +13,8 @@
   --app-log-bg: #fafafa;
   --app-log-hover: #f0f7ff;
   --app-log-gutter: #c0c4cc;
-  --app-log-level-info: #3a3a3a;
+  --app-log-level-info: #555555;
+  --app-log-level-info-scene: #232323;
   --app-log-level-debug: #6e6e6e;
   --app-radius: 10px;
   --app-radius-sm: 6px;
@@ -41,7 +42,8 @@ html.dark {
   --app-log-bg: #0d1117;
   --app-log-hover: #21262d;
   --app-log-gutter: #6e7681;
-  --app-log-level-info: #e6edf3;
+  --app-log-level-info: #afafaf;
+  --app-log-level-info-scene: #fafafa;
   --app-log-level-debug: #8b949e;
   --app-scene-tag-color: #79c0ff;
   --app-scene-tag-bg: rgba(88, 166, 255, 0.2);

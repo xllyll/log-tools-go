@@ -1457,7 +1457,8 @@ onUnmounted(() => {
 }
 
 .log-text :deep(strong.scene-kw-bold) {
-  font-weight: 700;
+  font-weight: bold;
+  font-size: 12px;
 }
 
 .log-text :deep(mark.kw-highlight) {
