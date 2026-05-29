@@ -455,23 +455,44 @@ const selectedLogFileIds = computed(() => {
 
 const showFileCollapse = computed(() => selectedLogFileIds.value.length > 1)
 
-const displayLogs = computed(() => {
-  const collapsed = collapsedFileIds.value
-  const out = []
-  let currentFileId = null
-  for (const row of logs.value) {
+/** 按当前排序重排已查询结果，不重新请求接口 */
+function buildDisplayLogs(rawLogs, fileOrder, collapsed) {
+  const headers = new Map()
+  const entriesByFile = new Map()
+  for (const row of rawLogs) {
     if (row._fileHeader) {
-      currentFileId = row.file_id
+      headers.set(row.file_id, row)
+      continue
+    }
+    const fid = row.file_id
+    if (!entriesByFile.has(fid)) entriesByFile.set(fid, [])
+    entriesByFile.get(fid).push(row)
+  }
+  const out = []
+  const placed = new Set()
+  for (const fileId of fileOrder) {
+    if (!headers.has(fileId) && !entriesByFile.has(fileId)) continue
+    placed.add(fileId)
+    const header = headers.get(fileId)
+    if (header) out.push(header)
+    if (collapsed.has(fileId)) continue
+    for (const row of entriesByFile.get(fileId) || []) {
       out.push(row)
-      continue
     }
-    if (currentFileId && collapsed.has(currentFileId)) {
-      continue
+  }
+  for (const [fileId, header] of headers) {
+    if (placed.has(fileId)) continue
+    out.push(header)
+    if (!collapsed.has(fileId)) {
+      out.push(...(entriesByFile.get(fileId) || []))
     }
-    out.push(row)
   }
   return out
-})
+}
+
+const displayLogs = computed(() =>
+  buildDisplayLogs(logs.value, selectedLogFileIds.value, collapsedFileIds.value),
+)
 
 const logMatchedTotal = ref(0)
 const logResultTruncated = ref(false)
@@ -728,10 +749,6 @@ function toggleFileCollapse(fileId) {
   }
   collapsedFileIds.value = next
 }
-
-watch(logFileSortMode, () => {
-  if (selectedLogFileIds.value.length) scheduleSearchLogs()
-})
 
 watch(selectedFileIds, (ids) => {
   const allowed = new Set(ids)

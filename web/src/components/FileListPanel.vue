@@ -5,8 +5,26 @@
         <span>我的文件</span>
         <el-badge :value="fileCount" :max="99" type="primary" />
       </div>
-      <div v-if="fileCount" class="file-panel-title-actions">
+      <div class="file-panel-title-actions">
+        <el-tooltip
+          v-if="fileCount"
+          :content="treeExpanded ? '折叠全部文件夹' : '展开全部文件夹'"
+          placement="top"
+        >
+          <button
+            type="button"
+            class="file-panel-icon-btn"
+            :aria-label="treeExpanded ? '折叠全部文件夹' : '展开全部文件夹'"
+            @click="toggleTreeExpand"
+          >
+            <el-icon>
+              <ArrowDown v-if="treeExpanded" />
+              <ArrowRight v-else />
+            </el-icon>
+          </button>
+        </el-tooltip>
         <el-button
+          v-if="fileCount"
           size="small"
           plain
           :disabled="!selectableIds.length"
@@ -15,6 +33,7 @@
           {{ allSelectableSelected ? '取消全选' : '全选' }}
         </el-button>
         <el-button
+          v-if="fileCount"
           type="danger"
           size="small"
           plain
@@ -30,6 +49,7 @@
       <div v-if="!fileCount" class="file-empty">暂无文件，请先上传</div>
       <el-tree
         v-else
+        ref="treeRef"
         :key="treeKey"
         :data="treeData"
         node-key="id"
@@ -37,6 +57,8 @@
         :expand-on-click-node="false"
         :props="{ label: 'label', children: 'children' }"
         class="file-tree"
+        @node-expand="onTreeExpandChange"
+        @node-collapse="onTreeExpandChange"
       >
         <template #default="{ data }">
           <div
@@ -93,9 +115,9 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Folder, MoreFilled } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Document, Folder, MoreFilled } from '@element-plus/icons-vue'
 import { api } from '../api'
 import { canIngest, isProcessing } from '../utils/fileStatus'
 import { buildFileTree, collectTreeSelectableIds } from '../utils/fileTree'
@@ -125,8 +147,45 @@ const emit = defineEmits([
 
 const batchDeleting = ref(false)
 const ingestingLocalId = ref('')
+const treeRef = ref(null)
+const treeExpanded = ref(true)
 
 const treeData = computed(() => buildFileTree(props.items))
+
+function setAllTreeNodesExpanded(expanded) {
+  const store = treeRef.value?.store
+  if (!store) return
+  for (const node of store._getAllNodes?.() || []) {
+    if (node.childNodes?.length) {
+      node.expanded = expanded
+    }
+  }
+  treeExpanded.value = expanded
+}
+
+function syncTreeExpandedState() {
+  const store = treeRef.value?.store
+  if (!store) return
+  const branchNodes = (store._getAllNodes?.() || []).filter((n) => n.childNodes?.length)
+  if (!branchNodes.length) {
+    treeExpanded.value = true
+    return
+  }
+  treeExpanded.value = branchNodes.every((n) => n.expanded)
+}
+
+function toggleTreeExpand() {
+  setAllTreeNodesExpanded(!treeExpanded.value)
+}
+
+function onTreeExpandChange() {
+  nextTick(() => syncTreeExpandedState())
+}
+
+watch(treeKey, () => {
+  treeExpanded.value = true
+  nextTick(() => setAllTreeNodesExpanded(true))
+})
 
 const selectableIds = computed(() => collectTreeSelectableIds(treeData.value, isViewable))
 
@@ -331,7 +390,8 @@ async function doIngest(f) {
 }
 
 .file-panel-title {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
@@ -340,13 +400,44 @@ async function doIngest(f) {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .file-panel-title-actions {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+.file-panel-icon-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.file-panel-icon-btn:hover {
+  color: var(--app-accent);
+  border-color: var(--app-accent);
+  background: var(--app-accent-soft);
+}
+
+.file-panel-icon-btn .el-icon {
+  font-size: 14px;
 }
 
 .file-empty {

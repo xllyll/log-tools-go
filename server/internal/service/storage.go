@@ -174,8 +174,8 @@ func ingestProgress(linesRead int, fileSize int64) int {
 }
 
 // RegisterUpload records an uploaded file without ingesting into the database.
-func (s *StorageService) RegisterUpload(deviceID string, meta UploadFileMeta) (*model.LogFile, error) {
-	ctx := context.Background()
+// 同目录下 original_name 相同则覆盖已有记录（含磁盘文件与已入库日志行）。
+func (s *StorageService) RegisterUpload(ctx context.Context, deviceID string, meta UploadFileMeta) (*model.LogFile, error) {
 	info, err := os.Stat(meta.Path)
 	if err != nil {
 		return nil, err
@@ -186,21 +186,49 @@ func (s *StorageService) RegisterUpload(deviceID string, meta UploadFileMeta) (*
 	if meta.FileFormat == "" {
 		meta.FileFormat = model.FileFormatFromName(meta.OriginalName)
 	}
+
+	existing, err := s.db.FindFileByOriginal(ctx, deviceID, meta.OriginalName, meta.ParentID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		s.removePhysicalSources(existing)
+		if err := s.db.DeleteEntriesByFile(ctx, existing.ID); err != nil {
+			return nil, err
+		}
+		existing.Name = filepath.Base(meta.Path)
+		existing.FileFormat = meta.FileFormat
+		existing.Size = info.Size()
+		existing.UploadAt = time.Now()
+		existing.Status = "uploaded"
+		existing.StatusMsg = "已上传，可预览；点击入库写入数据库"
+		existing.Progress = 0
+		existing.ParsedLines = 0
+		existing.Total = 0
+		existing.SourcePath = meta.Path
+		if err := s.db.SaveLogFile(ctx, existing); err != nil {
+			return nil, err
+		}
+		log.Printf("[upload] overwrite file=%s storage=%s original=%s folder=%s device=%s",
+			existing.ID, existing.Name, existing.OriginalName, existing.ParentID, deviceID)
+		return existing, nil
+	}
+
 	fileID := uuid.NewString()
 	f := &model.LogFile{
-		ID:             fileID,
-		DeviceID:       deviceID,
-		Name:           filepath.Base(meta.Path),
-		OriginalName:   meta.OriginalName,
-		FileFormat:     meta.FileFormat,
-		EntryType:      model.EntryTypeFile,
-		ParentID:       meta.ParentID,
-		Size:           info.Size(),
-		UploadAt:       time.Now(),
-		Status:         "uploaded",
-		StatusMsg:      "已上传，可预览；点击入库写入数据库",
-		Progress:       0,
-		SourcePath:     meta.Path,
+		ID:           fileID,
+		DeviceID:     deviceID,
+		Name:         filepath.Base(meta.Path),
+		OriginalName: meta.OriginalName,
+		FileFormat:   meta.FileFormat,
+		EntryType:    model.EntryTypeFile,
+		ParentID:     meta.ParentID,
+		Size:         info.Size(),
+		UploadAt:     time.Now(),
+		Status:       "uploaded",
+		StatusMsg:    "已上传，可预览；点击入库写入数据库",
+		Progress:     0,
+		SourcePath:   meta.Path,
 	}
 	if err := s.db.SaveLogFile(ctx, f); err != nil {
 		return nil, err
@@ -233,7 +261,7 @@ func (s *StorageService) ImportSavedFile(ctx context.Context, deviceID, diskPath
 			log.Printf("[import] ensure folders %v: %v", ent.ArchiveDirParts, err)
 			continue
 		}
-		lf, err := s.RegisterUpload(deviceID, UploadFileMeta{
+		lf, err := s.RegisterUpload(ctx, deviceID, UploadFileMeta{
 			Path:         ent.DiskPath,
 			OriginalName: ent.OriginalName,
 			FileFormat:   ext,

@@ -59,6 +59,7 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 		api.DELETE("/scene-library/:id", sceneLibH.Delete)
 
 		api.POST("/jira/import", jiraH.Import)
+		api.POST("/jira/import/stream", jiraH.ImportStream)
 		api.GET("/jira/issues/:key/attachments", jiraH.ListAttachments)
 	}
 

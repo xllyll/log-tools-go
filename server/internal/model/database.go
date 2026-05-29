@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -437,6 +438,27 @@ SELECT `+logFileSelectCols+`
 FROM log_files WHERE id=$1 AND device_id=$2 AND entry_type='file'`, fileID, deviceID)
 	f, err := scanLogFile(row)
 	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+// FindFileByOriginal 同设备、同父目录下按 original_name 查找已有日志文件
+func (d *Database) FindFileByOriginal(ctx context.Context, deviceID, originalName, parentID string) (*LogFile, error) {
+	var parentVal any
+	if parentID != "" {
+		parentVal = parentID
+	}
+	row := d.pool.QueryRow(ctx, `
+SELECT `+logFileSelectCols+`
+FROM log_files
+WHERE device_id=$1 AND entry_type='file' AND original_name=$2 AND parent_id IS NOT DISTINCT FROM $3
+LIMIT 1`, deviceID, originalName, parentVal)
+	f, err := scanLogFile(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &f, nil

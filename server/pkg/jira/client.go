@@ -71,7 +71,14 @@ func (c *Client) ListLogAttachments(issueKey string) ([]model.JiraAttachment, er
 	return list, nil
 }
 
+// DownloadProgressFunc 下载进度回调；total 未知时为 -1
+type DownloadProgressFunc func(downloaded, total int64)
+
 func (c *Client) DownloadAttachment(contentURL, attachmentID string) ([]byte, error) {
+	return c.DownloadAttachmentWithProgress(contentURL, attachmentID, nil)
+}
+
+func (c *Client) DownloadAttachmentWithProgress(contentURL, attachmentID string, onProgress DownloadProgressFunc) ([]byte, error) {
 	if err := c.enabled(); err != nil {
 		return nil, err
 	}
@@ -79,25 +86,55 @@ func (c *Client) DownloadAttachment(contentURL, attachmentID string) ([]byte, er
 	if url == "" {
 		url = strings.TrimRight(c.cfg.BaseURL, "/") + "/rest/api/2/attachment/" + attachmentID
 	}
-	return c.get(url)
+	return c.getWithProgress(url, onProgress)
 }
 
 func (c *Client) get(url string) ([]byte, error) {
+	return c.getWithProgress(url, nil)
+}
+
+type byteCounter struct {
+	n          int64
+	total      int64
+	onProgress DownloadProgressFunc
+}
+
+func (c *byteCounter) Write(p []byte) (int, error) {
+	c.n += int64(len(p))
+	if c.onProgress != nil {
+		c.onProgress(c.n, c.total)
+	}
+	return len(p), nil
+}
+
+func (c *Client) getWithProgress(url string, onProgress DownloadProgressFunc) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 	auth := base64.StdEncoding.EncodeToString([]byte(c.cfg.Email + ":" + c.cfg.APIToken))
 	req.Header.Set("Authorization", "Basic "+auth)
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", "*/*")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
+		data, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("jira 请求失败 %d: %s", resp.StatusCode, string(data))
+	}
+	total := resp.ContentLength
+	if onProgress != nil {
+		onProgress(0, total)
+	}
+	counter := &byteCounter{total: total, onProgress: onProgress}
+	data, err := io.ReadAll(io.TeeReader(resp.Body, counter))
+	if err != nil {
+		return nil, err
+	}
+	if onProgress != nil {
+		onProgress(int64(len(data)), total)
 	}
 	return data, nil
 }
