@@ -23,6 +23,14 @@
       </div>
       <el-tag v-if="loading" effect="plain" round>查询中…</el-tag>
       <el-tag v-else effect="plain" round :title="countTitle">{{ countLabel }}</el-tag>
+      <div class="log-line-fold">
+        <span class="log-line-fold-label">折叠长行</span>
+        <el-switch
+          :model-value="lineFold"
+          size="small"
+          @update:model-value="emit('update:lineFold', $event)"
+        />
+      </div>
       <el-button size="small" :loading="loading" @click="emit('refresh')">
         <el-icon><Refresh /></el-icon>
         刷新
@@ -42,14 +50,14 @@ const props = defineProps({
   files: { type: Array, default: () => [] },
   /** 与日志列表 v-for 相同的数据源 */
   rows: { type: Array, default: () => [] },
-  /** 本次查询各文件返回的日志行数之和（未截断前） */
-  matchedTotal: { type: Number, default: 0 },
-  truncated: { type: Boolean, default: false },
+  hasMore: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   sortMode: { type: String, default: 'default' },
+  /** 过长日志单行省略 */
+  lineFold: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['refresh', 'update:sortMode'])
+const emit = defineEmits(['refresh', 'update:sortMode', 'update:lineFold'])
 
 const showSort = computed(() => props.fileIds.length > 1)
 
@@ -61,8 +69,8 @@ const countLabel = computed(() => {
   if (n === 0 && files > 0) {
     return files > 1 ? `已选 ${files} 个文件，无匹配日志` : '无匹配日志'
   }
-  if (props.truncated && props.matchedTotal > n) {
-    return `展示 ${n} / ${props.matchedTotal}+ 条`
+  if (props.hasMore) {
+    return files > 1 ? `${files} 个文件 · 已加载 ${n} 条` : `已加载 ${n} 条`
   }
   if (files > 1) {
     return `${files} 个文件 · ${n} 条日志`
@@ -72,8 +80,8 @@ const countLabel = computed(() => {
 
 const countTitle = computed(() => {
   if (lineCount.value === 0) return ''
-  if (props.truncated) {
-    return '结果已截断，可加关键词缩小范围或提高单次查询上限'
+  if (props.hasMore) {
+    return '列表下方可加载更多日志'
   }
   return `当前列表共 ${lineCount.value} 行日志（不含文件标题行）`
 })
@@ -142,5 +150,17 @@ function onSortChange(mode) {
 
 .log-sort-select {
   width: 128px;
+}
+
+.log-line-fold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.log-line-fold-label {
+  font-size: 12px;
+  color: var(--app-text-muted);
+  white-space: nowrap;
 }
 </style>

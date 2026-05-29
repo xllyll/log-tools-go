@@ -249,10 +249,10 @@
               :file-ids="selectedLogFileIds"
               :files="logFiles"
               :rows="displayLogs"
-              :matched-total="logMatchedTotal"
-              :truncated="logResultTruncated"
+              :has-more="hasMoreLogs"
               :loading="loadingLogs"
               v-model:sort-mode="logFileSortMode"
+              v-model:line-fold="logLineFold"
               @refresh="searchLogs"
             />
           </div>
@@ -263,11 +263,11 @@
                 <div
                   v-for="row in displayLogs"
                   :key="row.id"
-                  v-memo="[row.id, row.level, row.scene_desc, row.content, row._fileHeader, isFileCollapsed(row.file_id), searchKeywords, useRegex]"
-                  :class="row._fileHeader ? 'log-file-header' : 'log-line'"
-                  :style="row._fileHeader ? undefined : logLineStyle(row)"
-                  :title="row._fileHeader ? row.file_name : `${row.display || row.content || ''}（双击查看上下文）`"
-                  @dblclick="!row._fileHeader && expandContext(row)"
+                  v-memo="[row.id, row.level, row.scene_desc, row.content, row._fileHeader, row._fileLoadMore, row.loading, isFileCollapsed(row.file_id), searchKeywords, useRegex, logLineFold]"
+                  :class="rowClass(row)"
+                  :style="row._fileHeader || row._fileLoadMore ? undefined : logLineStyle(row)"
+                  :title="row._fileHeader ? row.file_name : row._fileLoadMore ? undefined : `${row.display || row.content || ''}（双击查看上下文）`"
+                  @dblclick="!row._fileHeader && !row._fileLoadMore && expandContext(row)"
                 >
                   <template v-if="row._fileHeader">
                     <el-icon class="log-file-header-icon"><Document /></el-icon>
@@ -286,10 +286,19 @@
                       </el-icon>
                     </el-button>
                   </template>
+                  <template v-else-if="row._fileLoadMore">
+                    <el-button
+                      size="small"
+                      :loading="row.loading"
+                      @click="loadMoreForFile(row.file_id)"
+                    >
+                      加载更多
+                    </el-button>
+                  </template>
                   <template v-else>
                     <span class="ln">{{ row.line }}</span>
-                    <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc }">
-                      <span class="log-text" v-html="highlightLine(row)"></span>
+                    <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc, 'is-content-wrap': !logLineFold }">
+                      <span class="log-text" :class="{ 'is-wrap': !logLineFold }" v-html="highlightLine(row)"></span>
                       <span
                         v-if="row.scene_desc"
                         class="scene-desc"
@@ -312,7 +321,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   ArrowDown,
@@ -360,6 +369,7 @@ import { orderLogFileIds } from './utils/logSort'
 
 const SIDEBAR_VISIBLE_KEY = 'log_tools_sidebar_visible'
 const TOOLS_PANEL_VISIBLE_KEY = 'log_tools_tools_panel_visible'
+const LOG_LINE_FOLD_KEY = 'log_tools_log_line_fold'
 
 function readSidebarVisible() {
   try {
@@ -377,18 +387,30 @@ function readToolsPanelVisible() {
   }
 }
 
+function readLogLineFold() {
+  try {
+    return localStorage.getItem(LOG_LINE_FOLD_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 const deviceId = ref(getDeviceId())
 const isDark = ref(getPreferredTheme() === 'dark')
 const sidebarVisible = ref(readSidebarVisible())
+const logLineFold = ref(readLogLineFold())
 const toolsPanelVisible = ref(readToolsPanelVisible())
 const leftTab = ref('upload')
 const fileItems = ref([])
 const fileListVersion = ref(0)
 const logFiles = computed(() => fileItems.value.filter((i) => i.entry_type !== 'folder'))
 const selectedFileIds = ref([])
-const logs = shallowRef([])
+/** @type {import('vue').Ref<Record<string, { entries: unknown[], offset: number, hasMore: boolean, loadingMore: boolean }>>} */
+const fileLogData = ref({})
 const collapsedFileIds = ref(new Set())
-const MAX_LOG_ROWS = 10000
+const LOG_PAGE_SIZE = 1000
+/** @type {Record<string, unknown> | null} */
+let logQueryBase = null
 let searchSeq = 0
 let searchDebounceTimer = null
 const loadingLogs = ref(false)
@@ -455,47 +477,58 @@ const selectedLogFileIds = computed(() => {
 
 const showFileCollapse = computed(() => selectedLogFileIds.value.length > 1)
 
-/** 按当前排序重排已查询结果，不重新请求接口 */
-function buildDisplayLogs(rawLogs, fileOrder, collapsed) {
-  const headers = new Map()
-  const entriesByFile = new Map()
-  for (const row of rawLogs) {
-    if (row._fileHeader) {
-      headers.set(row.file_id, row)
-      continue
-    }
-    const fid = row.file_id
-    if (!entriesByFile.has(fid)) entriesByFile.set(fid, [])
-    entriesByFile.get(fid).push(row)
+function makeFileHeader(id, fileMap) {
+  const f = fileMap.get(id)
+  return {
+    _fileHeader: true,
+    id: `header-${id}`,
+    file_id: id,
+    file_name: f ? displayFileName(f) : id,
   }
+}
+
+const displayLogs = computed(() => {
+  const order = selectedLogFileIds.value
+  const fileMap = new Map(logFiles.value.map((f) => [f.id, f]))
   const out = []
-  const placed = new Set()
-  for (const fileId of fileOrder) {
-    if (!headers.has(fileId) && !entriesByFile.has(fileId)) continue
-    placed.add(fileId)
-    const header = headers.get(fileId)
-    if (header) out.push(header)
-    if (collapsed.has(fileId)) continue
-    for (const row of entriesByFile.get(fileId) || []) {
-      out.push(row)
-    }
-  }
-  for (const [fileId, header] of headers) {
-    if (placed.has(fileId)) continue
-    out.push(header)
-    if (!collapsed.has(fileId)) {
-      out.push(...(entriesByFile.get(fileId) || []))
+  for (const fileId of order) {
+    const bucket = fileLogData.value[fileId]
+    if (!bucket) continue
+    out.push(makeFileHeader(fileId, fileMap))
+    if (collapsedFileIds.value.has(fileId)) continue
+    out.push(...bucket.entries)
+    if (bucket.hasMore) {
+      out.push({
+        _fileLoadMore: true,
+        id: `load-more-${fileId}`,
+        file_id: fileId,
+        loading: bucket.loadingMore,
+      })
     }
   }
   return out
-}
+})
 
-const displayLogs = computed(() =>
-  buildDisplayLogs(logs.value, selectedLogFileIds.value, collapsedFileIds.value),
+const hasMoreLogs = computed(() =>
+  Object.values(fileLogData.value).some((b) => b?.hasMore),
 )
 
-const logMatchedTotal = ref(0)
-const logResultTruncated = ref(false)
+function rowClass(row) {
+  if (row._fileHeader) return 'log-file-header'
+  if (row._fileLoadMore) return 'log-load-more-row'
+  return ['log-line', { 'is-content-wrap': !logLineFold.value }]
+}
+
+async function fetchFileLogPage(fileId, offset) {
+  const { data } = await api.queryLogs({
+    ...logQueryBase,
+    file_id: fileId,
+    limit: LOG_PAGE_SIZE,
+    offset,
+  })
+  if (!data.success) throw new Error(data.error)
+  return decorateEntries(data.data?.entries || [], sceneMeta)
+}
 
 async function afterFilesRemoved(ids) {
   const removed = expandRemovedItemIds(fileItems.value, ids)
@@ -503,9 +536,7 @@ async function afterFilesRemoved(ids) {
   fileListVersion.value += 1
   selectedFileIds.value = selectedFileIds.value.filter((x) => !removed.has(x))
   if (!selectedLogFileIds.value.length) {
-    logs.value = []
-    logMatchedTotal.value = 0
-    logResultTruncated.value = false
+    fileLogData.value = {}
   } else {
     scheduleSearchLogs()
   }
@@ -539,14 +570,20 @@ function toggleToolsPanel() {
   }
 }
 
+watch(logLineFold, (fold) => {
+  try {
+    localStorage.setItem(LOG_LINE_FOLD_KEY, fold ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
+})
+
 function onFileSelectChange(ids) {
   const logIds = filterLogFileIds(ids, fileItems.value)
   if (logIds.length) {
     scheduleSearchLogs()
   } else {
-    logs.value = []
-    logMatchedTotal.value = 0
-    logResultTruncated.value = false
+    fileLogData.value = {}
   }
 }
 
@@ -662,76 +699,72 @@ function scheduleSearchLogs() {
   }, 350)
 }
 
-function perFileQueryLimit(fileCount) {
-  if (fileCount <= 1) return 5000
-  return Math.min(3000, Math.max(400, Math.floor(6000 / fileCount)))
-}
-
 async function searchLogs() {
   const logIds = selectedLogFileIds.value
   if (!logIds.length) return
   const seq = ++searchSeq
   loadingLogs.value = true
-  logs.value = []
-  logMatchedTotal.value = 0
-  logResultTruncated.value = false
+  fileLogData.value = {}
   try {
     const kws = searchKeywords.value.split('\n').map((s) => s.trim()).filter(Boolean)
     const { specs: sceneSpecs, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
     sceneMeta = meta
-    const order = [...logIds]
-    const fileMap = new Map(logFiles.value.map((f) => [f.id, f]))
-    const limit = perFileQueryLimit(order.length)
-    const baseQuery = {
+    logQueryBase = {
       keywords: kws,
       scene_keywords: sceneSpecs,
       use_regex: useRegex.value,
-      limit,
     }
-
-    const responses = await Promise.all(
-      order.map((id) => api.queryLogs({ ...baseQuery, file_id: id }))
+    const results = await Promise.all(
+      logIds.map(async (id) => {
+        const batch = await fetchFileLogPage(id, 0)
+        if (seq !== searchSeq) return null
+        return { id, batch }
+      }),
     )
     if (seq !== searchSeq) return
-
-    const merged = []
-    let truncated = false
-    let matchedTotal = 0
-    for (let i = 0; i < order.length; i++) {
-      const id = order[i]
-      const { data } = responses[i]
-      if (!data.success) throw new Error(data.error)
-      const batch = decorateEntries(data.data?.entries || [], meta)
-      matchedTotal += batch.length
-      const f = fileMap.get(id)
-      merged.push({
-        _fileHeader: true,
-        id: `header-${id}`,
-        file_id: id,
-        file_name: f ? displayFileName(f) : id,
-      })
-      const room = MAX_LOG_ROWS - merged.length
-      if (batch.length >= room) {
-        merged.push(...batch.slice(0, room))
-        truncated = true
-        break
+    const next = {}
+    for (const item of results) {
+      if (!item) return
+      next[item.id] = {
+        entries: item.batch,
+        offset: item.batch.length,
+        hasMore: item.batch.length >= LOG_PAGE_SIZE,
+        loadingMore: false,
       }
-      merged.push(...batch)
     }
-
-    if (seq !== searchSeq) return
-    await nextTick()
-    if (seq !== searchSeq) return
-    logs.value = merged
-    logMatchedTotal.value = matchedTotal
-    logResultTruncated.value = truncated
-    if (truncated) {
-      ElMessage.warning(`已选 ${order.length} 个文件，仅展示前 ${MAX_LOG_ROWS} 行，请加关键词缩小范围`)
-    }
+    fileLogData.value = next
   } catch (e) {
     if (seq === searchSeq) ElMessage.error(e.response?.data?.error || e.message)
   } finally {
     if (seq === searchSeq) loadingLogs.value = false
+  }
+}
+
+async function loadMoreForFile(fileId) {
+  const bucket = fileLogData.value[fileId]
+  if (!bucket?.hasMore || bucket.loadingMore || loadingLogs.value || !logQueryBase) return
+  fileLogData.value = {
+    ...fileLogData.value,
+    [fileId]: { ...bucket, loadingMore: true },
+  }
+  try {
+    const batch = await fetchFileLogPage(fileId, bucket.offset)
+    const prev = fileLogData.value[fileId]
+    fileLogData.value = {
+      ...fileLogData.value,
+      [fileId]: {
+        entries: [...prev.entries, ...batch],
+        offset: prev.offset + batch.length,
+        hasMore: batch.length >= LOG_PAGE_SIZE,
+        loadingMore: false,
+      },
+    }
+  } catch (e) {
+    fileLogData.value = {
+      ...fileLogData.value,
+      [fileId]: { ...fileLogData.value[fileId], loadingMore: false },
+    }
+    ElMessage.error(e.response?.data?.error || e.message)
   }
 }
 
@@ -1342,6 +1375,12 @@ onUnmounted(() => {
   padding: 4px 0;
 }
 
+.log-load-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 8px 12px 12px;
+}
+
 .log-line {
   display: flex;
   align-items: center;
@@ -1359,6 +1398,11 @@ onUnmounted(() => {
 
 .log-line:hover {
   background: var(--app-log-hover);
+}
+
+.log-line.is-content-wrap {
+  align-items: flex-start;
+  overflow: visible;
 }
 
 .log-line .ln {
@@ -1382,6 +1426,12 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.log-body.is-content-wrap {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  overflow: visible;
+}
+
 .log-body:not(.has-scene-desc) .log-text {
   flex: 1 1 auto;
 }
@@ -1392,6 +1442,13 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.log-text.is-wrap {
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-all;
 }
 
 .log-text :deep(strong.scene-kw-bold) {
