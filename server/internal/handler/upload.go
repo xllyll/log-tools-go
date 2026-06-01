@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"log-tools/server/internal/model"
@@ -112,11 +113,72 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 
 	if len(fileIDs) == 0 {
 		msg := "压缩包内未解析到日志文件，请确认包含 .log/.txt/.json 或有效的嵌套压缩包"
+		if strings.HasSuffix(strings.ToLower(header.Filename), ".zip") {
+			msg += "；若 zip 内为分卷 .rar，需包含全部分卷"
+		}
 		log.Printf("[upload] failed device=%s file=%s", deviceID, header.Filename)
 		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: msg})
 		return
 	}
 
+	c.JSON(http.StatusOK, model.UploadResponse{
+		Success: true,
+		Message: "upload accepted",
+		FileIDs: fileIDs,
+	})
+}
+
+// UploadVolume accepts multiple files belonging to one multi-volume archive.
+func (h *UploadHandler) UploadVolume(c *gin.Context) {
+	deviceID := GetDeviceID(c)
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: err.Error()})
+		return
+	}
+	headers := form.File["files"]
+	if len(headers) < 2 {
+		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: "分卷压缩包请同时上传至少 2 个分卷文件"})
+		return
+	}
+
+	volDir, err := h.storage.PrepareVolumeDir()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
+		return
+	}
+	defer os.RemoveAll(volDir)
+
+	var partPaths []string
+	for _, header := range headers {
+		if err := h.storage.ValidateFile(header.Size, header.Filename); err != nil {
+			c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: err.Error()})
+			return
+		}
+		file, err := header.Open()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: err.Error()})
+			return
+		}
+		partPath, err := service.SaveVolumePart(volDir, header.Filename, file)
+		file.Close()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
+			return
+		}
+		partPaths = append(partPaths, partPath)
+	}
+
+	fileIDs, err := h.storage.ImportMultiVolumeArchive(c.Request.Context(), deviceID, "", partPaths)
+	if err != nil {
+		log.Printf("[upload] volume failed device=%s: %v", deviceID, err)
+		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: err.Error()})
+		return
+	}
+	if len(fileIDs) == 0 {
+		c.JSON(http.StatusBadRequest, model.UploadResponse{Success: false, Error: "压缩包内未解析到可导入的日志文件"})
+		return
+	}
 	c.JSON(http.StatusOK, model.UploadResponse{
 		Success: true,
 		Message: "upload accepted",

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"log-tools/server/internal/model"
+	"log-tools/server/internal/pkg/multivolume"
 )
 
 var archiveExtensions = map[string]bool{".zip": true, ".rar": true, ".7z": true}
@@ -102,6 +103,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 
 	itemCount := 0
 	hasSubpath := false
+	archiveNames := make([]string, 0)
 	for _, f := range reader.File {
 		if f.FileInfo().IsDir() || isArchiveNoisePath(f.Name) {
 			continue
@@ -115,11 +117,38 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 		if isLogExt(ext) || isArchiveExt(ext) {
 			itemCount++
 		}
+		if isArchiveExt(ext) {
+			archiveNames = append(archiveNames, base)
+		}
 	}
 	bindContainer := archiveBindContainer(itemCount, hasSubpath)
 
+	volumeGroups, _ := multivolume.GroupFilenames(archiveNames)
+	volumePartNames := make(map[string]struct{})
+	for _, g := range volumeGroups {
+		for _, p := range g.Parts {
+			volumePartNames[p.Filename] = struct{}{}
+		}
+	}
+
 	var out []model.ExtractedFile
 	var nestedChains [][]string
+
+	for _, g := range volumeGroups {
+		if !g.IsMultiVolume() {
+			return nil, multivolume.VolumeIncompleteError(g)
+		}
+		relDir := zipMemberRelDir(reader.File, g.Parts[0].Filename)
+		parentForNested := folderChainForNestedArchive(parentFolders, containerName, bindContainer, relDir)
+		chunk, err := s.extractZipNestedVolumeGroup(reader, g, parentForNested, extractRoot)
+		if err != nil {
+			log.Printf("[extract] zip nested volume %s in %s: %v", g.DisplayName(), filepath.Base(zipPath), err)
+			return nil, err
+		}
+		out = append(out, chunk.Files...)
+		nestedChains = mergeFolderChains(nestedChains, chunk.FolderChains)
+	}
+
 	for _, f := range reader.File {
 		if f.FileInfo().IsDir() {
 			continue
@@ -140,6 +169,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 				continue
 			}
 			if err := extractZipEntry(f, target); err != nil {
+				log.Printf("[extract] zip log %s: %v", base, err)
 				continue
 			}
 			out = append(out, model.ExtractedFile{
@@ -149,20 +179,77 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 				ArchiveDirParts: normalizeFolderChain(folderBinding),
 			})
 		case isArchiveExt(ext):
+			if _, inVolume := volumePartNames[base]; inVolume {
+				continue
+			}
 			parentForNested := folderChainForNestedArchive(parentFolders, containerName, bindContainer, relDir)
 			chunk, err := s.handleNestedZipMember(f, base, parentForNested, extractRoot)
 			if err != nil {
+				log.Printf("[extract] zip nested %s: %v", base, err)
 				continue
 			}
 			out = append(out, chunk.Files...)
 			nestedChains = mergeFolderChains(nestedChains, chunk.FolderChains)
 		}
 	}
+	if len(out) == 0 {
+		log.Printf("[extract] zip %s: no log files extracted (entries: %d)", filepath.Base(zipPath), len(reader.File))
+	}
 	folderChains := mergeFolderChains(
 		collectFolderChains(parentFolders, containerName, bindContainer, pathPartsList),
 		nestedChains,
 	)
 	return &model.ArchiveExtractResult{Files: out, FolderChains: folderChains}, nil
+}
+
+func zipMemberRelDir(files []*zip.File, baseName string) []string {
+	for _, f := range files {
+		if f.FileInfo().IsDir() || isArchiveNoisePath(f.Name) {
+			continue
+		}
+		if filepath.Base(filepath.ToSlash(f.Name)) == baseName {
+			return archiveDirParts(filepath.ToSlash(f.Name))
+		}
+	}
+	return nil
+}
+
+func findZipMemberByBaseName(files []*zip.File, baseName string) *zip.File {
+	for _, f := range files {
+		if f.FileInfo().IsDir() || isArchiveNoisePath(f.Name) {
+			continue
+		}
+		if filepath.Base(filepath.ToSlash(f.Name)) == baseName {
+			return f
+		}
+	}
+	return nil
+}
+
+func (s *StorageService) extractZipNestedVolumeGroup(
+	reader *zip.ReadCloser,
+	g multivolume.Group,
+	parentFolders []string,
+	extractRoot string,
+) (*model.ArchiveExtractResult, error) {
+	volDir, err := os.MkdirTemp(extractRoot, "nested-vol-*")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(volDir)
+
+	for _, p := range g.Parts {
+		zf := findZipMemberByBaseName(reader.File, p.Filename)
+		if zf == nil {
+			return nil, fmt.Errorf("zip 内缺少分卷 %s", p.Filename)
+		}
+		dest := filepath.Join(volDir, filepath.Base(p.Filename))
+		if err := extractZipEntry(zf, dest); err != nil {
+			return nil, err
+		}
+	}
+	first := filepath.Join(volDir, multivolume.FirstPartFilename(g))
+	return s.expandArchiveFromDisk(first, g.DisplayName(), parentFolders, extractRoot, "")
 }
 
 func (s *StorageService) handleNestedZipMember(f *zip.File, archiveName string, parentFolders []string, extractRoot string) (*model.ArchiveExtractResult, error) {

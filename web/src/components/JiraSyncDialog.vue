@@ -11,6 +11,7 @@
 
     <el-alert type="info" :closable="false" show-icon class="tip">
       Jira 连接信息由服务端配置，此处只需填写 Issue Key。选中 .zip / .7z / .rar 压缩包时会自动解压并导入其中的 .log / .txt / .json。
+      同一压缩包的分卷（如 .part01.rar、.part02.rar）会合并为一项，需一并导入。
     </el-alert>
 
     <div v-if="progressVisible" class="progress-block" :class="{ 'is-done': progressStatus === 'success' }">
@@ -41,7 +42,14 @@
       @selection-change="onSelect"
     >
       <el-table-column type="selection" width="46" />
-      <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip />
+      <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip>
+        <template #default="{ row }">
+          <span>{{ row.filename }}</span>
+          <el-tag v-if="row.isVolumeGroup" size="small" type="warning" class="vol-tag">
+            分卷 ×{{ row.partCount }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="大小" width="100">
         <template #default="{ row }">{{ formatSize(row.size) }}</template>
       </el-table-column>
@@ -67,6 +75,7 @@ import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck } from '@element-plus/icons-vue'
 import { api, jiraImportStream } from '../api'
+import { groupJiraAttachments, flattenSelectedForImport } from '../utils/archiveVolume'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -206,13 +215,15 @@ async function fetchList() {
   try {
     const { data } = await api.jiraAttachments(key)
     if (!data.success) throw new Error(data.error)
-    files.value = data.data || []
+    files.value = groupJiraAttachments(data.data || [])
     ok = true
     if (!files.value.length) {
       ElMessage.info('该 Issue 下没有可导入的日志附件')
       finishProgress(true, '拉取完成 · 未找到可导入的日志附件')
     } else {
-      finishProgress(true, `拉取完成 · 共 ${files.value.length} 个附件`)
+      const volCount = files.value.filter((r) => r.isVolumeGroup).length
+      const hint = volCount ? `（含 ${volCount} 个分卷包）` : ''
+      finishProgress(true, `拉取完成 · 共 ${files.value.length} 项${hint}`)
     }
   } catch (e) {
     finishProgress(false, '拉取失败')
@@ -230,7 +241,8 @@ async function fetchList() {
 
 async function doImport() {
   if (!selected.value.length) return
-  const total = selected.value.length
+  const toImport = flattenSelectedForImport(selected.value)
+  const importItemCount = selected.value.length
   clearResetTimer()
   importing.value = true
   progressVisible.value = true
@@ -242,7 +254,7 @@ async function doImport() {
     const result = await jiraImportStream(
       {
         issue_key: issueKey.value.trim(),
-        attachments: selected.value.map((f) => ({
+        attachments: toImport.map((f) => ({
           id: f.id,
           filename: f.filename,
           content_url: f.content_url,
@@ -250,7 +262,7 @@ async function doImport() {
       },
       (ev) => applyProgress(ev),
     )
-    finishProgress(true, `导入完成 · 共 ${total} 个附件`)
+    finishProgress(true, `导入完成 · 共 ${importItemCount} 项`)
     ElMessage.success(result.message || '已导入')
     scheduleResetProgress(1800)
     await new Promise((r) => setTimeout(r, 1500))
@@ -313,5 +325,10 @@ async function doImport() {
   font-size: 12px;
   font-weight: 600;
   color: var(--el-color-success);
+}
+
+.vol-tag {
+  margin-left: 8px;
+  vertical-align: middle;
 }
 </style>

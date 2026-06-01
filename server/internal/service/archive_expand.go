@@ -12,7 +12,10 @@ import (
 
 	"log-tools/server/internal/model"
 
+	"log-tools/server/internal/pkg/multivolume"
+
 	"github.com/mholt/archiver/v4"
+	"github.com/nwaples/rardecode/v2"
 )
 
 func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, parentFolders []string, extractRoot string, containerName string) (*model.ArchiveExtractResult, error) {
@@ -187,6 +190,10 @@ func extractArchiveToDir(archivePath, destDir string) ([][]string, error) {
 		}
 		return collectWalkPathParts(destDir), nil
 	}
+	if ext == ".rar" && multivolume.HasRarVolumeSiblings(archivePath) {
+		first := multivolume.FindFirstVolumePath(filepath.Dir(archivePath), archivePath)
+		return extractRarMultiVolumeToDir(first, destDir)
+	}
 	return extractArchiverToDir(archivePath, destDir)
 }
 
@@ -275,6 +282,55 @@ func extractArchiverToDir(archivePath, destDir string) ([][]string, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	return pathPartsList, nil
+}
+
+// extractRarMultiVolumeToDir uses rardecode.OpenReader so .part01.rar / .part02.rar in the same folder work.
+func extractRarMultiVolumeToDir(firstVolumePath, destDir string) ([][]string, error) {
+	rc, err := rardecode.OpenReader(firstVolumePath)
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+
+	var pathPartsList [][]string
+	for {
+		hdr, err := rc.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		rel := filepath.ToSlash(hdr.Name)
+		rel = strings.TrimPrefix(rel, "./")
+		if isArchiveNoisePath(rel) {
+			continue
+		}
+		if hdr.IsDir {
+			rel = strings.TrimSuffix(rel, "/")
+			if parts := splitPathSegments(rel); len(parts) > 0 {
+				pathPartsList = append(pathPartsList, parts)
+			}
+			continue
+		}
+		if parts := archiveDirParts(rel); len(parts) > 0 {
+			pathPartsList = append(pathPartsList, parts)
+		}
+		target := filepath.Join(destDir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return nil, err
+		}
+		out, err := os.Create(target)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := io.Copy(out, rc); err != nil {
+			out.Close()
+			return nil, err
+		}
+		out.Close()
 	}
 	return pathPartsList, nil
 }

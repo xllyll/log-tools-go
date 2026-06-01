@@ -38,6 +38,7 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 	api.Use(handler.RequireDeviceID())
 	{
 		api.POST("/upload", uploadH.Upload)
+		api.POST("/upload/volume", uploadH.UploadVolume)
 		api.GET("/files", uploadH.ListFiles)
 		api.GET("/files/:id", uploadH.GetFileStatus)
 		api.DELETE("/files/:id", uploadH.DeleteFile)

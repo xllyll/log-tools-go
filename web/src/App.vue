@@ -107,7 +107,7 @@
               >
                 <el-icon class="upload-icon"><UploadFilled /></el-icon>
                 <div class="upload-title">拖拽日志到此处</div>
-                <div class="upload-hint">支持 .log .txt .zip .rar .7z</div>
+                <div class="upload-hint">支持 .log .txt .zip .rar .7z；分卷包（.part01.rar 等）请一次选全部分卷</div>
               </el-upload>
               <el-button type="primary" size="large" :loading="uploading" class="full-btn" @click="doUpload">
                 <el-icon><Upload /></el-icon>
@@ -367,6 +367,7 @@ import { displayFileName } from './utils/fileDisplay'
 import { expandRemovedItemIds, filterLogFileIds } from './utils/fileTree'
 import { highlightLogLine } from './utils/highlight'
 import { orderLogFileIds } from './utils/logSort'
+import { groupUploadFiles } from './utils/archiveVolume'
 
 const SIDEBAR_VISIBLE_KEY = 'log_tools_sidebar_visible'
 const TOOLS_PANEL_VISIBLE_KEY = 'log_tools_tools_panel_visible'
@@ -668,20 +669,38 @@ async function doUpload() {
     ElMessage.warning('请先选择文件')
     return
   }
+  const jobs = groupUploadFiles(pendingFiles.value)
+  const incomplete = jobs.find((j) => j.incomplete)
+  if (incomplete) {
+    ElMessage.warning(`分卷压缩包「${incomplete.label}」需同时选择全部分卷后再上传`)
+    return
+  }
   uploading.value = true
   uploadProgress.value = 0
   parseLogs.value = []
   try {
-    const total = pendingFiles.value.length
+    const total = jobs.length
     for (let i = 0; i < total; i++) {
-      const f = pendingFiles.value[i]
-      appendParseLog(`上传文件: ${f.name}`)
-      const { data } = await api.upload(f, (e) => {
-        const single = e.total ? Math.round((e.loaded / e.total) * 100) : 0
-        uploadProgress.value = Math.round(((i + single / 100) / total) * 100)
-      })
-      if (data.file_ids?.length) {
-        data.file_ids.forEach((id) => appendParseLog(`已上传: ${id.slice(0, 8)}…`))
+      const job = jobs[i]
+      if (job.isVolumeGroup) {
+        appendParseLog(`上传分卷: ${job.label}（${job.files.length} 个文件）`)
+        const { data } = await api.uploadVolume(job.files, (e) => {
+          const single = e.total ? Math.round((e.loaded / e.total) * 100) : 0
+          uploadProgress.value = Math.round(((i + single / 100) / total) * 100)
+        })
+        if (data.file_ids?.length) {
+          data.file_ids.forEach((id) => appendParseLog(`已上传: ${id.slice(0, 8)}…`))
+        }
+      } else {
+        const f = job.files[0]
+        appendParseLog(`上传文件: ${f.name}`)
+        const { data } = await api.upload(f, (e) => {
+          const single = e.total ? Math.round((e.loaded / e.total) * 100) : 0
+          uploadProgress.value = Math.round(((i + single / 100) / total) * 100)
+        })
+        if (data.file_ids?.length) {
+          data.file_ids.forEach((id) => appendParseLog(`已上传: ${id.slice(0, 8)}…`))
+        }
       }
     }
     ElMessage.success('上传成功，可选择文件预览或点击入库')

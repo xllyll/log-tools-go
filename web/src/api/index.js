@@ -20,6 +20,17 @@ export const api = {
       onUploadProgress: onProgress,
     }).then((res) => res)
   },
+  uploadVolume(files, onProgress) {
+    const fd = new FormData()
+    for (const f of files) {
+      fd.append('files', f)
+    }
+    return http.post('/upload/volume', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress,
+      timeout: 600000,
+    }).then((res) => res)
+  },
   listFiles() {
     return http.get('/files')
   },
