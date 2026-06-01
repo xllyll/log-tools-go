@@ -53,7 +53,6 @@
         :key="treeKey"
         :data="treeData"
         node-key="id"
-        default-expand-all
         :expand-on-click-node="false"
         :props="{ label: 'label', children: 'children' }"
         class="file-tree"
@@ -148,7 +147,7 @@ const emit = defineEmits([
 const batchDeleting = ref(false)
 const ingestingLocalId = ref('')
 const treeRef = ref(null)
-const treeExpanded = ref(true)
+const treeExpanded = ref(false)
 
 const treeData = computed(() => buildFileTree(props.items))
 
@@ -183,8 +182,8 @@ function onTreeExpandChange() {
 }
 
 watch(treeKey, () => {
-  treeExpanded.value = true
-  nextTick(() => setAllTreeNodesExpanded(true))
+  treeExpanded.value = false
+  nextTick(() => setAllTreeNodesExpanded(false))
 })
 
 const selectableIds = computed(() => collectTreeSelectableIds(treeData.value, isViewable))
