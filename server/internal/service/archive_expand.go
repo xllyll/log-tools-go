@@ -87,7 +87,7 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 		out = append(out, model.ExtractedFile{
 			DiskPath:        target,
 			OriginalName:    base,
-			FileFormat:      strings.ToLower(filepath.Ext(base)),
+			FileFormat:      model.LogFormatFromName(base),
 			ArchiveDirParts: normalizeFolderChain(folderBinding),
 		})
 	}

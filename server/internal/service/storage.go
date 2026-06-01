@@ -33,9 +33,11 @@ func (s *StorageService) ValidateFile(size int64, filename string) error {
 	if size > s.cfg.Storage.MaxFileSize {
 		return fmt.Errorf("file exceeds max size %d", s.cfg.Storage.MaxFileSize)
 	}
+	if model.IsLogFileName(filename) {
+		return nil
+	}
 	ext := strings.ToLower(filepath.Ext(filename))
-	allowed := append([]string{".zip", ".rar", ".7z"}, model.LogExtensions...)
-	for _, a := range allowed {
+	for _, a := range []string{".zip", ".rar", ".7z"} {
 		if ext == a {
 			return nil
 		}
@@ -64,10 +66,10 @@ func (s *StorageService) SaveUpload(src io.Reader, filename string) (string, err
 
 // UploadFileMeta describes a registered upload beyond the on-disk storage name.
 type UploadFileMeta struct {
-	Path           string
-	OriginalName   string
-	FileFormat     string
-	ParentID string
+	Path         string
+	OriginalName string
+	FileFormat   string
+	ParentID     string
 }
 
 func archiveDirParts(archiveRel string) []string {
@@ -249,12 +251,12 @@ func (s *StorageService) ImportSavedFile(ctx context.Context, deviceID, diskPath
 	}
 	var fileIDs []string
 	for _, ent := range result.Files {
-		ext := ent.FileFormat
-		if ext == "" {
-			ext = strings.ToLower(filepath.Ext(ent.OriginalName))
-		}
-		if !model.IsLogExtension(ext) {
+		if !model.IsLogFileName(ent.OriginalName) {
 			continue
+		}
+		ext := ent.FileFormat
+		if ext == "" || !model.IsLogExtension(ext) {
+			ext = model.LogFormatFromName(ent.OriginalName)
 		}
 		parentID, err := s.EnsureFolders(ctx, deviceID, ent.ArchiveDirParts)
 		if err != nil {

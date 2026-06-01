@@ -33,9 +33,10 @@ func scanExtractedTreeFiltered(root string) (logPaths, archivePaths []string, er
 		if isArchiveNoisePath(path) {
 			return nil
 		}
-		ext := strings.ToLower(filepath.Ext(d.Name()))
+		name := d.Name()
+		ext := strings.ToLower(filepath.Ext(name))
 		switch {
-		case isLogExt(ext):
+		case isLogFile(name):
 			logPaths = append(logPaths, path)
 		case isArchiveExt(ext):
 			archivePaths = append(archivePaths, path)

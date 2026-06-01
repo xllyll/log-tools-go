@@ -61,7 +61,7 @@ func (c *Client) ListLogAttachments(issueKey string) ([]model.JiraAttachment, er
 	var list []model.JiraAttachment
 	for _, a := range parsed.Fields.Attachment {
 		ext := strings.ToLower(filepath.Ext(a.Filename))
-		if !model.IsLogExtension(ext) && ext != ".zip" && ext != ".rar" && ext != ".7z" {
+		if !model.IsLogFileName(a.Filename) && ext != ".zip" && ext != ".rar" && ext != ".7z" {
 			continue
 		}
 		list = append(list, model.JiraAttachment{

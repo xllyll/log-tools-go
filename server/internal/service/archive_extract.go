@@ -15,8 +15,8 @@ import (
 
 var archiveExtensions = map[string]bool{".zip": true, ".rar": true, ".7z": true}
 
-func isLogExt(ext string) bool {
-	return model.IsLogExtension(ext)
+func isLogFile(name string) bool {
+	return model.IsLogFileName(name)
 }
 
 func isArchiveExt(ext string) bool {
@@ -114,7 +114,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 		}
 		base := filepath.Base(rel)
 		ext := strings.ToLower(filepath.Ext(base))
-		if isLogExt(ext) || isArchiveExt(ext) {
+		if isLogFile(base) || isArchiveExt(ext) {
 			itemCount++
 		}
 		if isArchiveExt(ext) {
@@ -162,7 +162,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 		relDir := archiveDirParts(rel)
 
 		switch {
-		case isLogExt(ext):
+		case isLogFile(base):
 			folderBinding := folderChainForLogInArchive(parentFolders, containerName, "", bindContainer, relDir)
 			target, err := diskTarget(extractRoot, folderBinding, base)
 			if err != nil {
@@ -175,7 +175,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 			out = append(out, model.ExtractedFile{
 				DiskPath:        target,
 				OriginalName:    base,
-				FileFormat:      ext,
+				FileFormat:      model.LogFormatFromName(base),
 				ArchiveDirParts: normalizeFolderChain(folderBinding),
 			})
 		case isArchiveExt(ext):

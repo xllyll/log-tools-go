@@ -48,8 +48,6 @@ func NormalizeArchiveEntryName(entryName string) string {
 
 var archiveExtensions = map[string]bool{".zip": true, ".rar": true, ".7z": true}
 
-var rotationNumberSuffix = regexp.MustCompile(`^\d+$`)
-
 func isArchiveExtension(ext string) bool {
 	return archiveExtensions[strings.ToLower(ext)]
 }
@@ -69,24 +67,7 @@ func flattenSuffixFromInner(innerLogName string) string {
 // archiveStemLooksLikeLogName 判断去掉压缩包后缀后的名称是否已是日志类文件名（含轮转序号）。
 // 例如 logcat.log.003、logcat.log、report.txt.002
 func archiveStemLooksLikeLogName(stem string) bool {
-	lower := strings.ToLower(stem)
-	if IsLogExtension(filepath.Ext(lower)) {
-		return true
-	}
-	lastDot := strings.LastIndex(lower, ".")
-	if lastDot < 0 {
-		return false
-	}
-	if !rotationNumberSuffix.MatchString(lower[lastDot+1:]) {
-		return false
-	}
-	prefix := lower[:lastDot]
-	for _, logExt := range LogExtensions {
-		if strings.HasSuffix(prefix, logExt) {
-			return true
-		}
-	}
-	return false
+	return IsLogFileName(stem)
 }
 
 // FlattenedLogOriginalName: 单日志压缩包展平后的展示名（不含包内日志主名）。
