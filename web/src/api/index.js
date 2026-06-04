@@ -31,8 +31,14 @@ export const api = {
       timeout: 600000,
     }).then((res) => res)
   },
-  listFiles() {
-    return http.get('/files')
+  listFolders() {
+    return http.get('/files/folders')
+  },
+  listFilesByParent(parentId = '') {
+    return http.get('/files', { params: { parent_id: parentId } })
+  },
+  listProcessingFiles() {
+    return http.get('/files/processing')
   },
   fileStatus(id) {
     return http.get(`/files/${id}`)
@@ -51,6 +57,11 @@ export const api = {
   },
   queryLogs(body) {
     return http.post('/logs/query', body)
+  },
+  downloadLogFile(fileId) {
+    return http.get(`/files/${encodeURIComponent(fileId)}/download`, {
+      responseType: 'blob',
+    })
   },
   logContext(params) {
     return http.get('/logs/context', { params })

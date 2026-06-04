@@ -7,6 +7,7 @@
     destroy-on-close
     @open="onOpen"
   >
+    <div v-loading="opening" class="scene-dialog-body">
     <div class="scene-toolbar">
       <el-button type="primary" plain size="small" @click="addModule">
         <el-icon><Plus /></el-icon>
@@ -34,10 +35,10 @@
       <div class="nav-pane">
         <div class="pane-title">模块</div>
         <el-select
-          v-model="selectedModuleIndex"
+          :model-value="selectedModuleIndex"
           class="module-select"
           placeholder="选择模块"
-          @change="onModuleChange"
+          @update:model-value="onModuleIndexUpdate"
         >
           <el-option
             v-for="(mod, mi) in draft.modules"
@@ -159,15 +160,33 @@
         </template>
       </div>
     </div>
+    </div>
 
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" :loading="confirming" @click="handleConfirm">确定</el-button>
+      <el-button type="primary" :loading="confirming" :disabled="opening" @click="handleConfirm">确定</el-button>
     </template>
 
     <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="onFileImport" />
 
     <SceneLibraryDialog ref="libraryRef" v-model="libraryVisible" :config="draft" @apply="onLibraryApply" />
+
+    <el-dialog
+      v-model="conflictVisible"
+      title="模块冲突"
+      width="440px"
+      append-to-body
+      :close-on-click-modal="false"
+      @closed="onConflictClosed"
+    >
+      <p class="conflict-msg">当前模块其他成员已修改，请选择操作：</p>
+      <div class="conflict-actions">
+        <el-button type="primary" @click="finishConflict('merge')">合并</el-button>
+        <el-button @click="finishConflict('theirs')">用他人版本</el-button>
+        <el-button @click="finishConflict('mine')">用我的版本</el-button>
+        <el-button link type="info" @click="finishConflict('abort')">取消保存</el-button>
+      </div>
+    </el-dialog>
   </el-dialog>
 </template>
 
@@ -182,6 +201,10 @@ import {
   defaultSceneConfig,
   emptyKeyword,
   mergeSceneConfig,
+  findModuleByName,
+  mergeModuleConflict,
+  mergeSceneConfigDirtyModules,
+  mergeSceneConfigReplaceModule,
   saveLocalScene,
   sceneDescStyle,
 } from '../utils/scene'
@@ -202,6 +225,17 @@ const draft = ref(cloneSceneConfig(props.config))
 const selectedModuleIndex = ref(null)
 const selectedSceneIndex = ref(null)
 const confirming = ref(false)
+const opening = ref(false)
+/** 模块索引 -> 进入该模块编辑时的 JSON 快照，用于检测未保存 */
+const moduleBaselines = new Map()
+/** 模块索引 -> 开始编辑时的模块名（保存时用于在 server 上定位） */
+const moduleBaselineNames = new Map()
+/** 打开弹窗时服务器各模块快照（模块名 -> JSON），用于保存前冲突检测 */
+const serverModulesAtOpen = new Map()
+const conflictVisible = ref(false)
+let conflictResolver = null
+/** @type {{ mi: number, serverCfg: object, serverModNow: object, lookupName: string } | null} */
+const conflictCtx = ref(null)
 const fileInput = ref(null)
 const libraryVisible = ref(false)
 const libraryRef = ref(null)
@@ -231,20 +265,202 @@ watch(
   { deep: true },
 )
 
-function onOpen() {
+async function onOpen() {
   draft.value = cloneSceneConfig(props.config)
   resetSelection()
+  opening.value = true
+  try {
+    const serverCfg = await fetchServerSceneConfig()
+    if (!visible.value) return
+    if (serverCfg) {
+      const cfg = cloneSceneConfig(serverCfg)
+      draft.value = cfg
+      emit('update:config', cfg)
+      saveLocalScene(cfg)
+      captureServerModulesAtOpen(serverCfg)
+      resetSelection()
+    }
+  } catch {
+    /* 拉取失败时沿用打开前的本地配置 */
+    serverModulesAtOpen.clear()
+  } finally {
+    opening.value = false
+    refreshAllModuleBaselines()
+  }
+}
+
+function captureServerModulesAtOpen(serverCfg) {
+  serverModulesAtOpen.clear()
+  for (const mod of serverCfg?.modules || []) {
+    const name = (mod.name || '').trim()
+    if (name) serverModulesAtOpen.set(name, JSON.stringify(snapshotModule(mod)))
+  }
+}
+
+function moduleLookupName(mi) {
+  return (moduleBaselineNames.get(mi) || draft.value.modules?.[mi]?.name || '').trim()
+}
+
+function promptModuleConflict(ctx) {
+  conflictCtx.value = ctx
+  conflictVisible.value = true
+  return new Promise((resolve) => {
+    conflictResolver = resolve
+  })
+}
+
+function finishConflict(choice) {
+  conflictVisible.value = false
+  const resolve = conflictResolver
+  conflictResolver = null
+  resolve?.(choice)
+}
+
+function onConflictClosed() {
+  if (conflictResolver) finishConflict('abort')
+}
+
+/**
+ * 保存前检测：打开弹窗时 server 上的该模块 vs 当前 server 上该模块。
+ * @returns {Promise<boolean>} false 表示取消保存
+ */
+async function resolveModuleConflictBeforeSave(mi, serverCfg) {
+  const lookupName = moduleLookupName(mi)
+  if (!lookupName || !serverModulesAtOpen.has(lookupName)) {
+    return true
+  }
+
+  const serverModNow = findModuleByName(serverCfg, lookupName)
+  const openSnap = serverModulesAtOpen.get(lookupName)
+
+  if (!serverModNow) {
+    return true
+  }
+
+  const nowSnap = JSON.stringify(snapshotModule(serverModNow))
+  if (openSnap === nowSnap) {
+    return true
+  }
+
+  const choice = await promptModuleConflict({ mi, serverCfg, serverModNow, lookupName })
+  if (choice === 'abort') return false
+
+  if (choice === 'theirs') {
+    draft.value.modules[mi] = snapshotModule(serverModNow)
+    syncModuleBaseline(mi)
+    serverModulesAtOpen.set(lookupName, nowSnap)
+    return true
+  }
+
+  if (choice === 'mine') {
+    return true
+  }
+
+  if (choice === 'merge') {
+    draft.value.modules[mi] = mergeModuleConflict(draft.value.modules[mi], serverModNow)
+    syncModuleBaseline(mi)
+    return true
+  }
+
+  return false
+}
+
+function markServerModulesSaved(cfg, indexes) {
+  for (const mi of indexes) {
+    const name = moduleLookupName(mi)
+    const mod = findModuleByName(cfg, name)
+    if (name && mod) {
+      serverModulesAtOpen.set(name, JSON.stringify(snapshotModule(mod)))
+    }
+  }
 }
 
 function onLibraryApply(cfg) {
   draft.value = cloneSceneConfig(cfg)
+  moduleBaselines.clear()
+  moduleBaselineNames.clear()
+  serverModulesAtOpen.clear()
   resetSelection()
+}
+
+function snapshotModule(mod) {
+  return cloneSceneConfig({ modules: [mod] }).modules[0]
+}
+
+function refreshAllModuleBaselines() {
+  moduleBaselines.clear()
+  moduleBaselineNames.clear()
+  ;(draft.value.modules || []).forEach((_, mi) => syncModuleBaseline(mi))
+}
+
+function clearModuleTracking() {
+  moduleBaselines.clear()
+  moduleBaselineNames.clear()
+  serverModulesAtOpen.clear()
+}
+
+function syncModuleBaseline(mi) {
+  const mod = draft.value.modules?.[mi]
+  if (mod) {
+    moduleBaselines.set(mi, JSON.stringify(snapshotModule(mod)))
+    moduleBaselineNames.set(mi, (mod.name || '').trim())
+  }
+}
+
+function isModuleDirty(mi) {
+  if (mi == null) return false
+  const raw = moduleBaselines.get(mi)
+  if (!raw) return false
+  const mod = draft.value.modules?.[mi]
+  if (!mod) return false
+  return JSON.stringify(snapshotModule(mod)) !== raw
+}
+
+function revertModule(mi) {
+  const raw = moduleBaselines.get(mi)
+  if (raw && draft.value.modules?.[mi]) {
+    draft.value.modules[mi] = JSON.parse(raw)
+  }
+}
+
+async function promptUnsavedModuleChange() {
+  try {
+    await ElMessageBox({
+      title: '提示',
+      message: '当前模块配置未保存，是否保存？',
+      type: 'warning',
+      showCancelButton: true,
+      distinguishCancelAndClose: true,
+      confirmButtonText: '保存',
+      cancelButtonText: '不保存',
+    })
+    return 'save'
+  } catch (action) {
+    if (action === 'cancel') return 'discard'
+    return 'abort'
+  }
+}
+
+/** @returns {Promise<boolean>} 是否允许继续切换 */
+async function guardModuleUnsaved(mi) {
+  if (!isModuleDirty(mi)) return true
+  const choice = await promptUnsavedModuleChange()
+  if (choice === 'abort') return false
+  if (choice === 'discard') {
+    revertModule(mi)
+    return true
+  }
+  const ok = await handleConfirm({ moduleIndex: mi })
+  return !!ok
 }
 
 function resetSelection() {
   selectedModuleIndex.value = null
   selectedSceneIndex.value = null
-  nextTick(() => selectFirstModule())
+  nextTick(() => {
+    selectFirstModule()
+    refreshAllModuleBaselines()
+  })
 }
 
 function selectFirstModule() {
@@ -253,11 +469,16 @@ function selectFirstModule() {
   selectedSceneIndex.value = null
 }
 
-function onModuleChange() {
+async function onModuleIndexUpdate(newMi) {
+  const oldMi = selectedModuleIndex.value
+  if (oldMi !== null && oldMi !== newMi && !(await guardModuleUnsaved(oldMi))) return
+  selectedModuleIndex.value = newMi
   selectedSceneIndex.value = null
+  syncModuleBaseline(newMi)
 }
 
 function selectScene(si) {
+  if (selectedModuleIndex.value === null || si === selectedSceneIndex.value) return
   selectedSceneIndex.value = si
 }
 
@@ -294,11 +515,15 @@ async function publishToLibrary() {
   }
 }
 
-function addModule() {
+async function addModule() {
   if (!draft.value.modules) draft.value.modules = []
+  const oldMi = selectedModuleIndex.value
+  if (oldMi !== null && !(await guardModuleUnsaved(oldMi))) return
   draft.value.modules.push({ name: '新模块', scenes: [] })
-  selectedModuleIndex.value = draft.value.modules.length - 1
+  const newMi = draft.value.modules.length - 1
+  selectedModuleIndex.value = newMi
   selectedSceneIndex.value = null
+  syncModuleBaseline(newMi)
 }
 
 function addSceneToSelected() {
@@ -312,7 +537,7 @@ function addSceneToSelected() {
   const mod = draft.value.modules[selectedModuleIndex.value]
   if (!mod.scenes) mod.scenes = []
   mod.scenes.push({ name: '新场景', keywords: [emptyKeyword()] })
-  selectedSceneIndex.value = mod.scenes.length - 1
+  selectScene(mod.scenes.length - 1)
 }
 
 function removeSelected() {
@@ -327,18 +552,20 @@ function removeSelected() {
       .catch(() => {})
     return
   }
-  ElMessageBox.confirm('确定删除该模块及其所有场景？', '提示', { type: 'warning' })
-    .then(() => {
-      const mi = selectedModuleIndex.value
-      draft.value.modules.splice(mi, 1)
-      if (!draft.value.modules.length) {
-        selectedModuleIndex.value = null
-        selectedSceneIndex.value = null
-      } else {
-        selectedModuleIndex.value = Math.min(mi, draft.value.modules.length - 1)
-        selectedSceneIndex.value = null
-      }
-    })
+    ElMessageBox.confirm('确定删除该模块及其所有场景？', '提示', { type: 'warning' })
+      .then(() => {
+        const mi = selectedModuleIndex.value
+        draft.value.modules.splice(mi, 1)
+        if (!draft.value.modules.length) {
+          selectedModuleIndex.value = null
+          selectedSceneIndex.value = null
+          clearModuleTracking()
+        } else {
+          selectedModuleIndex.value = Math.min(mi, draft.value.modules.length - 1)
+          selectedSceneIndex.value = null
+          refreshAllModuleBaselines()
+        }
+      })
     .catch(() => {})
 }
 
@@ -355,9 +582,32 @@ function resetDefault() {
   ElMessageBox.confirm('将覆盖当前编辑内容，是否继续？', '恢复示例', { type: 'warning' })
     .then(() => {
       draft.value = defaultSceneConfig()
+      clearModuleTracking()
       resetSelection()
     })
     .catch(() => {})
+}
+
+function validateModule(mi) {
+  const mod = draft.value.modules?.[mi]
+  if (!mod) return true
+  if (!mod.name?.trim()) {
+    ElMessage.warning('请填写模块名称')
+    return false
+  }
+  for (const scene of mod.scenes || []) {
+    if (!scene.name?.trim()) {
+      ElMessage.warning(`模块「${mod.name}」存在未命名场景`)
+      return false
+    }
+    for (const kw of scene.keywords || []) {
+      if (!kw.keyword?.trim()) {
+        ElMessage.warning(`场景「${scene.name}」存在空关键词`)
+        return false
+      }
+    }
+  }
+  return true
 }
 
 function validate() {
@@ -389,18 +639,92 @@ function applyConfig() {
   return cfg
 }
 
-async function handleConfirm() {
-  const cfg = applyConfig()
-  if (!cfg) return
+async function fetchServerSceneConfig() {
+  const { data } = await api.fetchSharedScene()
+  if (data?.success && data.data?.config?.modules?.length) {
+    return data.data.config
+  }
+  return null
+}
+
+function dirtyModuleIndexes() {
+  return (draft.value.modules || []).map((_, mi) => mi).filter((mi) => isModuleDirty(mi))
+}
+
+async function handleConfirm(opts = {}) {
+  const moduleIndex = opts.moduleIndex
+  const moduleOnly = Number.isInteger(moduleIndex) && moduleIndex >= 0
+  const dirtyIndexes = moduleOnly ? [moduleIndex] : dirtyModuleIndexes()
+
+  if (!moduleOnly && !dirtyIndexes.length) {
+    ElMessage.info('没有修改需要保存')
+    return true
+  }
+
   confirming.value = true
   try {
-    saveLocalScene(cfg)
-    const { data } = await api.uploadSharedScene(cfg)
+    let serverCfg = null
+    try {
+      serverCfg = await fetchServerSceneConfig()
+    } catch {
+      /* 拉取失败 */
+    }
+    if (serverCfg && dirtyIndexes.length) {
+      for (const mi of dirtyIndexes) {
+        const ok = await resolveModuleConflictBeforeSave(mi, serverCfg)
+        if (!ok) return false
+      }
+    }
+    for (const mi of dirtyIndexes) {
+      if (!validateModule(mi)) return false
+    }
+
+    const draftCfg = cloneSceneConfig(draft.value)
+    let toSave = draftCfg
+    let mergedWithServer = false
+    if (serverCfg) {
+      if (moduleOnly) {
+        toSave = mergeSceneConfigReplaceModule(
+          draftCfg,
+          serverCfg,
+          moduleIndex,
+          moduleBaselineNames.get(moduleIndex),
+        )
+      } else {
+        toSave = mergeSceneConfigDirtyModules(draftCfg, serverCfg, dirtyIndexes, moduleBaselineNames)
+      }
+      mergedWithServer = true
+    } else if (moduleOnly) {
+      toSave = mergeSceneConfigReplaceModule(
+        draftCfg,
+        { modules: [] },
+        moduleIndex,
+        moduleBaselineNames.get(moduleIndex),
+      )
+    } else if (dirtyIndexes.length) {
+      toSave = mergeSceneConfigDirtyModules(draftCfg, { modules: [] }, dirtyIndexes, moduleBaselineNames)
+    }
+    emit('update:config', toSave)
+    draft.value = cloneSceneConfig(toSave)
+    saveLocalScene(toSave)
+    const { data } = await api.uploadSharedScene(toSave)
     if (!data.success) throw new Error(data.error)
-    //visible.value = false
-    ElMessage.success('已保存到本地并上传服务器')
+    const n = dirtyIndexes.length
+    ElMessage.success(
+      moduleOnly
+        ? '当前模块已保存（其他模块保持服务器最新配置）'
+        : mergedWithServer
+          ? n === 1
+            ? '已保存 1 个模块（未改动的模块保持服务器最新配置；同模块以后提交的为准）'
+            : `已保存 ${n} 个模块（未改动的模块保持服务器最新配置；同模块以后提交的为准）`
+          : '已保存到本地并上传服务器',
+    )
+    refreshAllModuleBaselines()
+    markServerModulesSaved(toSave, dirtyIndexes)
+    return true
   } catch (e) {
     ElMessage.error(e.response?.data?.error || e.message || '保存失败')
+    return false
   } finally {
     confirming.value = false
   }
@@ -424,6 +748,7 @@ function onFileImport(e) {
     try {
       const incoming = parseImportedSceneConfig(reader.result)
       draft.value = mergeSceneConfig(draft.value, incoming)
+      clearModuleTracking()
       resetSelection()
       ElMessage.success('已合并到当前配置（未覆盖已有模块/场景）')
     } catch {
@@ -446,6 +771,10 @@ function exportJson() {
 </script>
 
 <style scoped>
+.scene-dialog-body {
+  min-height: 200px;
+}
+
 .scene-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -604,5 +933,17 @@ function exportJson() {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.conflict-msg {
+  margin: 0 0 16px;
+  line-height: 1.6;
+  color: var(--app-text);
+}
+
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 </style>

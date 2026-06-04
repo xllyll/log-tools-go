@@ -173,6 +173,13 @@ FOREIGN KEY (parent_id) REFERENCES log_files(id) ON DELETE CASCADE`)
 const logFileSelectCols = `id, device_id, COALESCE(entry_type,'file'), name, COALESCE(original_name,''), COALESCE(file_format,''),
 COALESCE(parent_id,''), size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,''), COALESCE(source_path,'')`
 
+// logFileListCols 文件列表 API：不查 source_path（前端用 parent_id 建树，不用 folder_path）
+const logFileListCols = `id, device_id, COALESCE(entry_type,'file'), name, COALESCE(original_name,''), COALESCE(file_format,''),
+COALESCE(parent_id,''), size, upload_at, total_entries, parsed_lines, progress, status, COALESCE(status_msg,''), ''`
+
+const logFolderListCols = `f.id, f.device_id, COALESCE(f.parent_id,''), f.name, COALESCE(f.original_name,''),
+(SELECT COUNT(*)::int FROM log_files c WHERE c.device_id = f.device_id AND c.parent_id = f.id AND COALESCE(c.entry_type,'file') = 'file')`
+
 func scanLogFile(scanner interface {
 	Scan(dest ...any) error
 }) (LogFile, error) {
@@ -395,7 +402,7 @@ FROM log_files WHERE device_id=$1 AND entry_type='file' ORDER BY upload_at DESC`
 
 func (d *Database) ListDeviceFiles(ctx context.Context, deviceID string) (*FileListData, error) {
 	rows, err := d.pool.Query(ctx, `
-SELECT `+logFileSelectCols+`
+SELECT `+logFileListCols+`
 FROM log_files WHERE device_id=$1 ORDER BY entry_type DESC, name`, deviceID)
 	if err != nil {
 		return nil, err
@@ -407,9 +414,6 @@ FROM log_files WHERE device_id=$1 ORDER BY entry_type DESC, name`, deviceID)
 		if err != nil {
 			return nil, err
 		}
-		if item.IsFile() && item.ParentID != "" {
-			item.FolderPath, _ = d.ResolveFolderPath(ctx, item.ParentID)
-		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -419,6 +423,90 @@ FROM log_files WHERE device_id=$1 ORDER BY entry_type DESC, name`, deviceID)
 		items = []LogFile{}
 	}
 	return &FileListData{Items: items}, nil
+}
+
+func scanFolderRow(scanner interface {
+	Scan(dest ...any) error
+}) (LogFile, error) {
+	var f LogFile
+	f.EntryType = EntryTypeFolder
+	err := scanner.Scan(&f.ID, &f.DeviceID, &f.ParentID, &f.Name, &f.OriginalName, &f.ChildFileCount)
+	return f, err
+}
+
+func (d *Database) ListDeviceFolders(ctx context.Context, deviceID string) ([]LogFile, error) {
+	rows, err := d.pool.Query(ctx, `
+SELECT `+logFolderListCols+`
+FROM log_files f
+WHERE f.device_id=$1 AND COALESCE(f.entry_type,'')='folder'
+ORDER BY f.name`, deviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LogFile
+	for rows.Next() {
+		item, err := scanFolderRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []LogFile{}
+	}
+	return items, nil
+}
+
+func (d *Database) ListDeviceFilesByParent(ctx context.Context, deviceID, parentID string) ([]LogFile, error) {
+	rows, err := d.pool.Query(ctx, `
+SELECT `+logFileListCols+`
+FROM log_files
+WHERE device_id=$1 AND COALESCE(entry_type,'file')='file' AND parent_id IS NOT DISTINCT FROM NULLIF($2, '')
+ORDER BY name`, deviceID, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LogFile
+	for rows.Next() {
+		item, err := scanLogFile(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []LogFile{}
+	}
+	return items, nil
+}
+
+func (d *Database) ListDeviceProcessingFiles(ctx context.Context, deviceID string) ([]LogFile, error) {
+	rows, err := d.pool.Query(ctx, `
+SELECT `+logFileListCols+`
+FROM log_files
+WHERE device_id=$1 AND COALESCE(entry_type,'file')='file' AND status IN ('parsing','inserting')
+ORDER BY upload_at DESC`, deviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LogFile
+	for rows.Next() {
+		item, err := scanLogFile(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func (d *Database) GetLogItem(ctx context.Context, deviceID, id string) (*LogFile, error) {
@@ -598,13 +686,17 @@ FROM log_entries WHERE device_id=$`)
 
 	for _, kw := range filter.Keywords {
 		if filter.UseRegex {
-			fmt.Fprintf(&b, " AND content ~ $%d", argN)
+			if filter.KeywordCaseSensitive {
+				fmt.Fprintf(&b, " AND content ~ $%d", argN)
+			} else {
+				fmt.Fprintf(&b, " AND content ~* $%d", argN)
+			}
+			args = append(args, kw)
+		} else if filter.KeywordCaseSensitive {
+			fmt.Fprintf(&b, " AND content LIKE $%d", argN)
+			args = append(args, "%"+kw+"%")
 		} else {
 			fmt.Fprintf(&b, " AND content ILIKE $%d", argN)
-		}
-		if filter.UseRegex {
-			args = append(args, kw)
-		} else {
 			args = append(args, "%"+kw+"%")
 		}
 		argN++
@@ -713,12 +805,13 @@ func (d *Database) CountEntries(ctx context.Context, deviceID, fileID string, fi
 	filter.Limit = 0
 	filter.Offset = 0
 	entries, err := d.GetLogEntries(ctx, LogFilter{
-		DeviceID:      deviceID,
-		FileID:        fileID,
-		FileIDs:       filter.FileIDs,
-		Keywords:      filter.Keywords,
-		SceneKeywords: filter.SceneKeywords,
-		UseRegex:      filter.UseRegex,
+		DeviceID:             deviceID,
+		FileID:               fileID,
+		FileIDs:              filter.FileIDs,
+		Keywords:             filter.Keywords,
+		SceneKeywords:        filter.SceneKeywords,
+		UseRegex:             filter.UseRegex,
+		KeywordCaseSensitive: filter.KeywordCaseSensitive,
 	})
 	if err != nil {
 		return 0, err

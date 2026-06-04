@@ -86,7 +86,7 @@ function renderSegments(src, sceneRanges, searchRanges) {
  * @param {boolean} useRegex
  * @param {{ keyword: string, mode?: number, case_sensitive?: number }[]} sceneKeywords
  */
-export function highlightLogLine(text, searchKeywords, useRegex = false, sceneKeywords = []) {
+export function highlightLogLine(text, searchKeywords, useRegex = false, sceneKeywords = [], searchCaseSensitive = false) {
   const src = text == null ? '' : String(text)
   const searchKws = (searchKeywords || []).map((k) => String(k).trim()).filter(Boolean)
   const sceneRanges = []
@@ -99,7 +99,7 @@ export function highlightLogLine(text, searchKeywords, useRegex = false, sceneKe
       sceneRanges.push(r)
     }
   }
-  const searchRanges = searchKws.length ? collectRanges(src, searchKws, useRegex) : []
+  const searchRanges = searchKws.length ? collectRanges(src, searchKws, useRegex, searchCaseSensitive) : []
   return renderSegments(src, sceneRanges, searchRanges)
 }
 

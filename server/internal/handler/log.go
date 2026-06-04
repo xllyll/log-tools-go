@@ -24,7 +24,8 @@ type logQueryReq struct {
 	FileIDs       []string        `json:"file_ids"`
 	Keywords      []string        `json:"keywords"`
 	SceneKeywords json.RawMessage `json:"scene_keywords"`
-	UseRegex      bool            `json:"use_regex"`
+	UseRegex              bool            `json:"use_regex"`
+	KeywordCaseSensitive  bool            `json:"keyword_case_sensitive"`
 	Limit         int             `json:"limit"`
 	Offset        int             `json:"offset"`
 }
@@ -71,16 +72,18 @@ func (h *LogHandler) Query(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Success: false, Error: "file_id required"})
 		return
 	}
-	if req.Limit <= 0 {
+	if req.Limit == 0 {
 		req.Limit = 2000
 	}
+	// Limit < 0：不分页，返回全部匹配（用于导出）
 	filter := model.LogFilter{
 		DeviceID:      deviceID,
 		FileID:        req.FileID,
 		FileIDs:       req.FileIDs,
 		Keywords:      req.Keywords,
 		SceneKeywords: parseSceneKeywordFilters(req.SceneKeywords),
-		UseRegex:      req.UseRegex,
+		UseRegex:             req.UseRegex,
+		KeywordCaseSensitive: req.KeywordCaseSensitive,
 		Limit:         req.Limit,
 		Offset:        req.Offset,
 	}

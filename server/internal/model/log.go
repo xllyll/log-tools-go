@@ -31,8 +31,9 @@ type LogFile struct {
 	Progress    int        `json:"progress"`
 	Status      string     `json:"status"` // uploaded | parsing | inserting | ready | failed
 	StatusMsg   string     `json:"status_msg,omitempty"`
-	SourcePath  string     `json:"source_path,omitempty"`
-	Entries     []LogEntry `json:"-"`
+	SourcePath     string     `json:"source_path,omitempty"`
+	ChildFileCount int        `json:"child_file_count,omitempty"` // 文件夹列表：直属文件数
+	Entries        []LogEntry `json:"-"`
 }
 
 // SceneKeywordFilter 场景查询关键字（与场景配置一致）
@@ -46,9 +47,10 @@ type LogFilter struct {
 	DeviceID      string
 	FileID        string
 	FileIDs       []string
-	Keywords      []string
-	SceneKeywords []SceneKeywordFilter
-	UseRegex      bool
+	Keywords              []string
+	SceneKeywords         []SceneKeywordFilter
+	UseRegex              bool
+	KeywordCaseSensitive  bool
 	Limit         int
 	Offset        int
 	LineNumber    int

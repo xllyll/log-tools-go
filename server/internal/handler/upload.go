@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -186,9 +187,30 @@ func (h *UploadHandler) UploadVolume(c *gin.Context) {
 	})
 }
 
-func (h *UploadHandler) ListFiles(c *gin.Context) {
+func (h *UploadHandler) ListFolders(c *gin.Context) {
 	deviceID := GetDeviceID(c)
-	data, err := h.storage.ListFiles(c.Request.Context(), deviceID)
+	data, err := h.storage.ListFolders(c.Request.Context(), deviceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, model.APIResponse{Success: true, Data: data})
+}
+
+func (h *UploadHandler) ListFilesByParent(c *gin.Context) {
+	deviceID := GetDeviceID(c)
+	parentID := strings.TrimSpace(c.Query("parent_id"))
+	data, err := h.storage.ListFilesByParent(c.Request.Context(), deviceID, parentID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, model.APIResponse{Success: true, Data: data})
+}
+
+func (h *UploadHandler) ListProcessingFiles(c *gin.Context) {
+	deviceID := GetDeviceID(c)
+	data, err := h.storage.ListProcessingFiles(c.Request.Context(), deviceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Success: false, Error: err.Error()})
 		return
@@ -227,8 +249,21 @@ func (h *UploadHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 	ids := dedupeDeleteRoots(req.IDs)
-	if list, err := h.storage.ListFiles(c.Request.Context(), deviceID); err == nil && list != nil {
-		ids = filterBatchDeleteRoots(ids, list.Items)
+	if list, err := h.storage.ListFolders(c.Request.Context(), deviceID); err == nil && list != nil {
+		items := list.Items
+		folderSet := make(map[string]struct{}, len(items))
+		for _, it := range items {
+			folderSet[it.ID] = struct{}{}
+		}
+		for _, id := range ids {
+			if _, ok := folderSet[id]; ok {
+				continue
+			}
+			if f, err := h.storage.GetFile(c.Request.Context(), deviceID, id); err == nil && f != nil {
+				items = append(items, *f)
+			}
+		}
+		ids = filterBatchDeleteRoots(ids, items)
 	}
 	var failed int
 	var lastErr string
@@ -265,4 +300,20 @@ func (h *UploadHandler) IngestFile(c *gin.Context) {
 
 func (h *UploadHandler) RetryIngest(c *gin.Context) {
 	h.IngestFile(c)
+}
+
+func (h *UploadHandler) DownloadFile(c *gin.Context) {
+	deviceID := GetDeviceID(c)
+	fileID := c.Param("id")
+	path, name, err := h.storage.SourceFileForDownload(c.Request.Context(), deviceID, fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, model.APIResponse{Success: false, Error: "file not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, model.APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+	c.Header("Content-Disposition", "attachment; filename*=UTF-8''"+url.PathEscape(name))
+	c.File(path)
 }

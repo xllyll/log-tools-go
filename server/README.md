@@ -45,7 +45,9 @@ chmod +x deploy.sh && ./deploy.sh up
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | /api/upload | 上传日志（异步入库） |
-| GET | /api/files | 当前设备文件列表 |
+| GET | /api/files/folders | 当前设备文件夹列表（含直属文件数） |
+| GET | /api/files?parent_id= | 指定目录下的文件（`parent_id` 为空为根目录） |
+| GET | /api/files/processing | 入库中的文件（轮询状态） |
 | DELETE | /api/files/:id | 删除文件 |
 | POST | /api/logs/query | 查询日志（关键词 AND / 场景 OR） |
 | GET | /api/logs/context | 上下文行（前后 N 条） |

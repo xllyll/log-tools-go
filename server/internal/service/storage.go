@@ -335,6 +335,33 @@ func (s *StorageService) ListFiles(ctx context.Context, deviceID string) (*model
 	return s.db.ListDeviceFiles(ctx, deviceID)
 }
 
+func (s *StorageService) ListFolders(ctx context.Context, deviceID string) (*model.FileListData, error) {
+	items, err := s.db.ListDeviceFolders(ctx, deviceID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.FileListData{Items: items}, nil
+}
+
+func (s *StorageService) ListFilesByParent(ctx context.Context, deviceID, parentID string) (*model.FileListData, error) {
+	items, err := s.db.ListDeviceFilesByParent(ctx, deviceID, parentID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.FileListData{Items: items}, nil
+}
+
+func (s *StorageService) ListProcessingFiles(ctx context.Context, deviceID string) (*model.FileListData, error) {
+	items, err := s.db.ListDeviceProcessingFiles(ctx, deviceID)
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []model.LogFile{}
+	}
+	return &model.FileListData{Items: items}, nil
+}
+
 func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string) error {
 	item, err := s.db.GetLogItem(ctx, deviceID, fileID)
 	if err != nil {
@@ -459,6 +486,26 @@ func (s *StorageService) GetContext(ctx context.Context, deviceID, fileID string
 
 func (s *StorageService) GetFile(ctx context.Context, deviceID, fileID string) (*model.LogFile, error) {
 	return s.db.GetLogFile(ctx, deviceID, fileID)
+}
+
+// SourceFileForDownload resolves the on-disk source path and suggested download name.
+func (s *StorageService) SourceFileForDownload(ctx context.Context, deviceID, fileID string) (path, downloadName string, err error) {
+	f, err := s.db.GetLogFile(ctx, deviceID, fileID)
+	if err != nil {
+		return "", "", err
+	}
+	if f.EntryType != "file" {
+		return "", "", fmt.Errorf("not a file")
+	}
+	path, err = s.resolveSourcePath(f)
+	if err != nil {
+		return "", "", err
+	}
+	downloadName = f.OriginalName
+	if downloadName == "" {
+		downloadName = f.Name
+	}
+	return path, downloadName, nil
 }
 
 func (s *StorageService) RetryIngest(ctx context.Context, deviceID, fileID string) error {

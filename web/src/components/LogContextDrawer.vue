@@ -36,12 +36,14 @@
           <span v-if="row.line === centerLine" class="ctx-origin-tag">当前</span>
           <span class="ln">{{ row.line }}</span>
           <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc }">
-            <span class="log-text">{{ row.display || row.content }}</span>
-            <span
-              v-if="row.scene_desc"
-              class="scene-desc"
-              :style="sceneDescStyle(row.color)"
-            >{{ row.scene_desc }}</span>
+            <span class="log-flow">
+              <span class="log-text">{{ row.display || row.content }}</span>
+              <span
+                v-if="row.scene_desc"
+                class="scene-desc"
+                :style="sceneDescStyle(row.color)"
+              >{{ row.scene_desc }}</span>
+            </span>
           </span>
         </div>
       </div>
@@ -237,18 +239,20 @@ defineExpose({ openFromRow })
 .log-body {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  overflow: visible;
+}
+
+.log-flow {
+  display: inline;
+  line-height: 1.45;
+  word-break: break-all;
 }
 
 .log-text {
-  width: 100%;
+  display: inline;
   color: var(--level-color, var(--app-log-level-info));
   white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .log-body.has-scene-desc .log-text {
@@ -257,7 +261,9 @@ defineExpose({ openFromRow })
 }
 
 .log-body.has-scene-desc .scene-desc {
-  align-self: flex-start;
+  display: inline;
+  margin-left: 6px;
+  vertical-align: baseline;
 }
 
 .ctx-origin {

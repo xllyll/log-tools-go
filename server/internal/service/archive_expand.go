@@ -43,6 +43,7 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 	if len(pathPartsList) == 0 {
 		pathPartsList = collectWalkPathParts(tmpDir)
 	}
+	pathPartsList, archiveRoot := stripSingleArchiveRoot(pathPartsList)
 	hasSubpath := false
 	for _, p := range pathPartsList {
 		if len(p) > 0 {
@@ -55,7 +56,7 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 
 	if arcN == 0 && logN == 1 {
 		rel := toSlashRel(tmpDir, logPaths[0])
-		relDir := archiveDirParts(rel)
+		relDir := stripRootFromRelDir(archiveDirParts(rel), archiveRoot)
 		if len(relDir) == 0 {
 			files, err := s.buildFlattenedLogEntry(archiveName, logPaths[0], extractRoot, parentFolders)
 			if err != nil {
@@ -74,7 +75,7 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 	var out []model.ExtractedFile
 	for _, logPath := range logPaths {
 		rel := toSlashRel(tmpDir, logPath)
-		relDir := archiveDirParts(rel)
+		relDir := stripRootFromRelDir(archiveDirParts(rel), archiveRoot)
 		folderBinding := folderChainForLogInArchive(parentFolders, containerName, archiveName, bindInner, relDir)
 		base := filepath.Base(logPath)
 		target, err := diskTarget(extractRoot, folderBinding, base)
@@ -94,7 +95,7 @@ func (s *StorageService) expandArchiveFromDisk(archivePath, archiveName string, 
 	for _, arcPath := range archivePaths {
 		base := filepath.Base(arcPath)
 		rel := toSlashRel(tmpDir, arcPath)
-		relDir := archiveDirParts(rel)
+		relDir := stripRootFromRelDir(archiveDirParts(rel), archiveRoot)
 		parentForNested := folderChainForNestedArchive(parentFolders, containerName, bindInner, relDir)
 		chunk, err := s.expandArchiveFromDisk(arcPath, base, parentForNested, extractRoot, "")
 		if err != nil {

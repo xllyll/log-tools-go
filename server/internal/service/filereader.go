@@ -19,8 +19,16 @@ func lineMatchesFilter(content string, filter model.LogFilter) bool {
 			continue
 		}
 		if filter.UseRegex {
-			re, err := regexp.Compile(kw)
+			pattern := kw
+			if !filter.KeywordCaseSensitive {
+				pattern = "(?i)" + kw
+			}
+			re, err := regexp.Compile(pattern)
 			if err != nil || !re.MatchString(content) {
+				return false
+			}
+		} else if filter.KeywordCaseSensitive {
+			if !strings.Contains(content, kw) {
 				return false
 			}
 		} else if !strings.Contains(strings.ToLower(content), strings.ToLower(kw)) {
@@ -46,8 +54,9 @@ func (p *Parser) QueryFileEntries(fileID, filePath string, filter model.LogFilte
 		return nil, err
 	}
 
+	unlimited := filter.Limit < 0
 	limit := filter.Limit
-	if limit <= 0 {
+	if !unlimited && limit <= 0 {
 		limit = 2000
 	}
 	offset := filter.Offset
@@ -86,7 +95,7 @@ func (p *Parser) QueryFileEntries(fileID, filePath string, filter model.LogFilte
 			Level:   xlog.ParseLevel(line),
 			Message: line,
 		})
-		if len(entries) >= limit {
+		if !unlimited && len(entries) >= limit {
 			break
 		}
 	}

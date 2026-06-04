@@ -67,8 +67,59 @@ func normalizeFolderChain(parts []string) []string {
 	return out
 }
 
+// stripSingleArchiveRoot 若包内条目均在同一顶层目录下，去掉该目录，避免「容器名.rar / 包内同名目录」重复一层。
+func stripSingleArchiveRoot(pathPartsList [][]string) ([][]string, string) {
+	if len(pathPartsList) == 0 {
+		return pathPartsList, ""
+	}
+	var root string
+	for _, parts := range pathPartsList {
+		p := normalizeFolderChain(parts)
+		if len(p) == 0 {
+			return pathPartsList, ""
+		}
+		if root == "" {
+			root = p[0]
+		} else if p[0] != root {
+			return pathPartsList, ""
+		}
+	}
+	hasNested := false
+	for _, parts := range pathPartsList {
+		if len(normalizeFolderChain(parts)) > 1 {
+			hasNested = true
+			break
+		}
+	}
+	if !hasNested {
+		return pathPartsList, ""
+	}
+	out := make([][]string, 0, len(pathPartsList))
+	for _, parts := range pathPartsList {
+		p := normalizeFolderChain(parts)
+		if len(p) > 1 {
+			out = append(out, p[1:])
+		} else {
+			out = append(out, nil)
+		}
+	}
+	return out, root
+}
+
+func stripRootFromRelDir(relDir []string, root string) []string {
+	relDir = normalizeFolderChain(relDir)
+	if root == "" || len(relDir) == 0 {
+		return relDir
+	}
+	if relDir[0] == root {
+		return relDir[1:]
+	}
+	return relDir
+}
+
 // collectFolderChains 从压缩包内各路径收集需入库的文件夹链（含全部中间层级）。
 func collectFolderChains(parentFolders []string, containerName string, bindContainer bool, pathPartsList [][]string) [][]string {
+	pathPartsList, _ = stripSingleArchiveRoot(pathPartsList)
 	seen := make(map[string]struct{})
 	var chains [][]string
 

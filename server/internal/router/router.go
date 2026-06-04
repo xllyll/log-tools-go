@@ -39,8 +39,11 @@ func Setup(cfg *config.Config, db *model.Database) *gin.Engine {
 	{
 		api.POST("/upload", uploadH.Upload)
 		api.POST("/upload/volume", uploadH.UploadVolume)
-		api.GET("/files", uploadH.ListFiles)
+		api.GET("/files/folders", uploadH.ListFolders)
+		api.GET("/files/processing", uploadH.ListProcessingFiles)
+		api.GET("/files", uploadH.ListFilesByParent)
 		api.GET("/files/:id", uploadH.GetFileStatus)
+		api.GET("/files/:id/download", uploadH.DownloadFile)
 		api.DELETE("/files/:id", uploadH.DeleteFile)
 		api.POST("/files/:id/ingest", uploadH.IngestFile)
 		api.POST("/files/:id/retry", uploadH.RetryIngest)

@@ -140,72 +140,33 @@
           </div>
 
           <div v-show="leftTab === 'search'" class="sidebar-pane">
-            <div class="panel-card search-card">
-              <el-form label-position="top" size="default">
-                <el-form-item>
-                  <template #label>
-                    <div class="search-kw-label-row">
-                      <span>关键词（每行一个，AND）</span>
-                      <el-checkbox v-model="useRegex" class="search-regex-check">启用正则匹配</el-checkbox>
-                    </div>
-                  </template>
-                  <el-input v-model="searchKeywords" type="textarea" :rows="2" placeholder="输入关键词或正则..." />
-                </el-form-item>
-                <el-form-item label="模块 / 场景" class="scene-picker-form-item">
-                  <div class="scene-picker-row">
-                    <el-select
-                      v-model="activeModuleIndex"
-                      filterable
-                      clearable
-                      placeholder="模块"
-                      class="scene-picker-module"
-                    >
-                      <el-option
-                        v-for="opt in moduleSelectOptions"
-                        :key="opt.value"
-                        :label="opt.label"
-                        :value="opt.value"
-                      />
-                    </el-select>
-                    <el-select
-                      v-model="currentModuleSceneKeys"
-                      multiple
-                      filterable
-                      collapse-tags
-                      collapse-tags-tooltip
-                      :disabled="activeModuleIndex == null"
-                      :placeholder="activeModuleIndex != null ? '场景（可多选，可跨模块）' : '先选模块'"
-                      class="scene-picker-scenes"
-                    >
-                      <el-option
-                        v-for="opt in currentModuleSceneOptions"
-                        :key="opt.value"
-                        :label="opt.label"
-                        :value="opt.value"
-                      />
-                    </el-select>
-                  </div>
-                </el-form-item>
-                <el-button type="primary" :loading="loadingLogs" class="full-btn" @click="searchLogs">
-                  <el-icon><Search /></el-icon>
-                  查询日志
-                </el-button>
-              </el-form>
-            </div>
+            <LogSearchPanel
+              v-model:keywords="searchKeywords"
+              v-model:use-regex="useRegex"
+              v-model:keyword-case-sensitive="keywordCaseSensitive"
+              v-model:scene-keys="selectedSceneKeys"
+              :scene-config="sceneConfig"
+              :loading="loadingLogs"
+              @search="searchLogs"
+            />
           </div>
         </div>
 
-        <div class="file-panel-slot">
-          <FileListPanel
-            :items="fileItems"
-            :list-version="fileListVersion"
-            v-model:selected-ids="selectedFileIds"
-            @select-change="onFileSelectChange"
-            @removed="afterFilesRemoved"
-            @ingested="onFileIngested"
-            @need-poll="startPolling"
+        <button
+          type="button"
+          class="sidebar-files-entry"
+          @click="myFilesDialogVisible = true"
+        >
+          <el-icon><Folder /></el-icon>
+          <span>我的文件</span>
+          <el-badge
+            v-if="logFiles.length"
+            :value="logFiles.length"
+            :max="9999"
+            type="primary"
+            class="sidebar-files-badge"
           />
-        </div>
+        </button>
         </div>
       </aside>
 
@@ -259,57 +220,20 @@
           </div>
 
           <div class="log-viewer panel-card">
-            <el-scrollbar height="calc(100vh - var(--app-header-h) - 120px)">
-              <div class="log-list">
-                <div
-                  v-for="row in displayLogs"
-                  :key="row.id"
-                  v-memo="[row.id, row.level, row.scene_desc, row.content, row._fileHeader, row._fileLoadMore, row.loading, isFileCollapsed(row.file_id), searchKeywords, useRegex, logLineFold]"
-                  :class="rowClass(row)"
-                  :style="row._fileHeader || row._fileLoadMore ? undefined : logLineStyle(row)"
-                  :title="row._fileHeader ? row.file_name : row._fileLoadMore ? undefined : `${row.display || row.content || ''}（双击查看上下文）`"
-                  @dblclick="!row._fileHeader && !row._fileLoadMore && expandContext(row)"
-                >
-                  <template v-if="row._fileHeader">
-                    <el-icon class="log-file-header-icon"><Document /></el-icon>
-                    <span class="log-file-header-name">{{ row.file_name }}</span>
-                    <el-button
-                      v-if="showFileCollapse"
-                      link
-                      size="small"
-                      class="log-file-collapse-btn"
-                      :title="isFileCollapsed(row.file_id) ? '展开' : '收起'"
-                      @click.stop="toggleFileCollapse(row.file_id)"
-                    >
-                      <el-icon>
-                        <ArrowDown v-if="!isFileCollapsed(row.file_id)" />
-                        <ArrowRight v-else />
-                      </el-icon>
-                    </el-button>
-                  </template>
-                  <template v-else-if="row._fileLoadMore">
-                    <el-button
-                      size="small"
-                      :loading="row.loading"
-                      @click="loadMoreForFile(row.file_id)"
-                    >
-                      加载更多
-                    </el-button>
-                  </template>
-                  <template v-else>
-                    <span class="ln">{{ row.line }}</span>
-                    <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc, 'is-content-wrap': !logLineFold }">
-                      <span class="log-text" :class="{ 'is-wrap': !logLineFold }" v-html="highlightLine(row)"></span>
-                      <span
-                        v-if="row.scene_desc"
-                        class="scene-desc"
-                        :style="sceneDescStyle(row.color)"
-                      >{{ row.scene_desc }}</span>
-                    </span>
-                  </template>
-                </div>
-              </div>
-            </el-scrollbar>
+            <VirtualLogList
+              :rows="displayLogs"
+              :line-fold="logLineFold"
+              :show-file-collapse="showFileCollapse"
+              :collapsed-file-ids="collapsedFileIds"
+              :search-keywords="activeSearchKeywords"
+              :use-regex="useRegex"
+              :keyword-case-sensitive="keywordCaseSensitive"
+              :downloading-file-ids="downloadingLogFileIds"
+              @load-more="loadMoreForFile"
+              @toggle-collapse="toggleFileCollapse"
+              @expand-context="expandContext"
+              @download-file="onDownloadLogFile"
+            />
           </div>
 
         </template>
@@ -317,6 +241,18 @@
     </div>
     <SceneConfigDialog v-model="sceneDialogVisible" v-model:config="sceneConfig" />
     <JiraSyncDialog v-model="jiraDialogVisible" @imported="onJiraImported" />
+    <MyFilesDialog
+      v-model="myFilesDialogVisible"
+      :selection-items="fileItems"
+      :list-version="fileListVersion"
+      v-model:selected-ids="selectedFileIds"
+      @select-change="onFileSelectChange"
+      @removed="afterFilesRemoved"
+      @ingested="onFileIngested"
+      @need-poll="startPolling"
+      @folders-loaded="onFoldersLoaded"
+      @files-loaded="onFilesLoaded"
+    />
     <LogContextDrawer ref="contextDrawerRef" />
   </div>
 </template>
@@ -332,6 +268,7 @@ import {
   Document,
   Expand,
   Fold,
+  Folder,
   DocumentCopy,
   Link,
   Loading,
@@ -344,30 +281,27 @@ import {
 } from '@element-plus/icons-vue'
 import SceneConfigDialog from './components/SceneConfigDialog.vue'
 import JiraSyncDialog from './components/JiraSyncDialog.vue'
-import FileListPanel from './components/FileListPanel.vue'
+import MyFilesDialog from './components/MyFilesDialog.vue'
 import LogToolbar from './components/LogToolbar.vue'
 import LogContextDrawer from './components/LogContextDrawer.vue'
+import VirtualLogList from './components/VirtualLogList.vue'
+import LogSearchPanel from './components/LogSearchPanel.vue'
 import { api } from './api'
 import { getDeviceId } from './utils/device'
 import { applyTheme, getPreferredTheme } from './utils/theme'
 import {
-  buildModuleSelectOptions,
-  buildSceneSelectOptionsForModule,
   cloneSceneConfig,
   collectSceneKeywords,
   decorateEntries,
   defaultSceneConfig,
-  pruneSceneKeys,
   saveLocalScene,
-  sceneDescStyle,
 } from './utils/scene'
-import { levelColor } from './utils/logLevel'
 import { isProcessing, statusLabel, statusType } from './utils/fileStatus'
 import { displayFileName } from './utils/fileDisplay'
 import { expandRemovedItemIds, filterLogFileIds } from './utils/fileTree'
-import { highlightLogLine } from './utils/highlight'
 import { orderLogFileIds } from './utils/logSort'
 import { groupUploadFiles } from './utils/archiveVolume'
+import { filteredLogFilename, triggerBlobDownload } from './utils/download'
 
 const SIDEBAR_VISIBLE_KEY = 'log_tools_sidebar_visible'
 const TOOLS_PANEL_VISIBLE_KEY = 'log_tools_tools_panel_visible'
@@ -403,18 +337,35 @@ const sidebarVisible = ref(readSidebarVisible())
 const logLineFold = ref(readLogLineFold())
 const toolsPanelVisible = ref(readToolsPanelVisible())
 const leftTab = ref('upload')
-const fileItems = ref([])
+const myFilesDialogVisible = ref(false)
+const folderItems = ref([])
+const fileCache = ref({})
+const fileItems = computed(() => [
+  ...folderItems.value,
+  ...Object.values(fileCache.value),
+])
 const fileListVersion = ref(0)
-const logFiles = computed(() => fileItems.value.filter((i) => i.entry_type !== 'folder'))
+const logFiles = computed(() => Object.values(fileCache.value))
 const selectedFileIds = ref([])
 /** @type {import('vue').Ref<Record<string, { entries: unknown[], offset: number, hasMore: boolean, loadingMore: boolean }>>} */
 const fileLogData = ref({})
 const collapsedFileIds = ref(new Set())
 const LOG_PAGE_SIZE = 1000
+const LOG_PAGE_SIZE_WHEN_MANY = 100
+/** 选中超过 5 个文件时，单次查询 limit 降为 100 */
+const LOG_PAGE_SIZE_MANY_THRESHOLD = 5
+
+function logPageSize() {
+  return selectedLogFileIds.value.length > LOG_PAGE_SIZE_MANY_THRESHOLD
+    ? LOG_PAGE_SIZE_WHEN_MANY
+    : LOG_PAGE_SIZE
+}
 /** @type {Record<string, unknown> | null} */
 let logQueryBase = null
 let searchSeq = 0
 let searchDebounceTimer = null
+/** 已拉取过日志的文件 id，用于选择变更时增量查询 */
+const fetchedLogFileIds = ref([])
 const loadingLogs = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
@@ -427,48 +378,14 @@ let pollTimer = null
 const sceneConfig = ref(defaultSceneConfig())
 const sceneDialogVisible = ref(false)
 const jiraDialogVisible = ref(false)
-const activeModuleIndex = ref(null)
 const selectedSceneKeys = ref([])
 const searchKeywords = ref('')
+const downloadingLogFileIds = ref(new Set())
 const useRegex = ref(false)
+const keywordCaseSensitive = ref(false)
 
 const contextDrawerRef = ref(null)
 let sceneMeta = []
-
-const moduleSelectOptions = computed(() => buildModuleSelectOptions(sceneConfig.value))
-
-const currentModuleSceneOptions = computed(() =>
-  buildSceneSelectOptionsForModule(sceneConfig.value, activeModuleIndex.value),
-)
-
-/** 第二个下拉只编辑当前模块；selectedSceneKeys 保留其它模块已选场景 */
-const currentModuleSceneKeys = computed({
-  get() {
-    const mi = activeModuleIndex.value
-    if (mi == null) return []
-    const prefix = `${mi}:`
-    return selectedSceneKeys.value.filter((k) => k.startsWith(prefix))
-  },
-  set(keysForModule) {
-    const mi = activeModuleIndex.value
-    if (mi == null) return
-    const prefix = `${mi}:`
-    const other = selectedSceneKeys.value.filter((k) => !k.startsWith(prefix))
-    selectedSceneKeys.value = [...other, ...keysForModule]
-  },
-})
-
-watch(
-  sceneConfig,
-  (cfg) => {
-    selectedSceneKeys.value = pruneSceneKeys(cfg, selectedSceneKeys.value)
-    const validMods = new Set(buildModuleSelectOptions(cfg).map((o) => o.value))
-    if (activeModuleIndex.value != null && !validMods.has(activeModuleIndex.value)) {
-      activeModuleIndex.value = null
-    }
-  },
-  { deep: true },
-)
 
 const logFileSortMode = ref('default')
 
@@ -519,17 +436,12 @@ const loadedLogCount = computed(() =>
   Object.values(fileLogData.value).reduce((n, b) => n + (b?.entries?.length ?? 0), 0),
 )
 
-function rowClass(row) {
-  if (row._fileHeader) return 'log-file-header'
-  if (row._fileLoadMore) return 'log-load-more-row'
-  return ['log-line', { 'is-content-wrap': !logLineFold.value }]
-}
-
 async function fetchFileLogPage(fileId, offset) {
+  const limit = logPageSize()
   const { data } = await api.queryLogs({
     ...logQueryBase,
     file_id: fileId,
-    limit: LOG_PAGE_SIZE,
+    limit,
     offset,
   })
   if (!data.success) throw new Error(data.error)
@@ -538,19 +450,15 @@ async function fetchFileLogPage(fileId, offset) {
 
 async function afterFilesRemoved(ids) {
   const removed = expandRemovedItemIds(fileItems.value, ids)
-  fileItems.value = fileItems.value.filter((item) => !removed.has(item.id))
+  folderItems.value = folderItems.value.filter((item) => !removed.has(item.id))
+  const nextCache = { ...fileCache.value }
+  for (const id of Object.keys(nextCache)) {
+    if (removed.has(id)) delete nextCache[id]
+  }
+  fileCache.value = nextCache
   fileListVersion.value += 1
   selectedFileIds.value = selectedFileIds.value.filter((x) => !removed.has(x))
-  if (!selectedLogFileIds.value.length) {
-    fileLogData.value = {}
-  } else {
-    scheduleSearchLogs()
-  }
-  try {
-    await loadFiles()
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || e.message || '刷新文件列表失败')
-  }
+  pruneFileLogDataForSelection()
 }
 
 function toggleTheme() {
@@ -586,15 +494,121 @@ watch(logLineFold, (fold) => {
 
 function onFileSelectChange(ids) {
   const logIds = filterLogFileIds(ids, fileItems.value)
-  if (logIds.length) {
-    scheduleSearchLogs()
-  } else {
+  const prev = fetchedLogFileIds.value
+
+  if (!logIds.length) {
     fileLogData.value = {}
+    fetchedLogFileIds.value = []
+    return
+  }
+
+  const added = logIds.filter((id) => !prev.includes(id))
+  const removed = prev.filter((id) => !logIds.includes(id))
+
+  if (removed.length) {
+    const next = { ...fileLogData.value }
+    for (const id of removed) delete next[id]
+    fileLogData.value = next
+  }
+
+  fetchedLogFileIds.value = logIds
+
+  if (added.length) {
+    scheduleIncrementalLogLoad()
+  }
+}
+
+function pruneFileLogDataForSelection() {
+  const logIds = new Set(selectedLogFileIds.value)
+  const next = { ...fileLogData.value }
+  for (const id of Object.keys(next)) {
+    if (!logIds.has(id)) delete next[id]
+  }
+  fileLogData.value = next
+  fetchedLogFileIds.value = selectedLogFileIds.value
+  if (!fetchedLogFileIds.value.length) fileLogData.value = {}
+}
+
+function ensureLogQueryBase() {
+  const kws = searchKeywords.value
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const { specs: sceneSpecs, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
+  sceneMeta = meta
+  logQueryBase = {
+    keywords: kws,
+    scene_keywords: sceneSpecs,
+    use_regex: useRegex.value,
+    keyword_case_sensitive: keywordCaseSensitive.value,
+  }
+}
+
+function hasActiveLogFilter() {
+  if (!logQueryBase) return false
+  const scenes = logQueryBase.scene_keywords
+  const hasScenes = Array.isArray(scenes) ? scenes.length > 0 : !!scenes
+  return (logQueryBase.keywords?.length > 0) || hasScenes
+}
+
+function setFileDownloading(fileId, on) {
+  const next = new Set(downloadingLogFileIds.value)
+  if (on) next.add(fileId)
+  else next.delete(fileId)
+  downloadingLogFileIds.value = next
+}
+
+async function fetchAllFilteredLogLines(fileId) {
+  ensureLogQueryBase()
+  const { data } = await api.queryLogs({
+    ...logQueryBase,
+    file_id: fileId,
+    limit: -1,
+    offset: 0,
+  })
+  if (!data.success) throw new Error(data.error)
+  const entries = data.data?.entries || []
+  return entries.map((e) => e.content || e.message || '').join('\n')
+}
+
+async function onDownloadLogFile(fileId) {
+  const f = logFiles.value.find((x) => x.id === fileId)
+  const displayName = displayFileName(f) || `${fileId}.log`
+  setFileDownloading(fileId, true)
+  try {
+    if (!hasActiveLogFilter()) {
+      const res = await api.downloadLogFile(fileId)
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data])
+      triggerBlobDownload(blob, displayName)
+      ElMessage.success('已开始下载源文件')
+      return
+    }
+    const text = await fetchAllFilteredLogLines(fileId)
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    triggerBlobDownload(blob, filteredLogFilename(displayName))
+    ElMessage.success(`已导出 ${(text.match(/\n/g)?.length ?? 0) + (text ? 1 : 0)} 行匹配日志`)
+  } catch (e) {
+    const err = e.response?.data
+    let msg = e.message
+    if (err instanceof Blob) {
+      try {
+        const j = JSON.parse(await err.text())
+        msg = j.error || msg
+      } catch {
+        /* ignore */
+      }
+    } else if (err?.error) {
+      msg = err.error
+    }
+    ElMessage.error(msg || '下载失败')
+  } finally {
+    setFileDownloading(fileId, false)
   }
 }
 
 async function onFileIngested() {
-  await loadFiles()
+  await refreshFileState()
+  fileListVersion.value += 1
   startPolling()
 }
 
@@ -602,6 +616,27 @@ function appendParseLog(msg) {
   const line = `[${new Date().toLocaleTimeString()}] ${msg}`
   parseLogs.value.unshift(line)
   if (parseLogs.value.length > 50) parseLogs.value.length = 50
+}
+
+function mergeFilesIntoCache(files) {
+  if (!files?.length) return
+  const next = { ...fileCache.value }
+  for (const f of files) {
+    next[f.id] = { ...f, entry_type: 'file' }
+  }
+  fileCache.value = next
+}
+
+function onFoldersLoaded(folders) {
+  const next = (folders || []).map((f) => ({ ...f, entry_type: 'folder' }))
+  const prevIds = folderItems.value.map((f) => f.id).join(',')
+  const nextIds = next.map((f) => f.id).join(',')
+  folderItems.value = next
+  if (prevIds !== nextIds) fileListVersion.value += 1
+}
+
+function onFilesLoaded(files) {
+  mergeFilesIntoCache(files)
 }
 
 function syncParseTasks() {
@@ -614,11 +649,22 @@ function syncParseTasks() {
   parseTasks.value = logFiles.value.filter((f) => isProcessing(f.status))
 }
 
+async function pollProcessingFiles() {
+  const { data } = await api.listProcessingFiles()
+  if (!data?.success) return
+  const files = normalizeFileListPayload(data.data)
+  mergeFilesIntoCache(files)
+  syncParseTasks()
+}
+
 function startPolling() {
   if (pollTimer) return
   pollTimer = setInterval(async () => {
-    await loadFiles()
-    syncParseTasks()
+    try {
+      await pollProcessingFiles()
+    } catch {
+      /* ignore */
+    }
     if (!logFiles.value.some((f) => isProcessing(f.status))) stopPolling()
   }, 1500)
 }
@@ -634,34 +680,48 @@ function onFileChange(_file, list) {
   pendingFiles.value = list.map((x) => x.raw).filter(Boolean)
 }
 
-function applyFileListPayload(payload) {
+function normalizeFileListPayload(payload) {
   if (Array.isArray(payload?.items)) {
-    fileItems.value = [...payload.items]
-  } else if (Array.isArray(payload?.files)) {
-    const folders = Array.isArray(payload.folders) ? payload.folders : []
-    fileItems.value = [
-      ...folders.map((f) => ({ ...f, entry_type: 'folder', parent_id: f.parent_folder_id })),
-      ...payload.files.map((f) => ({ ...f, entry_type: f.entry_type || 'file', parent_id: f.parent_id ?? f.parent_folder_id })),
-    ]
-  } else if (Array.isArray(payload)) {
-    fileItems.value = payload.map((f) => ({
+    return payload.items.map((f) => ({
       ...f,
       entry_type: f.entry_type || 'file',
       parent_id: f.parent_id ?? f.parent_folder_id,
     }))
-  } else {
-    fileItems.value = []
   }
-  fileListVersion.value += 1
-  syncParseTasks()
+  if (Array.isArray(payload?.files)) {
+    const folders = Array.isArray(payload.folders) ? payload.folders : []
+    return [
+      ...folders.map((f) => ({ ...f, entry_type: 'folder', parent_id: f.parent_folder_id })),
+      ...payload.files.map((f) => ({
+        ...f,
+        entry_type: f.entry_type || 'file',
+        parent_id: f.parent_id ?? f.parent_folder_id,
+      })),
+    ]
+  }
+  if (Array.isArray(payload)) {
+    return payload.map((f) => ({
+      ...f,
+      entry_type: f.entry_type || 'file',
+      parent_id: f.parent_id ?? f.parent_folder_id,
+    }))
+  }
+  return []
 }
 
-async function loadFiles() {
-  const { data } = await api.listFiles()
-  if (!data?.success) {
-    throw new Error(data?.error || '加载文件列表失败')
+async function loadFolders() {
+  const { data } = await api.listFolders()
+  if (!data?.success) throw new Error(data?.error || '加载文件夹失败')
+  onFoldersLoaded(normalizeFileListPayload(data.data))
+}
+
+async function refreshFileState() {
+  await loadFolders()
+  try {
+    await pollProcessingFiles()
+  } catch {
+    /* ignore */
   }
-  applyFileListPayload(data.data)
 }
 
 async function doUpload() {
@@ -707,7 +767,8 @@ async function doUpload() {
     pendingFiles.value = []
     uploadRef.value?.clearFiles()
     uploadProgress.value = 100
-    await loadFiles()
+    await refreshFileState()
+    fileListVersion.value += 1
   } catch (e) {
     ElMessage.error(e.response?.data?.error || e.message)
   } finally {
@@ -715,44 +776,38 @@ async function doUpload() {
   }
 }
 
-function scheduleSearchLogs() {
+function scheduleIncrementalLogLoad() {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
     searchDebounceTimer = null
-    searchLogs()
+    const need = selectedLogFileIds.value.filter((id) => !fileLogData.value[id])
+    if (need.length) loadLogsForFiles(need, false)
   }, 350)
 }
 
-async function searchLogs() {
-  const logIds = selectedLogFileIds.value
-  if (!logIds.length) return
+/** @param {string[]} fileIds @param {boolean} replace 是否替换现有日志缓存（手动「查询」时为 true） */
+async function loadLogsForFiles(fileIds, replace) {
+  if (!fileIds.length) return
   const seq = ++searchSeq
   loadingLogs.value = true
-  fileLogData.value = {}
+  ensureLogQueryBase()
   try {
-    const kws = searchKeywords.value.split('\n').map((s) => s.trim()).filter(Boolean)
-    const { specs: sceneSpecs, meta } = collectSceneKeywords(sceneConfig.value, selectedSceneKeys.value)
-    sceneMeta = meta
-    logQueryBase = {
-      keywords: kws,
-      scene_keywords: sceneSpecs,
-      use_regex: useRegex.value,
-    }
+    const pageLimit = logPageSize()
     const results = await Promise.all(
-      logIds.map(async (id) => {
+      fileIds.map(async (id) => {
         const batch = await fetchFileLogPage(id, 0)
         if (seq !== searchSeq) return null
         return { id, batch }
       }),
     )
     if (seq !== searchSeq) return
-    const next = {}
+    const next = replace ? {} : { ...fileLogData.value }
     for (const item of results) {
       if (!item) return
       next[item.id] = {
         entries: item.batch,
         offset: item.batch.length,
-        hasMore: item.batch.length >= LOG_PAGE_SIZE,
+        hasMore: item.batch.length >= pageLimit,
         loadingMore: false,
       }
     }
@@ -764,6 +819,14 @@ async function searchLogs() {
   }
 }
 
+/** 按当前关键字/场景重新查询所有已选文件 */
+async function searchLogs() {
+  const logIds = selectedLogFileIds.value
+  if (!logIds.length) return
+  fetchedLogFileIds.value = logIds
+  await loadLogsForFiles(logIds, true)
+}
+
 async function loadMoreForFile(fileId) {
   const bucket = fileLogData.value[fileId]
   if (!bucket?.hasMore || bucket.loadingMore || loadingLogs.value || !logQueryBase) return
@@ -772,6 +835,7 @@ async function loadMoreForFile(fileId) {
     [fileId]: { ...bucket, loadingMore: true },
   }
   try {
+    const pageLimit = logPageSize()
     const batch = await fetchFileLogPage(fileId, bucket.offset)
     const prev = fileLogData.value[fileId]
     fileLogData.value = {
@@ -779,7 +843,7 @@ async function loadMoreForFile(fileId) {
       [fileId]: {
         entries: [...prev.entries, ...batch],
         offset: prev.offset + batch.length,
-        hasMore: batch.length >= LOG_PAGE_SIZE,
+        hasMore: batch.length >= pageLimit,
         loadingMore: false,
       },
     }
@@ -829,26 +893,13 @@ const activeSearchKeywords = computed(() =>
     .filter(Boolean),
 )
 
-function highlightLine(row) {
-  const text = row.content || row.message || row.display || ''
-  const sceneKw = row.scene_desc ? row.scene_match_keywords || [] : []
-  return highlightLogLine(text, activeSearchKeywords.value, useRegex.value, sceneKw)
-}
-
-function logLineStyle(row) {
-  const lc = levelColor(row.level)
-  return {
-    '--level-color': lc,
-    borderLeftColor: lc,
-  }
-}
-
 function expandContext(row) {
   contextDrawerRef.value?.openFromRow(row, sceneMeta)
 }
 
 async function onJiraImported() {
-  await loadFiles()
+  await refreshFileState()
+  fileListVersion.value += 1
 }
 
 async function initSceneConfig() {
@@ -868,7 +919,7 @@ async function initSceneConfig() {
 
 onMounted(async () => {
   await initSceneConfig()
-  await loadFiles()
+  await refreshFileState()
   if (logFiles.value.some((f) => isProcessing(f.status))) startPolling()
 })
 
@@ -1100,12 +1151,44 @@ onUnmounted(() => {
 }
 
 .sidebar-tools {
-  flex: 0 1 auto;
+  flex: 1;
   min-height: 0;
-  max-height: min(42vh, 360px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.sidebar-files-entry {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius);
+  background: var(--app-surface-2);
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.sidebar-files-entry:hover {
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+  background: var(--app-accent-soft);
+}
+
+.sidebar-files-entry .el-icon {
+  font-size: 16px;
+  color: var(--app-accent);
+}
+
+.sidebar-files-badge {
+  margin-left: auto;
 }
 
 .sidebar-pane {
@@ -1141,14 +1224,6 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 
-.file-panel-slot {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
 .panel-card {
   background: var(--app-surface-2);
   border: 1px solid var(--app-border-light);
@@ -1179,53 +1254,6 @@ onUnmounted(() => {
 
 .full-width {
   width: 100%;
-}
-
-.search-card :deep(.el-form-item__label) {
-  display: flex;
-  width: 100%;
-  padding-right: 0;
-}
-
-.search-kw-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-}
-
-.search-regex-check {
-  height: auto;
-  margin-right: 0;
-}
-
-.search-regex-check :deep(.el-checkbox__label) {
-  font-size: 12px;
-  font-weight: normal;
-  color: var(--app-text-secondary);
-}
-
-.scene-picker-form-item :deep(.el-form-item__content) {
-  flex: 1;
-  min-width: 0;
-}
-
-.scene-picker-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.scene-picker-module {
-  flex: 0 0 36%;
-  min-width: 0;
-}
-
-.scene-picker-scenes {
-  flex: 1;
-  min-width: 0;
 }
 
 .upload-zone :deep(.el-upload-dragger) {
@@ -1299,50 +1327,6 @@ onUnmounted(() => {
   padding: 2px 0;
 }
 
-.log-file-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px 6px 4px;
-  margin-top: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--app-accent);
-  background: var(--app-accent-soft);
-  border-top: 1px solid var(--app-border-light);
-  border-bottom: 1px solid var(--app-border-light);
-  cursor: default;
-  user-select: none;
-}
-
-.log-file-collapse-btn {
-  flex-shrink: 0;
-  margin-left: auto;
-  padding: 2px 4px;
-  color: var(--app-accent);
-}
-
-.log-file-collapse-btn:hover {
-  color: var(--app-text);
-}
-
-.log-list > .log-file-header:first-child {
-  margin-top: 0;
-}
-
-.log-file-header-icon {
-  flex-shrink: 0;
-  font-size: 14px;
-}
-
-.log-file-header-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .content {
   flex: 1;
   padding: 16px;
@@ -1390,121 +1374,11 @@ onUnmounted(() => {
 
 .log-viewer {
   flex: 1;
+  min-height: 0;
+  height: calc(100vh - var(--app-header-h) - 120px);
   padding: 0;
   overflow: hidden;
   background: var(--app-log-bg);
-}
-
-.log-list {
-  padding: 4px 0;
-}
-
-.log-load-more-row {
-  display: flex;
-  justify-content: center;
-  padding: 8px 12px 12px;
-}
-
-.log-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 12px 3px 2px;
-  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.45;
-  cursor: pointer;
-  border-left: 2px solid var(--level-color, var(--app-log-level-info));
-  transition: background 0.1s;
-  overflow: hidden;
-  max-width: 100%;
-}
-
-.log-line:hover {
-  background: var(--app-log-hover);
-}
-
-.log-line.is-content-wrap {
-  align-items: flex-start;
-  overflow: visible;
-}
-
-.log-line .ln {
-  flex-shrink: 0;
-  min-width: 28px;
-  padding-right: 2px;
-  text-align: right;
-  color: var(--app-log-gutter);
-  user-select: none;
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.log-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: flex-start;
-  overflow: hidden;
-}
-
-.log-body.is-content-wrap {
-  flex-wrap: wrap;
-  align-items: flex-start;
-  overflow: visible;
-}
-
-.log-body:not(.has-scene-desc) .log-text {
-  flex: 1 1 auto;
-}
-
-.log-text {
-  min-width: 0;
-  color: var(--level-color, var(--app-log-level-info));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.log-text.is-wrap {
-  overflow: visible;
-  text-overflow: unset;
-  white-space: normal;
-  word-break: break-all;
-}
-
-.log-text :deep(strong.scene-kw-bold) {
-  font-weight: bold;
-  font-size: 12px;
-}
-
-.log-text :deep(mark.kw-highlight) {
-  background: var(--app-kw-highlight-bg);
-  color: var(--app-kw-highlight-color);
-  padding: 0 1px;
-  border-radius: 2px;
-  font-weight: 600;
-}
-
-.log-text :deep(mark.kw-highlight strong.scene-kw-bold) {
-  font-weight: 700;
-}
-
-.log-body.has-scene-desc {
-  gap: 6px;
-}
-
-.log-body.has-scene-desc .log-text {
-  flex: 0 1 auto;
-  max-width: 100%;
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.log-body.has-scene-desc .scene-desc {
-  flex: 0 0 auto;
 }
 
 </style>

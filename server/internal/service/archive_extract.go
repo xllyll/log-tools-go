@@ -100,6 +100,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 	defer reader.Close()
 
 	pathPartsList := collectZipPathParts(&reader.Reader)
+	pathPartsList, zipArchiveRoot := stripSingleArchiveRoot(pathPartsList)
 
 	itemCount := 0
 	hasSubpath := false
@@ -138,7 +139,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 		if !g.IsMultiVolume() {
 			return nil, multivolume.VolumeIncompleteError(g)
 		}
-		relDir := zipMemberRelDir(reader.File, g.Parts[0].Filename)
+		relDir := stripRootFromRelDir(zipMemberRelDir(reader.File, g.Parts[0].Filename), zipArchiveRoot)
 		parentForNested := folderChainForNestedArchive(parentFolders, containerName, bindContainer, relDir)
 		chunk, err := s.extractZipNestedVolumeGroup(reader, g, parentForNested, extractRoot)
 		if err != nil {
@@ -159,7 +160,7 @@ func (s *StorageService) processZipArchive(zipPath string, parentFolders []strin
 		}
 		base := filepath.Base(rel)
 		ext := strings.ToLower(filepath.Ext(base))
-		relDir := archiveDirParts(rel)
+		relDir := stripRootFromRelDir(archiveDirParts(rel), zipArchiveRoot)
 
 		switch {
 		case isLogFile(base):

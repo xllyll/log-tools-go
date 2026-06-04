@@ -168,6 +168,135 @@ export function mergeSceneConfig(local, remote) {
   return normalizeSceneConfig(out)
 }
 
+function cloneModule(mod) {
+  return cloneSceneConfig({ modules: [mod] }).modules[0]
+}
+
+export function findModuleByName(config, name) {
+  const n = (name || '').trim()
+  if (!n) return null
+  return (config?.modules || []).find((m) => (m.name || '').trim() === n) || null
+}
+
+/** 合并双方模块：保留我的场景；同名场景追加对方关键词；对方独有场景加入 */
+export function mergeModuleConflict(myMod, theirMod) {
+  const out = cloneModule(myMod)
+  const their = cloneModule(theirMod)
+  if (!out.scenes) out.scenes = []
+  for (const scene of their.scenes || []) {
+    const existing = out.scenes.find((s) => s.name === scene.name)
+    if (!existing) {
+      out.scenes.push(cloneScene(scene))
+      continue
+    }
+    mergeSceneKeywords(existing, scene)
+  }
+  normalizeSceneConfig({ modules: [out] })
+  return out
+}
+
+function cloneScene(scene) {
+  return JSON.parse(JSON.stringify(scene))
+}
+
+/** 同名模块/场景以 local 为准；仅 local 或仅 server 有的条目保留各自一方 */
+function mergeModulePreferLocal(localMod, serverMod) {
+  const localM = cloneModule(localMod)
+  const serverM = serverMod
+  const scenes = []
+  const seen = new Set()
+  for (const scene of localM.scenes || []) {
+    scenes.push(cloneScene(scene))
+    seen.add(scene.name)
+  }
+  for (const scene of serverM.scenes || []) {
+    if (!seen.has(scene.name)) {
+      scenes.push(cloneScene(scene))
+    }
+  }
+  return { ...localM, scenes }
+}
+
+/**
+ * 保存到服务器时合并：local 与 server 都有的模块/场景用 local；
+ * 仅 server 有的保留 server；仅 local 有的保留 local。
+ */
+export function mergeSceneConfigPreferLocal(local, server) {
+  const localCfg = cloneSceneConfig(local?.modules?.length ? local : { modules: [] })
+  const serverCfg = cloneSceneConfig(server?.modules?.length ? server : { modules: [] })
+  if (!serverCfg.modules?.length) return localCfg
+  if (!localCfg.modules?.length) return serverCfg
+
+  const modules = []
+  const seen = new Set()
+  for (const mod of localCfg.modules) {
+    const serverMod = serverCfg.modules.find((m) => m.name === mod.name)
+    modules.push(serverMod ? mergeModulePreferLocal(mod, serverMod) : cloneModule(mod))
+    seen.add(mod.name)
+  }
+  for (const mod of serverCfg.modules) {
+    if (!seen.has(mod.name)) {
+      modules.push(cloneModule(mod))
+    }
+  }
+  return normalizeSceneConfig({ modules })
+}
+
+/**
+ * 仅替换一个模块：其余模块与 server 完全一致；指定模块整段以 local 为准（含增删场景）。
+ * @param {object} localDraft 当前编辑中的完整 draft
+ * @param {object} server 服务器配置
+ * @param {number} moduleIndex draft 中的模块下标
+ * @param {string} [baselineModuleName] 开始编辑该模块时的模块名（用于改名后仍能定位 server 上的旧模块）
+ */
+export function mergeSceneConfigReplaceModule(localDraft, server, moduleIndex, baselineModuleName) {
+  const localCfg = cloneSceneConfig(localDraft?.modules?.length ? localDraft : { modules: [] })
+  const localMod = localCfg.modules?.[moduleIndex]
+  if (!localMod) {
+    return cloneSceneConfig(server?.modules?.length ? server : { modules: [] })
+  }
+
+  const serverCfg = cloneSceneConfig(server?.modules?.length ? server : { modules: [] })
+  const localClone = cloneModule(localMod)
+
+  if (!serverCfg.modules?.length) {
+    return normalizeSceneConfig({ modules: [localClone] })
+  }
+
+  const lookupName = (baselineModuleName || localMod.name || '').trim()
+  const out = cloneSceneConfig(serverCfg)
+
+  if (lookupName) {
+    const si = out.modules.findIndex((m) => (m.name || '').trim() === lookupName)
+    if (si >= 0) {
+      out.modules[si] = localClone
+      return normalizeSceneConfig(out)
+    }
+  }
+
+  const pos = Math.min(moduleIndex, out.modules.length)
+  out.modules.splice(pos, 0, localClone)
+  return normalizeSceneConfig(out)
+}
+
+/**
+ * 多人并发保存：先取最新 server，再仅把 dirty 下标对应的模块整段写回（同模块后写覆盖先写）。
+ * @param {Map<number,string>|Record<number,string>} baselineNameByIndex 各模块开始编辑时的名称
+ */
+export function mergeSceneConfigDirtyModules(localDraft, server, dirtyModuleIndexes, baselineNameByIndex) {
+  let out = cloneSceneConfig(server?.modules?.length ? server : { modules: [] })
+  const indexes = [...(dirtyModuleIndexes || [])].filter((mi) => Number.isInteger(mi) && mi >= 0)
+  if (!indexes.length) return out
+
+  const localCfg = cloneSceneConfig(localDraft?.modules?.length ? localDraft : { modules: [] })
+  for (const mi of indexes) {
+    const baseline =
+      baselineNameByIndex instanceof Map ? baselineNameByIndex.get(mi) : baselineNameByIndex?.[mi]
+    out = mergeSceneConfigReplaceModule(localCfg, out, mi, baseline)
+  }
+  return out
+}
+
 export function shortDeviceLabel(deviceId) {
   if (!deviceId) return '未知'
   return deviceId.length > 8 ? `${deviceId.slice(0, 8)}…` : deviceId
