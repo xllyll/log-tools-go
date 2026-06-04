@@ -60,7 +60,7 @@
               <span class="ln">{{ item.row.line }}</span>
               <span
                 class="log-body"
-                :class="{ 'has-scene-desc': !!item.row.scene_desc, 'is-content-wrap': !lineFold }"
+                :class="{ 'has-scene-desc': sceneDescList(item.row).length, 'is-content-wrap': !lineFold }"
               >
                 <span class="log-flow" :class="{ 'is-wrap': !lineFold }">
                   <span
@@ -69,10 +69,11 @@
                     v-html="highlightRow(item.row)"
                   />
                   <span
-                    v-if="item.row.scene_desc"
+                    v-for="(tag, di) in sceneDescList(item.row)"
+                    :key="`${item.row.id}-desc-${di}`"
                     class="scene-desc"
-                    :style="sceneDescStyle(item.row.color)"
-                  >{{ item.row.scene_desc }}</span>
+                    :style="sceneDescStyle(tag.color)"
+                  >{{ tag.desc }}</span>
                 </span>
               </span>
             </template>
@@ -89,7 +90,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ArrowDown, ArrowRight, Document, Download } from '@element-plus/icons-vue'
 import { highlightLogLine } from '../utils/highlight'
 import { levelColor } from '../utils/logLevel'
-import { sceneDescStyle } from '../utils/scene'
+import { sceneDescListForEntry, sceneDescStyle } from '../utils/scene'
 
 const OVERSCAN = 10
 const LOG_LINE_PX = Math.ceil(12 * 1.45)
@@ -128,7 +129,8 @@ function estimateLogLineHeight(row) {
   const bodyWidth = Math.max(160, listWidth.value - 52)
   const charsPerLine = Math.max(12, Math.floor(bodyWidth / 7.2))
   const lines = Math.max(1, Math.ceil(text.length / charsPerLine))
-  const sceneExtra = row.scene_desc ? 22 : 0
+  const descCount = sceneDescListForEntry(row).length
+  const sceneExtra = descCount ? Math.min(88, 20 + descCount * 18) : 0
   return Math.max(MIN_LOG_H, 4 + lines * LOG_LINE_PX + sceneExtra)
 }
 
@@ -283,9 +285,13 @@ function rowTitle(row) {
   return `${row.display || row.content || ''}（双击查看上下文）`
 }
 
+function sceneDescList(row) {
+  return sceneDescListForEntry(row)
+}
+
 function highlightRow(row) {
   const text = row.content || row.message || row.display || ''
-  const sceneKw = row.scene_desc ? row.scene_match_keywords || [] : []
+  const sceneKw = sceneDescList(row).length ? row.scene_match_keywords || [] : []
   return highlightLogLine(text, props.searchKeywords, props.useRegex, sceneKw, props.keywordCaseSensitive)
 }
 
@@ -535,6 +541,10 @@ watch(
   vertical-align: baseline;
 }
 
+.log-line.is-content-wrap .log-body.has-scene-desc .scene-desc + .scene-desc {
+  margin-left: 4px;
+}
+
 .log-text {
   min-width: 0;
   color: var(--level-color, var(--app-log-level-info));
@@ -573,7 +583,8 @@ watch(
   flex: 1 1 auto;
   min-width: 0;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px 6px;
 }
 
 .log-body.has-scene-desc:not(.is-content-wrap) .log-text {

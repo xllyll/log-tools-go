@@ -439,17 +439,40 @@ function sceneKeywordHits(content, meta) {
   return hits
 }
 
+/** 按 desc 去重，保留各场景说明与颜色 */
+function uniqueSceneDescs(matched) {
+  const seen = new Set()
+  const out = []
+  for (const h of matched) {
+    const d = (h.desc || '').trim()
+    if (!d || seen.has(d)) continue
+    seen.add(d)
+    out.push({ desc: d, color: h.color || '' })
+  }
+  return out
+}
+
+/** 日志行上待展示的场景 desc 列表（兼容旧 scene_desc 单字段） */
+export function sceneDescListForEntry(row) {
+  if (row?.scene_descs?.length) return row.scene_descs
+  const d = (row?.scene_desc || '').trim()
+  if (d) return [{ desc: d, color: row.color || '' }]
+  return []
+}
+
 /** 前端为匹配行附加 desc 与颜色 */
 export function decorateEntries(entries, meta) {
   if (!meta.length) return entries
   return entries.map((e) => {
     const content = e.content || e.message || ''
     const matched = sceneKeywordHits(content, meta)
+    const sceneDescs = uniqueSceneDescs(matched)
     const first = matched[0]
     return {
       ...e,
       color: first?.color || e.color || '',
-      scene_desc: first?.desc || '',
+      scene_descs: sceneDescs,
+      scene_desc: sceneDescs.map((s) => s.desc).join(' · '),
       scene_match_keywords: matched.map(({ keyword, mode, case_sensitive }) => ({
         keyword,
         mode,

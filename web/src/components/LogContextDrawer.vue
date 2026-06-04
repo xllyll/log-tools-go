@@ -35,14 +35,15 @@
         >
           <span v-if="row.line === centerLine" class="ctx-origin-tag">当前</span>
           <span class="ln">{{ row.line }}</span>
-          <span class="log-body" :class="{ 'has-scene-desc': !!row.scene_desc }">
+          <span class="log-body" :class="{ 'has-scene-desc': sceneDescList(row).length }">
             <span class="log-flow">
               <span class="log-text">{{ row.display || row.content }}</span>
               <span
-                v-if="row.scene_desc"
+                v-for="(tag, di) in sceneDescList(row)"
+                :key="`${row.id}-desc-${di}`"
                 class="scene-desc"
-                :style="sceneDescStyle(row.color)"
-              >{{ row.scene_desc }}</span>
+                :style="sceneDescStyle(tag.color)"
+              >{{ tag.desc }}</span>
             </span>
           </span>
         </div>
@@ -55,8 +56,12 @@
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
-import { decorateEntries, sceneDescStyle } from '../utils/scene'
+import { decorateEntries, sceneDescListForEntry, sceneDescStyle } from '../utils/scene'
 import { levelColor } from '../utils/logLevel'
+
+function sceneDescList(row) {
+  return sceneDescListForEntry(row)
+}
 
 const visible = defineModel({ type: Boolean, default: false })
 
