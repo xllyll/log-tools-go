@@ -297,7 +297,7 @@ import {
   saveLocalScene,
 } from './utils/scene'
 import { isProcessing, statusLabel, statusType } from './utils/fileStatus'
-import { displayFileName } from './utils/fileDisplay'
+import { buildLogFileDisplayPath, displayFileName } from './utils/fileDisplay'
 import { expandRemovedItemIds, filterLogFileIds } from './utils/fileTree'
 import { orderLogFileIds } from './utils/logSort'
 import { groupUploadFiles } from './utils/archiveVolume'
@@ -396,24 +396,25 @@ const selectedLogFileIds = computed(() => {
 
 const showFileCollapse = computed(() => selectedLogFileIds.value.length > 1)
 
-function makeFileHeader(id, fileMap) {
+function makeFileHeader(id, fileMap, folderById) {
   const f = fileMap.get(id)
   return {
     _fileHeader: true,
     id: `header-${id}`,
     file_id: id,
-    file_name: f ? displayFileName(f) : id,
+    file_name: f ? buildLogFileDisplayPath(f, folderById) : id,
   }
 }
 
 const displayLogs = computed(() => {
   const order = selectedLogFileIds.value
   const fileMap = new Map(logFiles.value.map((f) => [f.id, f]))
+  const folderById = new Map(folderItems.value.map((f) => [f.id, f]))
   const out = []
   for (const fileId of order) {
     const bucket = fileLogData.value[fileId]
     if (!bucket) continue
-    out.push(makeFileHeader(fileId, fileMap))
+    out.push(makeFileHeader(fileId, fileMap, folderById))
     if (collapsedFileIds.value.has(fileId)) continue
     out.push(...bucket.entries)
     if (bucket.hasMore) {

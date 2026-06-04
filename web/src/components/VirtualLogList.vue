@@ -16,7 +16,11 @@
           >
             <template v-if="item.row._fileHeader">
               <el-icon class="log-file-header-icon"><Document /></el-icon>
-              <span class="log-file-header-name">{{ item.row.file_name }}</span>
+              <span class="log-file-header-name">
+                <span v-if="filePathPrefix(item.row.file_name)" class="log-file-path">{{
+                  filePathPrefix(item.row.file_name)
+                }}</span><span class="log-file-basename">{{ fileBaseName(item.row.file_name) }}</span>
+              </span>
               <div class="log-file-header-actions">
                 <el-button
                   link
@@ -246,6 +250,19 @@ function isFileDownloading(fileId) {
   return fileId ? props.downloadingFileIds.has(fileId) : false
 }
 
+function filePathPrefix(fullName) {
+  const n = fullName || ''
+  const i = n.lastIndexOf('/')
+  if (i < 0) return ''
+  return n.slice(0, i + 1)
+}
+
+function fileBaseName(fullName) {
+  const n = fullName || ''
+  const i = n.lastIndexOf('/')
+  return i < 0 ? n : n.slice(i + 1)
+}
+
 function rowClass(row) {
   if (row._fileHeader) return 'log-file-header'
   if (row._fileLoadMore) return 'log-load-more-row'
@@ -371,13 +388,13 @@ watch(
 
 .log-file-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 6px 12px 4px 4px;
   margin-top: 6px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--app-accent);
+  font-weight: 500;
+  color: var(--app-text-secondary);
   background: var(--app-accent-soft);
   border-top: 1px solid var(--app-border-light);
   border-bottom: 1px solid var(--app-border-light);
@@ -392,6 +409,7 @@ watch(
 .log-file-header-actions {
   flex-shrink: 0;
   margin-left: auto;
+  margin-top: 2px;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -407,14 +425,25 @@ watch(
 .log-file-header-icon {
   flex-shrink: 0;
   font-size: 14px;
+  margin-top: 2px;
 }
 
 .log-file-header-name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.log-file-path {
+  color: var(--app-text-muted);
+  font-weight: 500;
+}
+
+.log-file-basename {
+  color: var(--app-accent);
+  font-weight: 600;
 }
 
 .log-load-more-row {
