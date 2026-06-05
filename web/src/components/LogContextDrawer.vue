@@ -7,6 +7,15 @@
   >
     <div class="ctx-toolbar">
       <el-button
+        type="primary"
+        size="small"
+        :disabled="!centerLine || !lines.length"
+        @click="goToCenterLine"
+      >
+        <el-icon><Aim /></el-icon>
+        定位当前行
+      </el-button>
+      <el-button
         size="small"
         :loading="loadingBefore"
         :disabled="!hasMoreBefore || loadingAfter"
@@ -24,7 +33,8 @@
       </el-button>
     </div>
 
-    <el-scrollbar class="ctx-scroll">
+    <div ref="scrollRef" class="ctx-scroll" @scroll.passive="onScroll">
+      <div v-if="loadingBefore" class="ctx-scroll-hint">正在加载更早日志…</div>
       <div class="log-list ctx-list">
         <div
           v-for="row in lines"
@@ -48,16 +58,23 @@
           </span>
         </div>
       </div>
-    </el-scrollbar>
+      <div v-if="loadingAfter" class="ctx-scroll-hint">正在加载更晚日志…</div>
+      <div v-if="!hasMoreBefore && lines.length" class="ctx-scroll-edge">已到文件开头</div>
+      <div v-if="!hasMoreAfter && lines.length" class="ctx-scroll-edge">已到文件末尾</div>
+    </div>
   </el-drawer>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Aim } from '@element-plus/icons-vue'
 import { api } from '../api'
 import { decorateEntries, sceneDescListForEntry, sceneDescStyle } from '../utils/scene'
 import { levelColor } from '../utils/logLevel'
+
+const SCROLL_EDGE_PX = 56
+const SCROLL_LOAD_CHUNK = 20
 
 function sceneDescList(row) {
   return sceneDescListForEntry(row)
@@ -66,7 +83,8 @@ function sceneDescList(row) {
 const visible = defineModel({ type: Boolean, default: false })
 
 const props = defineProps({
-  chunk: { type: Number, default: 10 },
+  /** 每次滚动/按钮加载条数 */
+  chunk: { type: Number, default: SCROLL_LOAD_CHUNK },
   initialBefore: { type: Number, default: 10 },
   initialAfter: { type: Number, default: 10 },
 })
@@ -74,12 +92,14 @@ const props = defineProps({
 const lines = ref([])
 const centerLine = ref(0)
 const fileId = ref('')
+const scrollRef = ref(null)
 let sceneMetaCache = []
 
 const hasMoreBefore = ref(true)
 const hasMoreAfter = ref(true)
 const loadingBefore = ref(false)
 const loadingAfter = ref(false)
+let scrollLoadPaused = false
 
 const drawerTitle = computed(() => {
   if (!centerLine.value) return '上下文'
@@ -116,6 +136,51 @@ async function fetchContext(line, before, after) {
   return decorateEntries(data.data || [], sceneMetaCache)
 }
 
+function restoreScrollAfterPrepend(wrap, prevScrollHeight, prevScrollTop) {
+  if (!wrap) return
+  scrollLoadPaused = true
+  wrap.scrollTop = prevScrollTop + (wrap.scrollHeight - prevScrollHeight)
+  requestAnimationFrame(() => {
+    scrollLoadPaused = false
+  })
+}
+
+function scrollToCenterLine() {
+  nextTick(() => {
+    const wrap = scrollRef.value
+    const origin = wrap?.querySelector('.ctx-origin')
+    if (wrap && origin) {
+      scrollLoadPaused = true
+      origin.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      requestAnimationFrame(() => {
+        scrollLoadPaused = false
+      })
+    }
+  })
+}
+
+function goToCenterLine() {
+  if (!centerLine.value) return
+  if (!lines.value.some((r) => r.line === centerLine.value)) {
+    ElMessage.warning('当前行尚未加载，请先向上或向下滚动加载')
+    return
+  }
+  scrollToCenterLine()
+}
+
+function onScroll(e) {
+  if (scrollLoadPaused || !visible.value) return
+  const el = e.target
+  const { scrollTop, scrollHeight, clientHeight } = el
+  const nearTop = scrollTop <= SCROLL_EDGE_PX
+  const nearBottom = scrollHeight - scrollTop - clientHeight <= SCROLL_EDGE_PX
+  if (nearTop && hasMoreBefore.value && !loadingBefore.value && !loadingAfter.value) {
+    loadMoreBefore()
+  } else if (nearBottom && hasMoreAfter.value && !loadingBefore.value && !loadingAfter.value) {
+    loadMoreAfter()
+  }
+}
+
 async function openFromRow(row, sceneMeta = []) {
   if (!row?.file_id) return
   fileId.value = row.file_id
@@ -134,6 +199,7 @@ async function openFromRow(row, sceneMeta = []) {
     } else {
       hasMoreBefore.value = lines.value[0].line > 1
       hasMoreAfter.value = true
+      scrollToCenterLine()
     }
   } catch (e) {
     ElMessage.error(e.response?.data?.error || e.message)
@@ -147,6 +213,9 @@ async function loadMoreBefore() {
     hasMoreBefore.value = false
     return
   }
+  const wrap = scrollRef.value
+  const prevScrollHeight = wrap?.scrollHeight ?? 0
+  const prevScrollTop = wrap?.scrollTop ?? 0
   const anchor = firstLine - 1
   loadingBefore.value = true
   try {
@@ -161,6 +230,8 @@ async function loadMoreBefore() {
       return
     }
     lines.value = merged
+    await nextTick()
+    restoreScrollAfterPrepend(wrap, prevScrollHeight, prevScrollTop)
     if (lines.value[0].line <= 1) {
       hasMoreBefore.value = false
     }
@@ -211,6 +282,20 @@ defineExpose({ openFromRow })
 
 .ctx-scroll {
   height: calc(100vh - var(--app-header-h) - 140px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.ctx-scroll-hint,
+.ctx-scroll-edge {
+  padding: 8px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--app-text-muted);
+}
+
+.ctx-scroll-edge {
+  padding: 6px 12px;
 }
 
 .log-list {
