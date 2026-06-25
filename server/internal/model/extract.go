@@ -12,4 +12,5 @@ type ExtractedFile struct {
 type ArchiveExtractResult struct {
 	Files        []ExtractedFile
 	FolderChains [][]string
+	ExtractRoot  string // 解压目录；非压缩包直传时为空
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"log-tools/server/internal/config"
@@ -19,14 +20,16 @@ import (
 )
 
 type StorageService struct {
-	cfg    *config.Config
-	db     *model.Database
-	parser *Parser
-	pool   *job.Pool
+	cfg       *config.Config
+	db        *model.Database
+	parser    *Parser
+	pool      *job.Pool
+	extractMu *sync.Map
 }
 
 func NewStorageService(cfg *config.Config, db *model.Database, parser *Parser, pool *job.Pool) *StorageService {
-	return &StorageService{cfg: cfg, db: db, parser: parser, pool: pool}
+	s := &StorageService{cfg: cfg, db: db, parser: parser, pool: pool, extractMu: &sync.Map{}}
+	return s
 }
 
 func (s *StorageService) ValidateFile(size int64, filename string) error {
@@ -45,14 +48,15 @@ func (s *StorageService) ValidateFile(size int64, filename string) error {
 	return fmt.Errorf("unsupported file type: %s", ext)
 }
 
-func (s *StorageService) SaveUpload(src io.Reader, filename string) (string, error) {
-	if err := os.MkdirAll(s.cfg.Storage.UploadDir, 0o755); err != nil {
+func (s *StorageService) SaveUpload(src io.Reader, deviceID, filename string) (string, error) {
+	deviceDir, err := s.DeviceUploadDir(deviceID)
+	if err != nil {
 		return "", err
 	}
 	ts := time.Now().Format("20060102_150405")
 	ext := filepath.Ext(filename)
 	base := strings.TrimSuffix(filename, ext)
-	dst := filepath.Join(s.cfg.Storage.UploadDir, fmt.Sprintf("%s_%s%s", base, ts, ext))
+	dst := filepath.Join(deviceDir, fmt.Sprintf("%s_%s%s", base, ts, ext))
 	out, err := os.Create(dst)
 	if err != nil {
 		return "", err
@@ -178,7 +182,12 @@ func ingestProgress(linesRead int, fileSize int64) int {
 // RegisterUpload records an uploaded file without ingesting into the database.
 // 同目录下 original_name 相同则覆盖已有记录（含磁盘文件与已入库日志行）。
 func (s *StorageService) RegisterUpload(ctx context.Context, deviceID string, meta UploadFileMeta) (*model.LogFile, error) {
-	info, err := os.Stat(meta.Path)
+	absPath, err := absFilePath(meta.Path)
+	if err != nil {
+		return nil, err
+	}
+	meta.Path = absPath
+	size, err := verifyReadableFile(meta.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +209,7 @@ func (s *StorageService) RegisterUpload(ctx context.Context, deviceID string, me
 		}
 		existing.Name = filepath.Base(meta.Path)
 		existing.FileFormat = meta.FileFormat
-		existing.Size = info.Size()
+		existing.Size = size
 		existing.UploadAt = time.Now()
 		existing.Status = "uploaded"
 		existing.StatusMsg = "已上传，可预览；点击入库写入数据库"
@@ -225,7 +234,7 @@ func (s *StorageService) RegisterUpload(ctx context.Context, deviceID string, me
 		FileFormat:   meta.FileFormat,
 		EntryType:    model.EntryTypeFile,
 		ParentID:     meta.ParentID,
-		Size:         info.Size(),
+		Size:         size,
 		UploadAt:     time.Now(),
 		Status:       "uploaded",
 		StatusMsg:    "已上传，可预览；点击入库写入数据库",
@@ -240,19 +249,44 @@ func (s *StorageService) RegisterUpload(ctx context.Context, deviceID string, me
 	return f, nil
 }
 
-// ImportSavedFile 解析已落盘文件（压缩包会解压）并登记日志；返回登记成功的 file id 列表。
+// ImportSavedFile 解析已落盘文件（压缩包会解压）并登记日志；同 device 并发时会排队等待。
 func (s *StorageService) ImportSavedFile(ctx context.Context, deviceID, diskPath, originalName string) ([]string, error) {
-	result, err := s.ExtractArchive(diskPath, originalName)
+	var fileIDs []string
+	err := s.RunDeviceExtractExclusive(deviceID, func() error {
+		var innerErr error
+		fileIDs, innerErr = s.importSavedFile(ctx, deviceID, diskPath, originalName)
+		return innerErr
+	})
+	return fileIDs, err
+}
+
+// ImportSavedFileUnlocked 在已持有 device 解压锁时调用（见 RunDeviceExtractExclusive）。
+func (s *StorageService) ImportSavedFileUnlocked(ctx context.Context, deviceID, diskPath, originalName string) ([]string, error) {
+	return s.importSavedFile(ctx, deviceID, diskPath, originalName)
+}
+
+func (s *StorageService) importSavedFile(ctx context.Context, deviceID, diskPath, originalName string) ([]string, error) {
+	log.Printf("[import] extract start device=%s file=%s", deviceID, originalName)
+	result, err := s.ExtractArchive(deviceID, diskPath, originalName)
 	if err != nil {
 		return nil, err
 	}
+	extractRoot := result.ExtractRoot
+
 	if err := s.EnsureFolderChains(ctx, deviceID, result.FolderChains); err != nil {
+		s.cleanupExtractRoot(extractRoot)
 		return nil, err
 	}
+
 	var fileIDs []string
 	for _, ent := range result.Files {
 		if !model.IsLogFileName(ent.OriginalName) {
 			continue
+		}
+		if _, err := verifyReadableFile(ent.DiskPath); err != nil {
+			s.rollbackImportedFiles(ctx, deviceID, fileIDs)
+			s.cleanupExtractRoot(extractRoot)
+			return nil, fmt.Errorf("解压文件 %s 无效: %w", ent.OriginalName, err)
 		}
 		ext := ent.FileFormat
 		if ext == "" || !model.IsLogExtension(ext) {
@@ -260,8 +294,9 @@ func (s *StorageService) ImportSavedFile(ctx context.Context, deviceID, diskPath
 		}
 		parentID, err := s.EnsureFolders(ctx, deviceID, ent.ArchiveDirParts)
 		if err != nil {
-			log.Printf("[import] ensure folders %v: %v", ent.ArchiveDirParts, err)
-			continue
+			s.rollbackImportedFiles(ctx, deviceID, fileIDs)
+			s.cleanupExtractRoot(extractRoot)
+			return nil, fmt.Errorf("创建文件夹 %v: %w", ent.ArchiveDirParts, err)
 		}
 		lf, err := s.RegisterUpload(ctx, deviceID, UploadFileMeta{
 			Path:         ent.DiskPath,
@@ -270,12 +305,35 @@ func (s *StorageService) ImportSavedFile(ctx context.Context, deviceID, diskPath
 			ParentID:     parentID,
 		})
 		if err != nil {
-			log.Printf("[import] register %s: %v", ent.OriginalName, err)
-			continue
+			s.rollbackImportedFiles(ctx, deviceID, fileIDs)
+			s.cleanupExtractRoot(extractRoot)
+			return nil, fmt.Errorf("登记 %s: %w", ent.OriginalName, err)
 		}
 		fileIDs = append(fileIDs, lf.ID)
 	}
+	if len(fileIDs) == 0 {
+		s.cleanupExtractRoot(extractRoot)
+		return nil, fmt.Errorf("压缩包内未解析到可导入的日志文件")
+	}
+	log.Printf("[import] extract done device=%s file=%s ids=%d", deviceID, originalName, len(fileIDs))
 	return fileIDs, nil
+}
+
+func (s *StorageService) cleanupExtractRoot(extractRoot string) {
+	if extractRoot == "" {
+		return
+	}
+	if err := os.RemoveAll(extractRoot); err != nil && !os.IsNotExist(err) {
+		log.Printf("[import] cleanup extract root %s: %v", extractRoot, err)
+	}
+}
+
+func (s *StorageService) rollbackImportedFiles(ctx context.Context, deviceID string, fileIDs []string) {
+	for _, id := range fileIDs {
+		if err := s.DeleteFile(ctx, deviceID, id); err != nil {
+			log.Printf("[import] rollback delete file=%s: %v", id, err)
+		}
+	}
 }
 
 func (s *StorageService) usesDatabase(f *model.LogFile) bool {
@@ -371,7 +429,10 @@ func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string
 	if err != nil {
 		return err
 	}
-	uploadDir := s.cfg.Storage.UploadDir
+	deviceDir, err := s.DeviceUploadDir(deviceID)
+	if err != nil {
+		return err
+	}
 	pathSeen := make(map[string]struct{})
 	var sourcePaths []string
 	for i := range files {
@@ -384,11 +445,11 @@ func (s *StorageService) DeleteFile(ctx context.Context, deviceID, fileID string
 		}
 	}
 	for _, p := range sourcePaths {
-		removePhysicalFilePath(p, uploadDir)
+		removePhysicalFilePath(p, deviceDir)
 	}
 	if item.EntryType == model.EntryTypeFolder {
 		folderSegs, _ := s.db.ResolveFolderPath(ctx, fileID)
-		removePhysicalFolderDirs(uploadDir, folderSegs, sourcePaths)
+		removePhysicalFolderDirs(deviceDir, folderSegs, sourcePaths)
 	}
 	if err := s.db.DeleteLogItemSubtree(ctx, deviceID, fileID); err != nil {
 		return err
@@ -416,16 +477,16 @@ func (s *StorageService) collectPhysicalPaths(f *model.LogFile) []string {
 		out = append(out, abs)
 	}
 	add(f.SourcePath)
-	if p, err := s.findPathByName(f.Name); err == nil {
-		add(p)
-	}
 	return out
 }
 
 func (s *StorageService) removePhysicalSources(f *model.LogFile) {
-	uploadDir := s.cfg.Storage.UploadDir
+	deviceDir, err := s.DeviceUploadDir(f.DeviceID)
+	if err != nil {
+		deviceDir = s.cfg.Storage.UploadDir
+	}
 	for _, p := range s.collectPhysicalPaths(f) {
-		removePhysicalFilePath(p, uploadDir)
+		removePhysicalFilePath(p, deviceDir)
 	}
 }
 
@@ -513,39 +574,50 @@ func (s *StorageService) RetryIngest(ctx context.Context, deviceID, fileID strin
 }
 
 func (s *StorageService) resolveSourcePath(f *model.LogFile) (string, error) {
-	if f.SourcePath != "" {
-		if _, err := os.Stat(f.SourcePath); err == nil {
-			return f.SourcePath, nil
+	if f.SourcePath == "" {
+		label := f.OriginalName
+		if label == "" {
+			label = f.Name
 		}
+		return "", fmt.Errorf("源文件路径缺失，请重新导入: %s", label)
 	}
-	return s.findPathByName(f.Name)
+	abs, err := absFilePath(f.SourcePath)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		label := f.OriginalName
+		if label == "" {
+			label = f.Name
+		}
+		return "", fmt.Errorf("源文件不存在，请重新导入: %s", label)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("源文件路径无效（是目录）: %s", abs)
+	}
+	if f.Size > 0 && info.Size() != f.Size {
+		label := f.OriginalName
+		if label == "" {
+			label = f.Name
+		}
+		return "", fmt.Errorf("源文件大小与记录不一致（磁盘 %d 字节，记录 %d 字节），请重新导入: %s",
+			info.Size(), f.Size, label)
+	}
+	return abs, nil
 }
 
-func (s *StorageService) findPathByName(name string) (string, error) {
-	if name == "" {
-		return "", fmt.Errorf("empty file name")
+func (s *StorageService) findPathByName(deviceID, name string) (string, error) {
+	deviceDir, err := s.DeviceUploadDir(deviceID)
+	if err != nil {
+		return "", err
 	}
-	var matches []string
-	err := filepath.Walk(s.cfg.Storage.UploadDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info == nil || info.IsDir() {
-			return nil
-		}
-		if filepath.Base(path) == name {
-			matches = append(matches, path)
-		}
-		return nil
-	})
-	_ = err
-	if len(matches) == 0 {
-		return "", fmt.Errorf("源文件不存在，请重新上传: %s", name)
+	path, err := findUniqueFileByBaseName(deviceDir, name)
+	if err == nil {
+		return path, nil
 	}
-	best := matches[0]
-	var bestMod time.Time
-	for _, p := range matches {
-		if st, err := os.Stat(p); err == nil && st.ModTime().After(bestMod) {
-			bestMod = st.ModTime()
-			best = p
-		}
+	if strings.Contains(err.Error(), "存在多个同名") {
+		return "", err
 	}
-	return best, nil
+	return findUniqueFileByBaseName(s.cfg.Storage.UploadDir, name)
 }

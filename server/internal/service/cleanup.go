@@ -81,10 +81,24 @@ func removePhysicalFile(path string) {
 }
 
 func (s *StorageService) purgeStaleUploadDir(cutoff time.Time, activePaths map[string]struct{}) {
-	dir := s.cfg.Storage.UploadDir
-	if dir == "" {
+	root := s.cfg.Storage.UploadDir
+	if root == "" {
 		return
 	}
+	s.purgeStaleOneUploadDir(root, cutoff, activePaths)
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return
+	}
+	for _, ent := range entries {
+		if !ent.IsDir() {
+			continue
+		}
+		s.purgeStaleOneUploadDir(filepath.Join(root, ent.Name()), cutoff, activePaths)
+	}
+}
+
+func (s *StorageService) purgeStaleOneUploadDir(dir string, cutoff time.Time, activePaths map[string]struct{}) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return

@@ -257,6 +257,7 @@ async function doImport() {
         attachments: toImport.map((f) => ({
           id: f.id,
           filename: f.filename,
+          size: f.size ?? 0,
           content_url: f.content_url,
         })),
       },

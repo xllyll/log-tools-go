@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"log-tools/server/internal/model"
 	"log-tools/server/internal/pkg/multivolume"
@@ -38,7 +37,7 @@ func diskTarget(extractRoot string, folderParts []string, fileName string) (stri
 	return filepath.Join(dir, fileName), nil
 }
 
-func (s *StorageService) ExtractArchive(path, uploadOriginalName string) (*model.ArchiveExtractResult, error) {
+func (s *StorageService) ExtractArchive(deviceID, path, uploadOriginalName string) (*model.ArchiveExtractResult, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	if !isArchiveExt(ext) {
 		orig := model.OriginalBaseName(uploadOriginalName)
@@ -55,15 +54,21 @@ func (s *StorageService) ExtractArchive(path, uploadOriginalName string) (*model
 		}}}, nil
 	}
 
-	extractRoot := filepath.Join(s.cfg.Storage.UploadDir, "extracted_"+time.Now().Format("20060102_150405"))
-	if err := os.MkdirAll(extractRoot, 0o755); err != nil {
+	deviceDir, err := s.DeviceUploadDir(deviceID)
+	if err != nil {
+		return nil, err
+	}
+	extractRoot, err := os.MkdirTemp(deviceDir, "extracted_*")
+	if err != nil {
 		return nil, err
 	}
 	containerName := model.OriginalBaseName(uploadOriginalName)
 	result, err := s.processArchiveAtPath(path, nil, extractRoot, containerName)
 	if err != nil {
+		_ = os.RemoveAll(extractRoot)
 		return nil, err
 	}
+	result.ExtractRoot = extractRoot
 	removeUploadedArchive(path)
 	return result, nil
 }

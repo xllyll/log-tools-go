@@ -136,5 +136,8 @@ func (c *Client) getWithProgress(url string, onProgress DownloadProgressFunc) ([
 	if onProgress != nil {
 		onProgress(int64(len(data)), total)
 	}
+	if total > 0 && int64(len(data)) != total {
+		return nil, fmt.Errorf("下载不完整（期望 %d 字节，实际 %d 字节）", total, len(data))
+	}
 	return data, nil
 }

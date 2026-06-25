@@ -24,6 +24,7 @@
       <el-divider direction="vertical" />
       <el-button size="small" @click="resetDefault">恢复示例</el-button>
       <el-button size="small" @click="importJson">导入 JSON</el-button>
+      <el-button size="small" type="warning" plain @click="importJsonOverwrite">导入 JSON 覆盖</el-button>
       <el-button size="small" @click="exportJson">导出 JSON</el-button>
     </div>
 
@@ -168,6 +169,7 @@
     </template>
 
     <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="onFileImport" />
+    <input ref="overwriteFileInput" type="file" accept=".json,application/json" hidden @change="onFileImportOverwrite" />
 
     <SceneLibraryDialog ref="libraryRef" v-model="libraryVisible" :config="draft" @apply="onLibraryApply" />
 
@@ -237,6 +239,7 @@ let conflictResolver = null
 /** @type {{ mi: number, serverCfg: object, serverModNow: object, lookupName: string } | null} */
 const conflictCtx = ref(null)
 const fileInput = ref(null)
+const overwriteFileInput = ref(null)
 const libraryVisible = ref(false)
 const libraryRef = ref(null)
 const libraryPublishing = ref(false)
@@ -610,8 +613,8 @@ function validateModule(mi) {
   return true
 }
 
-function validate() {
-  for (const mod of draft.value.modules || []) {
+function validateConfig(cfg) {
+  for (const mod of cfg?.modules || []) {
     if (!mod.name?.trim()) {
       ElMessage.warning('请填写模块名称')
       return false
@@ -630,6 +633,10 @@ function validate() {
     }
   }
   return true
+}
+
+function validate() {
+  return validateConfig(draft.value)
 }
 
 function applyConfig() {
@@ -734,9 +741,13 @@ function importJson() {
   fileInput.value?.click()
 }
 
+function importJsonOverwrite() {
+  overwriteFileInput.value?.click()
+}
+
 function parseImportedSceneConfig(raw) {
   const data = typeof raw === 'string' ? JSON.parse(raw) : raw
-  if (data?.modules?.length) return data
+  if (data?.modules?.length) return cloneSceneConfig(data)
   throw new Error('invalid')
 }
 
@@ -757,6 +768,52 @@ function onFileImport(e) {
     e.target.value = ''
   }
   reader.readAsText(file)
+}
+
+async function onFileImportOverwrite(e) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+
+  let incoming
+  try {
+    const text = await file.text()
+    incoming = parseImportedSceneConfig(text)
+  } catch {
+    ElMessage.error('JSON 格式无效，需包含 modules 字段')
+    return
+  }
+
+  if (!validateConfig(incoming)) return
+
+  try {
+    await ElMessageBox.confirm(
+      '将用 JSON 文件完全替换服务器上的场景配置（以文件内容为准，未包含在 JSON 中的模块将被删除）。是否继续？',
+      '导入 JSON 覆盖',
+      { type: 'warning', confirmButtonText: '覆盖并上传', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+
+  confirming.value = true
+  try {
+    const { data } = await api.uploadSharedScene(incoming)
+    if (!data.success) throw new Error(data.error)
+
+    draft.value = cloneSceneConfig(incoming)
+    emit('update:config', draft.value)
+    saveLocalScene(draft.value)
+    resetSelection()
+    captureServerModulesAtOpen(draft.value)
+    ElMessage.success('已用 JSON 覆盖服务器场景配置')
+  } catch (err) {
+    if (err !== 'cancel' && err !== 'close') {
+      ElMessage.error(err.response?.data?.error || err.message || '覆盖上传失败')
+    }
+  } finally {
+    confirming.value = false
+  }
 }
 
 function exportJson() {

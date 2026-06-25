@@ -100,7 +100,7 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	saved, err := h.storage.SaveUpload(file, header.Filename)
+	saved, err := h.storage.SaveUpload(file, deviceID, header.Filename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
 		return
@@ -143,7 +143,7 @@ func (h *UploadHandler) UploadVolume(c *gin.Context) {
 		return
 	}
 
-	volDir, err := h.storage.PrepareVolumeDir()
+	volDir, err := h.storage.PrepareVolumeDir(deviceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.UploadResponse{Success: false, Error: err.Error()})
 		return
